@@ -1,0 +1,56 @@
+# Windbreak grant application prototype - production stack.
+#
+#   docker compose -f docker-compose.prod.yml up --build -d
+#
+#   frontend: http://localhost:8080  (compiled NestJS server)
+#   backend:  http://localhost:5000  (pygeoapi OGC API)
+#
+# Standalone file (not an override): the dev compose file bind-mounts the
+# frontend source, which must not leak into the production container.
+
+services:
+  backend:
+    build:
+      context: ./backend
+    image: windbreak-backend
+    container_name: windbreak-backend
+    ports:
+      - "5000:80"
+    environment:
+      WSGI_APP: windbreak_app:APP
+      WSGI_WORKERS: "1"
+    volumes:
+      - ./backend/pygeoapi.config.yml:/pygeoapi/local.config.yml:ro
+      - ./backend/data:/pygeoapi/data
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "python3",
+          "-c",
+          "import urllib.request; urllib.request.urlopen('http://localhost:80/collections/farmers/items?f=json', timeout=5)",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+
+  frontend:
+    build:
+      context: ./frontend
+      target: serve
+    image: windbreak-frontend
+    container_name: windbreak-frontend
+    ports:
+      - "8080:3000"
+    environment:
+      # Server-side URL of the pygeoapi backend (service name + internal port)
+      PYGEOAPI_URL: http://backend:80
+      # Assumed portal-session identity: name + kennitala only
+      DEMO_FULL_NAME: Guðmundur Jónsson
+      DEMO_KENNITALA: "2409693949"
+      # Fasteignir-Xroad lookup is mocked (no island.is Bearer token yet)
+      FASTEIGNIR_MOCK: "true"
+      PORT: "3000"
+    depends_on:
+      - backend

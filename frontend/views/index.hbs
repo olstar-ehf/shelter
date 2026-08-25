@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Windbreak Grant Application</title>
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+  <link rel="stylesheet" href="/app.css" />
+</head>
+<body>
+  <div class="page">
+    <header class="topbar">
+      <div class="topbar-inner">
+        <div>
+          <span class="topbar-brand">Land &amp; Nature Agency</span>
+          <span class="topbar-title">Windbreak Grant Scheme</span>
+        </div>
+        <div class="topbar-session">
+          <span class="muted-inverse">Government portal session</span>
+        </div>
+      </div>
+    </header>
+
+    <main class="container">
+      <ol class="stepper" aria-label="Application steps">
+        <li class="active"><span class="step-no">1</span> Your details</li>
+        <li><span class="step-no">2</span> Draw windbreak</li>
+        <li><span class="step-no">3</span> Review</li>
+        <li><span class="step-no">4</span> Submitted</li>
+      </ol>
+
+      <div class="card card-center">
+        <h1>Apply for a grant to plant a windbreak</h1>
+        <p>
+          A windbreak protects crops and livestock and improves nature on
+          your farm. In this prototype you are <strong>already signed in</strong>
+          to the government portal, so the service looks up your details and
+          your registered land automatically.
+        </p>
+        <p class="muted">
+          The only thing you have to provide is <strong>where</strong> you
+          want the windbreak: draw the lines on the map of your land and
+          submit.
+        </p>
+        <a class="btn btn-primary btn-large" href="/apply">Apply for windbreak</a>
+        <p class="muted small">
+          Assumed session identity: <code>{{demoFullName}}</code> &middot;
+          kennitala <code>{{demoKennitala}}</code> (set via DEMO_FULL_NAME /
+          DEMO_KENNITALA)
+        </p>
+      </div>
+    </main>
+
+    <footer class="app-footer">
+      <div class="container">
+        <p>
+          Prototype &mdash; farmer authentication is assumed to have happened
+          in the portal. Data is served by a pygeoapi OGC API and stored in
+          local GeoJSON files.
+        </p>
+      </div>
+    </footer>
+  </div>
+</body>
+</html>

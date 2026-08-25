@@ -1,0 +1,12 @@
+{
+  "extends": "./tsconfig.json",
+  "exclude": [
+    "node_modules",
+    "client",
+    "views",
+    "public",
+    "dist",
+    "test",
+    "e2e-draw-test.js"
+  ]
+}

@@ -1,0 +1,62 @@
+{
+  "type": "FeatureCollection",
+  "features": [
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [-18.45733, 63.478816],
+            [-18.41709, 63.501367],
+            [-18.424635, 63.502394],
+            [-18.444846, 63.505722],
+            [-18.441829, 63.515128],
+            [-18.676484, 63.508988],
+            [-18.662654, 63.444361],
+            [-18.527308, 63.458789],
+            [-18.45733, 63.478816]
+          ],
+          [
+            [-18.587692, 63.487214],
+            [-18.587372, 63.487159],
+            [-18.587494, 63.487016],
+            [-18.587815, 63.487071],
+            [-18.587692, 63.487214]
+          ]
+        ]
+      },
+      "properties": {
+        "parcel_id": "IS-163368",
+        "farmer_id": "farmer-123",
+        "landeignarnumer": 163368,
+        "parcel_name": "Jörð 163368",
+        "area_ha": 6867.9,
+        "land_use": "rangeland",
+        "source": "https://landeignaskra.hms.is/api/landeign/163368 (EPSG:3057, converted to WGS84)"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [[
+          [9.0520, 56.4100],
+          [9.0580, 56.4102],
+          [9.0582, 56.4070],
+          [9.0522, 56.4068],
+          [9.0520, 56.4100]
+        ]]
+      },
+      "properties": {
+        "parcel_id": "E-201",
+        "farmer_id": "farmer-456",
+        "landeignarnumer": 456001,
+        "parcel_name": "Home field",
+        "area_ha": 13.2,
+        "land_use": "arable",
+        "crop": "winter rye"
+      }
+    }
+  ]
+}

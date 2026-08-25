@@ -1,0 +1,71 @@
+# Windbreak grant application prototype - development stack.
+#
+#   docker compose up --build
+#
+#   frontend: http://localhost:8000  (NestJS dev server, hot reload)
+#   backend:  http://localhost:5000  (pygeoapi OGC API)
+#
+# The frontend is a NestJS application: it server-renders the pages with
+# Handlebars and talks to the pygeoapi backend server side (PYGEOAPI_URL).
+# The backend image (./backend/Dockerfile) extends geopython/pygeoapi:0.21.0
+# with flask-cors and a small WSGI patch that decodes transaction bodies
+# (see ./backend/windbreak_app.py).
+
+services:
+  backend:
+    build:
+      context: ./backend
+    image: windbreak-backend
+    container_name: windbreak-backend
+    ports:
+      # host:container - the pygeoapi image serves gunicorn on port 80
+      - "5000:80"
+    environment:
+      # Patched WSGI app: JSON transaction bodies + pygeoapi with CORS
+      WSGI_APP: windbreak_app:APP
+      # GeoJSON provider assumes a single process (no write locking)
+      WSGI_WORKERS: "1"
+    volumes:
+      - ./backend/pygeoapi.config.yml:/pygeoapi/local.config.yml:ro
+      # Read-write: submitted windbreak lines are appended to
+      # windbreak_applications.json in this directory.
+      - ./backend/data:/pygeoapi/data
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "python3",
+          "-c",
+          "import urllib.request; urllib.request.urlopen('http://localhost:80/collections/farmers/items?f=json', timeout=5)",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+
+  frontend:
+    build:
+      context: ./frontend
+      target: develop
+    image: windbreak-frontend
+    container_name: windbreak-frontend
+    ports:
+      # host:container - the NestJS server listens on port 3000
+      - "8000:3000"
+    environment:
+      # Server-side URL of the pygeoapi backend (service name + internal port)
+      PYGEOAPI_URL: http://backend:80
+      # Assumed portal-session identity: name + kennitala only
+      DEMO_FULL_NAME: Guðmundur Jónsson
+      DEMO_KENNITALA: "2409693949"
+      # Fasteignir-Xroad lookup is mocked (no island.is Bearer token yet)
+      FASTEIGNIR_MOCK: "true"
+      PORT: "3000"
+    volumes:
+      - ./frontend:/app
+      - frontend_node_modules:/app/node_modules
+    depends_on:
+      - backend
+
+volumes:
+  frontend_node_modules:

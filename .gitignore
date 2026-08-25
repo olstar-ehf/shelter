@@ -1,0 +1,21 @@
+# dependencies
+node_modules/
+
+# local npm home (cache/config)
+.npm-cache/
+.npm-home/
+
+# Gatsby/Nest build output
+frontend/.cache/
+frontend/public/
+# ...except the hand-written source assets the client bundle imports
+!frontend/public/styles.css
+!frontend/public/favicon.svg
+frontend/dist/
+
+# local Python virtualenv / caches
+.venv/
+__pycache__/
+
+# OS
+.DS_Store

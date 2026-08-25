@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Application submitted – Windbreak Grant Application</title>
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+  <link rel="stylesheet" href="/app.css" />
+</head>
+<body>
+  <div class="page">
+    <header class="topbar">
+      <div class="topbar-inner">
+        <div>
+          <span class="topbar-brand">Land &amp; Nature Agency</span>
+          <span class="topbar-title">Windbreak Grant Scheme</span>
+        </div>
+      </div>
+    </header>
+
+    <main class="container">
+      <ol class="stepper" aria-label="Application steps">
+        <li class="active"><span class="step-no">1</span> Your details</li>
+        <li class="active"><span class="step-no">2</span> Draw windbreak</li>
+        <li class="active"><span class="step-no">3</span> Review</li>
+        <li class="active"><span class="step-no">4</span> Submitted</li>
+      </ol>
+
+      {{#if error}}
+        <div class="error-banner" role="alert">
+          <strong>Something went wrong:</strong> {{error}}
+        </div>
+        <p><a class="btn btn-secondary" href="/apply">Back to the application</a></p>
+      {{else}}
+      <div class="card card-success">
+        <h2>Application submitted</h2>
+        <p>
+          Your windbreak grant application has been received and stored by
+          the grant service.
+        </p>
+
+        <dl class="details">
+          <dt>Application no.</dt>
+          <dd><strong>{{applicationId}}</strong></dd>
+          <dt>Submitted</dt>
+          <dd>{{submittedAt}}</dd>
+          <dt>Windbreaks</dt>
+          <dd>{{lines.length}} line(s), {{totalLengthM}} m in total</dd>
+          <dt>Status</dt>
+          <dd><span class="chip chip-ok">pending — not accepted yet</span></dd>
+        </dl>
+
+        <p class="muted">
+          The grant authority will now review your application. Until it is
+          accepted, the requested windbreak counts as an existing windbreak:
+          new applications cannot cross it.
+        </p>
+
+        <h3>Stored in the backend</h3>
+        <table class="lines-table">
+          <thead>
+            <tr>
+              <th>Line id</th>
+              <th>Parcel</th>
+              <th>Length</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            {{#each lines}}
+            <tr>
+              <td>{{line_id}}</td>
+              <td>{{parcel_id}}</td>
+              <td>{{length_m}} m</td>
+              <td>{{status}}</td>
+            </tr>
+            {{/each}}
+          </tbody>
+        </table>
+
+        <div class="step-actions">
+          <a class="btn btn-primary" href="/apply">
+            Apply for another windbreak
+          </a>
+        </div>
+      </div>
+      {{/if}}
+    </main>
+
+    <footer class="app-footer">
+      <div class="container">
+        <p>
+          Prototype &mdash; farmer authentication is assumed to have happened
+          in the portal. Data is served by a pygeoapi OGC API and stored in
+          local GeoJSON files.
+        </p>
+      </div>
+    </footer>
+  </div>
+</body>
+</html>

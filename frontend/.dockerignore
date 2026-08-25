@@ -1,0 +1,7 @@
+node_modules
+dist
+.cache
+.npm-home
+Dockerfile
+.dockerignore
+e2e-draw-test.js

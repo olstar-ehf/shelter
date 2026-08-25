@@ -1,0 +1,44 @@
+{
+  "name": "windbreak-grant-frontend",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Windbreak grant application form - NestJS server + Leaflet map client",
+  "scripts": {
+    "build": "nest build && npm run build:client",
+    "build:client": "esbuild client/main.ts --bundle --minify --sourcemap --outfile=public/app.js --loader:.png=file --loader:.svg=file",
+    "prestart": "npm run build:client",
+    "start": "node dist/main.js",
+    "prestart:dev": "npm run build:client",
+    "start:dev": "nest start --watch",
+    "start:prod": "node dist/main.js",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@nestjs/common": "^11.0.0",
+    "@nestjs/core": "^11.0.0",
+    "@nestjs/platform-express": "^11.0.0",
+    "hbs": "^4.2.0",
+    "reflect-metadata": "^0.2.2",
+    "rxjs": "^7.8.1"
+  },
+  "devDependencies": {
+    "@nestjs/cli": "^11.0.0",
+    "@nestjs/schematics": "^11.0.0",
+    "@turf/boolean-point-in-polygon": "^6.5.0",
+    "@turf/helpers": "^6.5.0",
+    "@turf/length": "^6.5.0",
+    "@turf/line-intersect": "^6.5.0",
+    "@turf/line-overlap": "^6.5.0",
+    "@turf/union": "^6.5.0",
+    "@types/express": "^5.0.0",
+    "@types/geojson": "^7946.0.14",
+    "@types/hbs": "^4.0.4",
+    "@types/leaflet": "^1.9.12",
+    "@types/leaflet-draw": "^1.0.11",
+    "@types/node": "^20.14.0",
+    "esbuild": "^0.25.0",
+    "leaflet": "^1.9.4",
+    "leaflet-draw": "^1.0.4",
+    "typescript": "^5.5.0"
+  }
+}

@@ -1,0 +1,128 @@
+# =================================================================
+# Windbreak Grant Service - pygeoapi configuration
+#
+# OGC API backend for the windbreak grant application prototype.
+# Serves three collections backed by local GeoJSON files:
+#   - farmers                  (farmer registry, read only)
+#   - farm_parcels             (land parcel registry, read only)
+#   - windbreak_applications   (submitted grant applications, editable)
+#
+# The data directory is mounted from ./data into /pygeoapi/data in
+# Docker (see docker-compose.yml).
+# =================================================================
+
+server:
+    bind:
+        host: 0.0.0.0
+        port: 5000
+    # Base URL as seen from the browser. Matches the host port mapping
+    # "5000:80" in docker-compose.yml.
+    url: http://localhost:5000
+    mimetype: application/json; charset=UTF-8
+    encoding: utf-8
+    gzip: false
+    languages:
+        - en-US
+    # Allow the Gatsby frontend (served from a different port) to call
+    # this API straight from the browser. flask-cors also answers the
+    # CORS preflight (OPTIONS) requests for POST transactions.
+    cors: true
+    pretty_print: true
+    limits:
+        default_items: 20
+        max_items: 100
+    map:
+        url: https://tile.openstreetmap.org/{z}/{x}/{y}.png
+        attribution: '&copy; <a href="https://openstreetmap.org/copyright">OpenStreetMap contributors</a>'
+
+logging:
+    level: ERROR
+
+metadata:
+    identification:
+        title: Windbreak Grant Service
+        description: OGC API backend for the windbreak grant application prototype
+        keywords:
+            - windbreak
+            - shelterbelt
+            - agriculture
+        keywords_type: theme
+        terms_of_service: https://creativecommons.org/licenses/by/4.0/
+        url: https://example.org
+    license:
+        name: CC-BY 4.0 license
+        url: https://creativecommons.org/licenses/by/4.0/
+    provider:
+        name: Demo Land Authority
+        url: https://example.org
+    contact:
+        name: Windbreak Grant Support
+        position: Support
+        address: Demo Street 1
+        city: Viborg
+        stateorprovince: Central Jutland
+        postalcode: '8800'
+        country: Denmark
+        phone: +45-00-00-00-00
+        email: support@example.org
+        url: https://example.org
+        hours: Mo-Fr 08:00-16:00
+        role: pointOfContact
+
+resources:
+    farmers:
+        type: collection
+        title: Farmers
+        description: Registered farmers and their contact details (demo seed data)
+        keywords:
+            - farmer
+            - registry
+        extents:
+            spatial:
+                bbox: [-24.6, 54, 13, 66.6]
+                crs: http://www.opengis.net/def/crs/OGC/1.3/CRS84
+        providers:
+            - type: feature
+              name: GeoJSON
+              data: /pygeoapi/data/farmers.json
+              id_field: farmer_id
+              title_field: full_name
+
+    farm_parcels:
+        type: collection
+        title: Farm parcels
+        description: Agricultural land parcels belonging to registered farmers (demo seed data)
+        keywords:
+            - parcel
+            - land
+            - cadastre
+        extents:
+            spatial:
+                bbox: [-24.6, 54, 13, 66.6]
+                crs: http://www.opengis.net/def/crs/OGC/1.3/CRS84
+        providers:
+            - type: feature
+              name: GeoJSON
+              data: /pygeoapi/data/farm_parcels.json
+              id_field: parcel_id
+              title_field: parcel_name
+
+    windbreak_applications:
+        type: collection
+        title: Windbreak grant applications
+        description: Windbreak lines submitted through the grant application form
+        keywords:
+            - windbreak
+            - shelterbelt
+            - application
+        extents:
+            spatial:
+                bbox: [-24.6, 54, 13, 66.6]
+                crs: http://www.opengis.net/def/crs/OGC/1.3/CRS84
+        providers:
+            - type: feature
+              name: GeoJSON
+              data: /pygeoapi/data/windbreak_applications.json
+              id_field: line_id
+              # editable enables OGC API Features transactions (POST items)
+              editable: true
