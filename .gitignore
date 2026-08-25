@@ -7,8 +7,11 @@ node_modules/
 
 # Gatsby/Nest build output
 frontend/.cache/
-frontend/public/
-# ...except the hand-written source assets the client bundle imports
+# Ignore everything inside public/ except the hand-written source assets
+# the client bundle imports. NOTE: ignore the CONTENTS (public/*), not the
+# directory (public/) - git cannot re-include files below an excluded
+# directory, so the !-rules would otherwise silently do nothing.
+frontend/public/*
 !frontend/public/styles.css
 !frontend/public/favicon.svg
 frontend/dist/
