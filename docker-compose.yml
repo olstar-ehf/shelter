@@ -60,6 +60,11 @@ services:
       DEMO_KENNITALA: "2409693949"
       # Fasteignir-Xroad lookup is mocked (no island.is Bearer token yet)
       FASTEIGNIR_MOCK: "true"
+      # Existing windbreaks come from the skógrækt PostGIS database
+      # (skograekt.skjolbelti, ISN93). Mocked here; for the real database set
+      # WINDBREAK_REGISTRY_MOCK=false and WINDBREAK_DATABASE_URL (or PG*).
+      WINDBREAK_REGISTRY_MOCK: "true"
+      WINDBREAK_DATABASE_URL: ${WINDBREAK_DATABASE_URL}   # or the PG* variables
       PORT: "3000"
     volumes:
       - ./frontend:/app

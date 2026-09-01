@@ -30,14 +30,17 @@ export type ParcelFeature = Feature<Polygon, ParcelProperties>;
 /** Attributes of a windbreak line stored in `windbreak_applications`. */
 export interface WindbreakProperties {
   line_id: string;
-  application_id: string;
+  application_id?: string;
   farmer_id?: string;
   /** Kennitala of the applicant (the assumed identity). */
   kennitala?: string;
-  parcel_id: string | null;
+  parcel_id?: string | null;
+  /** For windbreaks read from skograekt.skjolbelti. */
+  objectid?: number;
+  source?: string;
   /** 'established' (old windbreak) | 'pending' (submitted, not accepted) */
   status: string;
-  length_m: number;
+  length_m?: number;
   submitted_at?: string;
   planted_year?: number;
 }

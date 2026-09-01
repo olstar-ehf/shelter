@@ -8,6 +8,7 @@ import type { Feature, Geometry, LineString } from 'geojson';
 import { FasteignirService } from './fasteignir/fasteignir.service';
 import { uniqueLandeignarnumer } from './fasteignir/fasteignir.types';
 import { landUnion, measureLineM, validateLine } from './geometry';
+import { WindbreakRegistryService } from './windbreaks/windbreak-registry.service';
 import type {
   ParcelFeature,
   ParcelProperties,
@@ -59,7 +60,10 @@ export class AppService {
   readonly demoFullName =
     process.env.DEMO_FULL_NAME || 'Guðmundur Jónsson';
 
-  constructor(private readonly fasteignirService: FasteignirService) {}
+  constructor(
+    private readonly fasteignirService: FasteignirService,
+    private readonly windbreakRegistryService: WindbreakRegistryService,
+  ) {}
 
   private async getOgc<P>(path: string): Promise<OgcFeatureCollection<P>> {
     let res: Response;
@@ -140,7 +144,19 @@ export class AppService {
       );
     }
 
-    const windbreaks = await this.fetchWindbreaksForParcels(parcels);
+    // Existing windbreaks come from two places:
+    //  - the skógrækt PostGIS registry (established windbreaks on the land,
+    //    ISN93 -> WGS84), and
+    //  - the application collection (submitted, not yet accepted).
+    const union = landUnion(parcels);
+    const registeredWindbreaks = union
+      ? await this.windbreakRegistryService.getWindbreaks(
+          JSON.stringify(union),
+        )
+      : [];
+    const pendingWindbreaks = await this.fetchWindbreaksForParcels(parcels);
+
+    const windbreaks = [...registeredWindbreaks, ...pendingWindbreaks];
 
     const establishedCount = windbreaks.filter(
       (w) => w.properties.status === 'established',

@@ -7,34 +7,6 @@
         "type": "LineString",
         "coordinates": [
           [
-            -18.57474,
-            63.479866
-          ],
-          [
-            -18.568706,
-            63.480924
-          ]
-        ]
-      },
-      "properties": {
-        "line_id": "WB-1998-0001-1",
-        "application_id": "WB-1998-0001",
-        "farmer_id": "farmer-123",
-        "kennitala": "2409693949",
-        "parcel_id": "IS-163368",
-        "status": "established",
-        "length_m": 321.9,
-        "submitted_at": "1998-03-12T00:00:00Z",
-        "planted_year": 1998
-      },
-      "id": "WB-1998-0001-1"
-    },
-    {
-      "type": "Feature",
-      "geometry": {
-        "type": "LineString",
-        "coordinates": [
-          [
             -18.55057,
             63.486069
           ],

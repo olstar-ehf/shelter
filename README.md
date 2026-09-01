@@ -117,6 +117,11 @@ npm run start:dev
   `true`). Set to `false` plus `FASTEIGNIR_API_URL` (default
   `https://api.fasteignaskra.is`) and `FASTEIGNIR_TOKEN` (an island.is
   Bearer JWT) to call the real X-Road service.
+* `WINDBREAK_REGISTRY_MOCK` — use the mocked existing-windbreak registry
+  (default `true`). Set to `false` and configure the skógrækt PostGIS
+  database with `WINDBREAK_DATABASE_URL` (or the standard `PGHOST`,
+  `PGPORT`, `PGDATABASE`, `PGUSER`, `PGPASSWORD`) to read real windbreaks
+  from `skograekt.skjolbelti`.
 * `PORT` — server port (default `3000`; the compose files publish it as
   8000/8080).
 
@@ -145,13 +150,32 @@ provider. The `farmers` collection is kept as a registry, but the
 application flow no longer assumes a `farmer_id` — it joins through the
 `landeignarnumer` list from the (mocked) Fasteignir-Xroad lookup.
 
+### Existing windbreaks (skógrækt PostGIS)
+
+Established windbreaks are read from the skógrækt database
+(`skograekt.skjolbelti`), not invented:
+
+```sql
+SELECT objectid, ST_AsGeoJSON(ST_Transform(geometry, 4326))::json AS geojson
+FROM skograekt.skjolbelti
+WHERE ST_Intersects(geometry,
+                    ST_Transform(ST_GeomFromGeoJSON($1)::geometry, 3057))
+```
+
+The geometry is stored in **ISN93 (EPSG:3057)**; the query filters to the
+windbreaks intersecting the farmer's land (passed as WGS84 GeoJSON) and
+returns them transformed to **WGS84 (EPSG:4326)** for the map and
+validation. The implementation lives in
+`src/windbreaks/windbreak-registry.service.ts` (Postgres via `pg`, mocked by
+default — see `WINDBREAK_REGISTRY_MOCK` above).
+
 ### Windbreak line attributes
 
-Each line stores: `line_id`, `application_id`, `kennitala`, `parcel_id`,
-`status`, `length_m`, `submitted_at`. Statuses:
+Windbreak *applications* store: `line_id`, `application_id`, `kennitala`,
+`parcel_id`, `status`, `length_m`, `submitted_at`. Statuses:
 
-* `established` — an old windbreak that already exists on the land
-  (e.g. `WB-1998-0001-1`, planted 1998, on parcel `IS-163368`).
+* `established` — windbreaks that already exist on the land, read from
+  `skograekt.skjolbelti` (identified on the map as `skjolbelti-<objectid>`).
 * `pending` — submitted but **not accepted yet** (e.g. the seeded
   `WB-2026-0042-1` on parcel `IS-163368`); new applications posted by the
   form also get `pending`.
@@ -185,6 +209,9 @@ frontend/
       fasteignir.types.ts    # types mirroring the Fasteignir-Xroad OpenAPI spec
       fasteignir.service.ts  # abstract service + mock + real X-Road client
       fasteignir.module.ts   # provider: mock by default (FASTEIGNIR_MOCK)
+    windbreaks/
+      windbreak-registry.service.ts  # skograekt.skjolbelti (PostGIS, ISN93->WGS84) + mock
+      windbreaks.module.ts   # provider: mock by default (WINDBREAK_REGISTRY_MOCK)
     geometry.ts              # shared turf.js validation (inside parcels, no crossings)
     types.ts                 # shared domain types
   views/
@@ -233,6 +260,11 @@ docker-compose.prod.yml      # production stack
   (`[163368]`) exactly as it would with the real service. Set
   `FASTEIGNIR_MOCK=false` + `FASTEIGNIR_TOKEN` to switch to the real
   X-Road endpoint.
+* **The windbreak registry is mocked** unless a database is configured
+  (`src/windbreaks/windbreak-registry.service.ts`). The real implementation
+  reads `skograekt.skjolbelti` from PostGIS (geometry in ISN93, transformed
+  to WGS84). Set `WINDBREAK_REGISTRY_MOCK=false` +
+  `WINDBREAK_DATABASE_URL` (or the `PG*` variables) to use it.
 * **Validation runs twice**: in the browser (immediate feedback) and again
   in the NestJS server before storage. A line must be ≥ 10 m, lie entirely
   inside the farmer's registered parcels, and not cross or touch any other

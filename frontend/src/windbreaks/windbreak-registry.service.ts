@@ -1,0 +1,111 @@
+import {
+  Injectable,
+  ServiceUnavailableException,
+} from '@nestjs/common';
+import { Pool } from 'pg';
+import type { WindbreakFeature } from '../types';
+
+/**
+ * Registry of existing windbreaks on the land, read from the
+ * skógrækt (forestry) database:
+ *
+ *   select objectid, geometry from skograekt.skjolbelti
+ *
+ * The geometry is stored in ISN93 (EPSG:3057) and is transformed to WGS84
+ * (EPSG:4326) on the way out. A mock implementation is used when the
+ * database is not configured (WINDBREAK_REGISTRY_MOCK, the default).
+ */
+export abstract class WindbreakRegistryService {
+  /**
+   * All windbreaks intersecting the given land (GeoJSON, WGS84).
+   *
+   * @param landGeoJson GeoJSON geometry of the farmer's land (WGS84)
+   */
+  abstract getWindbreaks(landGeoJson: string): Promise<WindbreakFeature[]>;
+}
+
+/**
+ * PostGIS-backed implementation. Connect with WINDBREAK_DATABASE_URL or the
+ * standard PG* environment variables (PGHOST, PGPORT, PGDATABASE, PGUSER,
+ * PGPASSWORD). The query filters windbreaks to those intersecting the
+ * farmer's land and returns their geometry as WGS84 GeoJSON.
+ */
+@Injectable()
+export class PostgresWindbreakRegistryService extends WindbreakRegistryService {
+  private readonly pool: Pool;
+
+  constructor() {
+    super();
+    this.pool = new Pool(
+      process.env.WINDBREAK_DATABASE_URL
+        ? { connectionString: process.env.WINDBREAK_DATABASE_URL }
+        : {},
+    );
+  }
+
+  async getWindbreaks(landGeoJson: string): Promise<WindbreakFeature[]> {
+    const sql = `
+      SELECT objectid,
+             ST_AsGeoJSON(ST_Transform(geometry, 4326))::json AS geojson
+      FROM skograekt.skjolbelti
+      WHERE ST_Intersects(
+        geometry,
+        ST_Transform(ST_GeomFromGeoJSON($1)::geometry, 3057)
+      )
+    `;
+
+    let result;
+    try {
+      result = await this.pool.query(sql, [landGeoJson]);
+    } catch (err) {
+      throw new ServiceUnavailableException(
+        `Windbreak registry query failed: ${err instanceof Error ? err.message : String(err)}`,
+      );
+    }
+
+    return (result.rows as Array<{ objectid: unknown; geojson: unknown }>).map(
+      (row) => {
+        const objectid = row.objectid;
+        return {
+          type: 'Feature',
+          geometry: row.geojson,
+          properties: {
+            objectid,
+            line_id: `skjolbelti-${objectid}`,
+            status: 'established',
+            source: 'skograekt.skjolbelti',
+          },
+        } as WindbreakFeature;
+      },
+    );
+  }
+}
+
+/**
+ * Mock implementation for running the prototype without a database: returns
+ * the same established windbreak the demo previously seeded, in the shape
+ * the Postgres provider would return.
+ */
+@Injectable()
+export class MockWindbreakRegistryService extends WindbreakRegistryService {
+  async getWindbreaks(_landGeoJson: string): Promise<WindbreakFeature[]> {
+    return [
+      {
+        type: 'Feature',
+        geometry: {
+          type: 'LineString',
+          coordinates: [
+            [-18.57474, 63.479866],
+            [-18.568706, 63.480924],
+          ],
+        },
+        properties: {
+          objectid: 1,
+          line_id: 'skjolbelti-1',
+          status: 'established',
+          source: 'skograekt.skjolbelti (mock)',
+        },
+      },
+    ];
+  }
+}
