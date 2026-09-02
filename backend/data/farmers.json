@@ -5,6 +5,22 @@
       "type": "Feature",
       "geometry": {
         "type": "Point",
+        "coordinates": [65.455517, -21.830261]
+      },
+      "properties": {
+        "farmer_id": "farmer-007",
+        "full_name": "Hafliði Viðar Ólafsson",
+        "farm_name": "Garpsdalur",
+        "kennitala": "061050-4429",
+        "address": "381 Reykhólahreppur",
+        "phone": "+354 434 7799",
+        "email": "garpsdalur@simnet.is"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
         "coordinates": [-18.560724, 63.483055]
       },
       "properties": {

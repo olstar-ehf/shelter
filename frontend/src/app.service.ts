@@ -152,6 +152,7 @@ export class AppService {
     const registeredWindbreaks = union
       ? await this.windbreakRegistryService.getWindbreaks(
           JSON.stringify(union),
+          landeignarnumer,
         )
       : [];
     const pendingWindbreaks = await this.fetchWindbreaksForParcels(parcels);

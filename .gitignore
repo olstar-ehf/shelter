@@ -23,5 +23,9 @@ frontend/dist/
 .venv/
 __pycache__/
 
+# headless-browser test scratch (regenerable)
+.pw-browsers/
+.pw-libs/
+
 # OS
 .DS_Store

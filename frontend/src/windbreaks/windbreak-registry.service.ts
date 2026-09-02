@@ -20,8 +20,13 @@ export abstract class WindbreakRegistryService {
    * All windbreaks intersecting the given land (GeoJSON, WGS84).
    *
    * @param landGeoJson GeoJSON geometry of the farmer's land (WGS84)
+   * @param landeignarnumer the land ids being looked up (used by the mock
+   *        to keep its data land-specific; ignored by the PostGIS query)
    */
-  abstract getWindbreaks(landGeoJson: string): Promise<WindbreakFeature[]>;
+  abstract getWindbreaks(
+    landGeoJson: string,
+    landeignarnumer: number[],
+  ): Promise<WindbreakFeature[]>;
 }
 
 /**
@@ -43,7 +48,10 @@ export class PostgresWindbreakRegistryService extends WindbreakRegistryService {
     );
   }
 
-  async getWindbreaks(landGeoJson: string): Promise<WindbreakFeature[]> {
+  async getWindbreaks(
+    landGeoJson: string,
+    _landeignarnumer: number[],
+  ): Promise<WindbreakFeature[]> {
     const sql = `
       SELECT objectid,
              ST_AsGeoJSON(ST_Transform(geometry, 4326))::json AS geojson
@@ -83,12 +91,19 @@ export class PostgresWindbreakRegistryService extends WindbreakRegistryService {
 
 /**
  * Mock implementation for running the prototype without a database: returns
- * the same established windbreak the demo previously seeded, in the shape
- * the Postgres provider would return.
+ * the same established windbreak the demo previously seeded - but only for
+ * its own land (landeignarnumer 163368), so other demo farmers do not
+ * inherit it.
  */
 @Injectable()
 export class MockWindbreakRegistryService extends WindbreakRegistryService {
-  async getWindbreaks(_landGeoJson: string): Promise<WindbreakFeature[]> {
+  async getWindbreaks(
+    _landGeoJson: string,
+    landeignarnumer: number[],
+  ): Promise<WindbreakFeature[]> {
+    if (!landeignarnumer.includes(163368)) {
+      return [];
+    }
     return [
       {
         type: 'Feature',

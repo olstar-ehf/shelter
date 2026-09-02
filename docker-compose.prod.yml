@@ -47,14 +47,14 @@ services:
       # Server-side URL of the pygeoapi backend (service name + internal port)
       PYGEOAPI_URL: http://backend:80
       # Assumed portal-session identity: name + kennitala only
-      DEMO_FULL_NAME: Guðmundur Jónsson
-      DEMO_KENNITALA: "2409693949"
+      DEMO_FULL_NAME: "${DEMO_FULL_NAME:-Guðmundur Jónsson}"
+      DEMO_KENNITALA: "${DEMO_KENNITALA:-2409693949}"
       # Fasteignir-Xroad lookup is mocked (no island.is Bearer token yet)
-      FASTEIGNIR_MOCK: "true"
+      FASTEIGNIR_MOCK: "${FASTEIGNIR_MOCK:-true}"
       # Existing windbreaks come from the skógrækt PostGIS database
       # (skograekt.skjolbelti, ISN93). Mocked here; for the real database set
       # WINDBREAK_REGISTRY_MOCK=false and WINDBREAK_DATABASE_URL (or PG*).
-      WINDBREAK_REGISTRY_MOCK: "true"
+      WINDBREAK_REGISTRY_MOCK: "${WINDBREAK_REGISTRY_MOCK:-true}"
       PORT: "3000"
     depends_on:
       - backend

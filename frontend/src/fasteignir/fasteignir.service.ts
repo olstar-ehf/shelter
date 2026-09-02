@@ -58,6 +58,30 @@ export class MockFasteignirService extends FasteignirService {
         hasNextPage: false,
       },
     },
+    '061050-4429': {
+      fasteignir: [
+        {
+          fasteignanumer: 'F13955501',
+          sjalfgefidStadfang: {
+            stadfanganumer: 2100555,
+            landeignarnumer: 139555,
+            postnumer: 381,
+            sveitarfelagBirting: 'Reykhólahreppur',
+            birting: 'Garpsdalur, 381 Reykhólahreppur',
+            birtingStutt: 'Garpsdalur',
+          },
+        },
+      ],
+      paging: {
+        page: 1,
+        pageSize: 25,
+        total: 1,
+        totalPages: 1,
+        offset: 0,
+        hasPreviousPage: false,
+        hasNextPage: false,
+      },
+    },
   };
 
   async getFasteignir(kennitala: string): Promise<FasteignSimpleWrapper> {
