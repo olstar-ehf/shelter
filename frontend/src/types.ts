@@ -1,4 +1,4 @@
-import type { Feature, LineString, Polygon } from 'geojson';
+import type { Feature, LineString, MultiLineString, Polygon } from 'geojson';
 
 /** A farmer record as returned by the `farmers` collection. */
 export interface Farmer {
@@ -45,7 +45,11 @@ export interface WindbreakProperties {
   planted_year?: number;
 }
 
-export type WindbreakFeature = Feature<LineString, WindbreakProperties>;
+/** skograekt.skjolbelti stores MultiLineStrings; applications are LineStrings. */
+export type WindbreakFeature = Feature<
+  LineString | MultiLineString,
+  WindbreakProperties
+>;
 
 /** One windbreak line drawn by the farmer on the map. */
 export interface WindbreakLine {

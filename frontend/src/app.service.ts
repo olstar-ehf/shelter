@@ -151,7 +151,10 @@ export class AppService {
     const union = landUnion(parcels);
     const registeredWindbreaks = union
       ? await this.windbreakRegistryService.getWindbreaks(
-          JSON.stringify(union),
+          // Bare geometry: this PostGIS build's ST_GeomFromGeoJSON rejects
+          // Feature/FeatureCollection envelopes ("invalid GeoJson
+          // representation").
+          JSON.stringify(union.geometry),
           landeignarnumer,
         )
       : [];

@@ -7,6 +7,7 @@ import turfUnion from '@turf/union';
 import type {
   Feature,
   LineString,
+  MultiLineString,
   MultiPolygon,
   Polygon,
   Position,
@@ -74,18 +75,31 @@ export function lineContainedIn(
 }
 
 /**
- * Whether two windbreak lines conflict, i.e. they cross, touch or overlap.
+ * Whether two windbreaks conflict, i.e. they cross, touch or overlap.
  * Pure crossings and touches are found with line-intersect; collinear
  * overlaps need line-overlap (line-intersect returns nothing for those).
+ * lineB may be a MultiLineString (skograekt.skjolbelti stores those): each
+ * part is checked separately.
  */
 export function linesConflict(
   lineA: Feature<LineString>,
-  lineB: Feature<LineString>,
+  lineB: Feature<LineString | MultiLineString>,
 ): boolean {
-  return (
-    lineIntersect(lineA, lineB).features.length > 0 ||
-    lineOverlap(lineA, lineB).features.length > 0
-  );
+  const parts =
+    lineB.geometry.type === 'MultiLineString'
+      ? lineB.geometry.coordinates
+      : [lineB.geometry.coordinates];
+  return parts.some((coordinates) => {
+    const part: Feature<LineString> = {
+      type: 'Feature',
+      geometry: { type: 'LineString', coordinates },
+      properties: {},
+    };
+    return (
+      lineIntersect(lineA, part).features.length > 0 ||
+      lineOverlap(lineA, part).features.length > 0
+    );
+  });
 }
 
 export interface ValidationContext {

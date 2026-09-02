@@ -17,9 +17,10 @@ import type { WindbreakFeature } from '../types';
  */
 export abstract class WindbreakRegistryService {
   /**
-   * All windbreaks intersecting the given land (GeoJSON, WGS84).
+   * All windbreaks intersecting the given land (bare GeoJSON geometry,
+   * WGS84 - no Feature wrapper, which this PostGIS build rejects).
    *
-   * @param landGeoJson GeoJSON geometry of the farmer's land (WGS84)
+   * @param landGeoJson bare GeoJSON geometry of the farmer's land (WGS84)
    * @param landeignarnumer the land ids being looked up (used by the mock
    *        to keep its data land-specific; ignored by the PostGIS query)
    */
