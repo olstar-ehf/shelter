@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="{{locale}}">
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Application submitted – Windbreak Grant Application</title>
+  <title>{{t.submittedTitle}} – {{t.schemeName}}</title>
   <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
   <link rel="stylesheet" href="/app.css" />
 </head>
@@ -12,58 +12,58 @@
     <header class="topbar">
       <div class="topbar-inner">
         <div>
-          <span class="topbar-brand">Land &amp; Nature Agency</span>
-          <span class="topbar-title">Windbreak Grant Scheme</span>
+          <span class="topbar-brand">{{t.agencyName}}</span>
+          <span class="topbar-title">{{t.schemeName}}</span>
+        </div>
+        <div class="topbar-session">
+          <span class="lang-switch" aria-label="Language">
+            <a href="?lang=is" class="{{#if isActive}}lang-active{{/if}}">Íslenska</a>
+            <span class="lang-sep">|</span>
+            <a href="?lang=en" class="{{#if enActive}}lang-active{{/if}}">English</a>
+          </span>
         </div>
       </div>
     </header>
 
     <main class="container">
       <ol class="stepper" aria-label="Application steps">
-        <li class="active"><span class="step-no">1</span> Your details</li>
-        <li class="active"><span class="step-no">2</span> Draw windbreak</li>
-        <li class="active"><span class="step-no">3</span> Review</li>
-        <li class="active"><span class="step-no">4</span> Submitted</li>
+        <li class="active"><span class="step-no">1</span> {{t.stepYourDetails}}</li>
+        <li class="active"><span class="step-no">2</span> {{t.stepDrawWindbreak}}</li>
+        <li class="active"><span class="step-no">3</span> {{t.stepReview}}</li>
+        <li class="active"><span class="step-no">4</span> {{t.stepSubmitted}}</li>
       </ol>
 
       {{#if error}}
         <div class="error-banner" role="alert">
-          <strong>Something went wrong:</strong> {{error}}
+          <strong>{{t.errorSomethingWrong}}</strong> {{error}}
         </div>
-        <p><a class="btn btn-secondary" href="/apply">Back to the application</a></p>
+        <p><a class="btn btn-secondary" href="/apply">{{t.btnBackToApplication}}</a></p>
       {{else}}
       <div class="card card-success">
-        <h2>Application submitted</h2>
-        <p>
-          Your windbreak grant application has been received and stored by
-          the grant service.
-        </p>
+        <h2>{{t.submittedTitle}}</h2>
+        <p>{{t.submittedLead}}</p>
 
         <dl class="details">
-          <dt>Application no.</dt>
+          <dt>{{t.labelApplicationNo}}</dt>
           <dd><strong>{{applicationId}}</strong></dd>
-          <dt>Submitted</dt>
+          <dt>{{t.labelSubmitted}}</dt>
           <dd>{{submittedAt}}</dd>
-          <dt>Windbreaks</dt>
-          <dd>{{lines.length}} line(s), {{totalLengthM}} m in total</dd>
-          <dt>Status</dt>
-          <dd><span class="chip chip-ok">pending — not accepted yet</span></dd>
+          <dt>{{t.labelWindbreaks}}</dt>
+          <dd>{{linesLabel}}</dd>
+          <dt>{{t.labelStatus}}</dt>
+          <dd><span class="chip chip-ok">{{t.statusPending}}</span></dd>
         </dl>
 
-        <p class="muted">
-          The grant authority will now review your application. Until it is
-          accepted, the requested windbreak counts as an existing windbreak:
-          new applications cannot cross it.
-        </p>
+        <p class="muted">{{t.submittedNote}}</p>
 
-        <h3>Stored in the backend</h3>
+        <h3>{{t.submittedStoredHeading}}</h3>
         <table class="lines-table">
           <thead>
             <tr>
-              <th>Line id</th>
-              <th>Parcel</th>
-              <th>Length</th>
-              <th>Status</th>
+              <th>{{t.colLineId}}</th>
+              <th>{{t.colParcel}}</th>
+              <th>{{t.colLength}}</th>
+              <th>{{t.colStatus}}</th>
             </tr>
           </thead>
           <tbody>
@@ -80,7 +80,7 @@
 
         <div class="step-actions">
           <a class="btn btn-primary" href="/apply">
-            Apply for another windbreak
+            {{t.btnApplyAgain}}
           </a>
         </div>
       </div>
@@ -89,11 +89,7 @@
 
     <footer class="app-footer">
       <div class="container">
-        <p>
-          Prototype &mdash; farmer authentication is assumed to have happened
-          in the portal. Data is served by a pygeoapi OGC API and stored in
-          local GeoJSON files.
-        </p>
+        <p>{{t.footerPrototype}}</p>
       </div>
     </footer>
   </div>

@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="{{locale}}">
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Draw your windbreak – Windbreak Grant Application</title>
+  <title>{{t.schemeName}}</title>
   <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
   <link rel="stylesheet" href="/app.css" />
 </head>
@@ -12,33 +12,38 @@
     <header class="topbar">
       <div class="topbar-inner">
         <div>
-          <span class="topbar-brand">Land &amp; Nature Agency</span>
-          <span class="topbar-title">Windbreak Grant Scheme</span>
+          <span class="topbar-brand">{{t.agencyName}}</span>
+          <span class="topbar-title">{{t.schemeName}}</span>
         </div>
         <div class="topbar-session">
           {{#if identity}}
             <span class="session-user">
               {{identity.fullName}} <span class="session-kennitala">(kt. {{identity.kennitala}})</span>
             </span>
-            <span class="chip chip-ok">Signed in</span>
+            <span class="chip chip-ok">{{t.signedIn}}</span>
           {{else}}
-            <span class="muted-inverse">Government portal session</span>
+            <span class="muted-inverse">{{t.portalSession}}</span>
           {{/if}}
+          <span class="lang-switch" aria-label="Language">
+            <a href="?lang=is" class="{{#if isActive}}lang-active{{/if}}">Íslenska</a>
+            <span class="lang-sep">|</span>
+            <a href="?lang=en" class="{{#if enActive}}lang-active{{/if}}">English</a>
+          </span>
         </div>
       </div>
     </header>
 
     <main class="container">
       <ol class="stepper" id="stepper" aria-label="Application steps">
-        <li data-step="1" class="active"><span class="step-no">1</span> Your details</li>
-        <li data-step="2" class="active"><span class="step-no">2</span> Draw windbreak</li>
-        <li data-step="3"><span class="step-no">3</span> Review</li>
-        <li data-step="4"><span class="step-no">4</span> Submitted</li>
+        <li data-step="1" class="active"><span class="step-no">1</span> {{t.stepYourDetails}}</li>
+        <li data-step="2" class="active"><span class="step-no">2</span> {{t.stepDrawWindbreak}}</li>
+        <li data-step="3"><span class="step-no">3</span> {{t.stepReview}}</li>
+        <li data-step="4"><span class="step-no">4</span> {{t.stepSubmitted}}</li>
       </ol>
 
       {{#if error}}
         <div class="error-banner" role="alert">
-          <strong>Something went wrong:</strong> {{error}}
+          <strong>{{t.errorSomethingWrong}}</strong> {{error}}
         </div>
       {{/if}}
 
@@ -47,89 +52,69 @@
       <p class="muted lookup-info">{{lookupSummary}}</p>
       {{/if}}
       <div class="card">
-        <h2 id="step-title">Draw your windbreak</h2>
+        <h2 id="step-title">{{t.applyTitleDraw}}</h2>
         <div id="draw-help">
-          <p class="muted">
-            Your registered parcels are shown on the map. Use the
-            <strong>line tool</strong> (top right) to draw one or more
-            windbreaks inside your land. Click to add points, double-click (or
-            press Enter) to finish. Use the edit tools to move or delete lines.
-          </p>
-          <p class="muted">
-            Your land already has
-            <strong>{{establishedLabel}}</strong>
-            and
-            <strong>{{pendingLabel}}</strong>
-            (not accepted yet). A new windbreak
-            <strong>may not cross or touch</strong> any of them, or another
-            windbreak in this application.
-          </p>
+          <p class="muted">{{{t.helpDrawParcels}}}</p>
+          <p class="muted">{{{helpDrawExisting}}}</p>
         </div>
         <div id="review-help" hidden>
-          <p class="muted">
-            Check the windbreaks you have drawn below and submit the
-            application when you are satisfied. In this step the map is
-            <strong>read-only</strong>: press <strong>Back to map</strong> to
-            add, move or delete a line.
-          </p>
+          <p class="muted">{{{t.helpReview}}}</p>
         </div>
 
         <div class="map-container" id="map"></div>
 
         <div class="map-legend" aria-hidden="true">
-          <span><i class="legend-swatch legend-parcel"></i> Your parcels</span>
-          <span><i class="legend-swatch legend-established"></i> Established windbreak</span>
-          <span><i class="legend-swatch legend-pending"></i> Pending (not accepted)</span>
+          <span><i class="legend-swatch legend-parcel"></i> {{t.legendParcels}}</span>
+          <span><i class="legend-swatch legend-established"></i> {{t.legendEstablished}}</span>
+          <span><i class="legend-swatch legend-pending"></i> {{t.legendPending}}</span>
         </div>
 
         <div class="lines-summary">
-          <h3>Drawn windbreaks (<span id="line-count">0</span>)</h3>
-          <p class="muted" id="no-lines">No windbreaks drawn yet.</p>
+          <h3>{{t.drawnHeadingLabel}} (<span id="line-count">0</span>)</h3>
+          <p class="muted" id="no-lines">{{t.drawnNone}}</p>
           <table class="lines-table" id="lines-table" hidden>
             <thead>
               <tr>
-                <th>#</th>
-                <th>Length</th>
-                <th>On parcel</th>
-                <th>Check</th>
+                <th>{{t.colNumber}}</th>
+                <th>{{t.colLength}}</th>
+                <th>{{t.colParcel}}</th>
+                <th>{{t.colCheck}}</th>
               </tr>
             </thead>
             <tbody id="lines-body"></tbody>
           </table>
 
           <div class="review-panel" id="review-panel" hidden>
-            <h3>Windbreaks in this application</h3>
-            <p class="muted">
-              The grant service checks these windbreaks again when you submit.
-            </p>
+            <h3>{{t.reviewPanelHeading}}</h3>
+            <p class="muted">{{t.reviewPanelNote}}</p>
             <table class="lines-table">
               <thead>
-                <tr><th>#</th><th>Length</th><th>On parcel</th></tr>
+                <tr><th>{{t.colNumber}}</th><th>{{t.colLength}}</th><th>{{t.colParcel}}</th></tr>
               </thead>
               <tbody id="review-body"></tbody>
             </table>
             <p class="muted">
-              Total length:
+              {{t.totalLength}}
               <strong><span id="review-total">0</span> m</strong>
             </p>
             <p class="error-text" id="submit-error" hidden></p>
             <div class="step-actions">
               <button type="button" class="btn btn-secondary" id="back-btn">
-                Back to map
+                {{t.btnBackToMap}}
               </button>
               <button type="button" class="btn btn-primary" id="submit-btn">
-                Submit application
+                {{t.btnSubmitApplication}}
               </button>
             </div>
           </div>
 
           <div class="step-actions">
             <span class="muted">
-              Total length:
+              {{t.totalLength}}
               <strong><span id="total-length">0</span> m</strong>
             </span>
             <button type="button" class="btn btn-primary" id="review-btn" disabled>
-              Review application
+              {{t.btnReviewApplication}}
             </button>
           </div>
         </div>
@@ -139,16 +124,13 @@
 
     <footer class="app-footer">
       <div class="container">
-        <p>
-          Prototype &mdash; farmer authentication is assumed to have happened
-          in the portal. Data is served by a pygeoapi OGC API and stored in
-          local GeoJSON files.
-        </p>
+        <p>{{t.footerPrototype}}</p>
       </div>
     </footer>
   </div>
 
   {{#unless error}}
+  <script id="locale-data" type="application/json">{{{localeJson}}}</script>
   <script id="parcels-data" type="application/json">{{{parcelsJson}}}</script>
   <script id="windbreaks-data" type="application/json">{{{windbreaksJson}}}</script>
   <script src="/app.js"></script>

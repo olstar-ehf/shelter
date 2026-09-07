@@ -62,7 +62,12 @@ export interface WindbreakLine {
 /** Result of validating a drawn line against the farmer's parcels. */
 export type Validation =
   | { status: 'ok'; parcelId: string | null }
-  | { status: 'error'; reason: string };
+  | {
+      status: 'error';
+      /** Message id in the locale catalogs (messages/en.ts, messages/is.ts). */
+      messageId: string;
+      values?: Record<string, string | number>;
+    };
 
 export interface ValidatedLine {
   line: WindbreakLine;

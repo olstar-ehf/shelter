@@ -94,6 +94,35 @@ body {
   color: #bcd3e4;
 }
 
+/* ---- language switch ---- */
+.lang-switch {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.9rem;
+  margin-left: 8px;
+}
+
+.lang-switch a {
+  color: #bcd3e4;
+  text-decoration: none;
+}
+
+.lang-switch a:hover {
+  text-decoration: underline;
+}
+
+.lang-switch a.lang-active {
+  color: #fff;
+  font-weight: 700;
+  text-decoration: none;
+  cursor: default;
+}
+
+.lang-sep {
+  color: #6f8fa8;
+}
+
 /* ---- layout ---- */
 .container {
   max-width: 960px;

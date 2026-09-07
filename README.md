@@ -125,6 +125,29 @@ npm run start:dev
 * `PORT` — server port (default `3000`; the compose files publish it as
   8000/8080).
 
+## Internationalisation (is + en)
+
+The app follows the island.is pattern: one flat **message catalog per
+locale** with **ICU MessageFormat** strings (`src/messages/en.ts`,
+`src/messages/is.ts`), formatted by `intl-messageformat` (the engine
+underneath react-intl, adapted to this NestJS + Handlebars + vanilla
+TypeScript stack).
+
+* The **locale** is resolved island.is-style: `?lang=is|en` query parameter
+  → `lang` cookie → `Accept-Language` header → default Icelandic. The
+  top-bar **Íslenska | English** switcher sets the cookie.
+* **Server side** (`src/i18n/`): views receive the raw catalog (`{{t.key}}`)
+  and pre-formatted ICU strings (lookup summary, plurals, validation
+  errors); `createTranslator(locale)` formats everything else.
+* **Client side**: the apply page embeds the chosen locale; the Leaflet
+  client formats validation chips, popups and step titles with the same
+  catalogs, and overrides leaflet-draw's own UI strings (`L.drawLocal`,
+  including tooltips and edit menus).
+* Shared validation messages are returned as **message ids** by
+  `src/geometry.ts` and formatted per locale on both sides.
+* Adding a locale = adding `src/messages/<locale>.ts` with the same keys,
+  registering it in `src/i18n/index.ts`, and adding a switcher link.
+
 ## OGC API backend
 
 Collections (all backed by GeoJSON files under `backend/data/`):
@@ -212,6 +235,11 @@ frontend/
     windbreaks/
       windbreak-registry.service.ts  # skograekt.skjolbelti (PostGIS, ISN93->WGS84) + mock
       windbreaks.module.ts   # provider: mock by default (WINDBREAK_REGISTRY_MOCK)
+    i18n/
+      index.ts               # locale resolution (query/cookie/header) + ICU translator
+      drawLocal.ts           # leaflet-draw UI strings per locale
+    messages/
+      en.ts / is.ts          # ICU MessageFormat catalogs (island.is style)
     geometry.ts              # shared turf.js validation (inside parcels, no crossings)
     types.ts                 # shared domain types
   views/

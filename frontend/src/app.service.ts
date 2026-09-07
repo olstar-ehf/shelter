@@ -8,6 +8,7 @@ import type { Feature, Geometry, LineString } from 'geojson';
 import { FasteignirService } from './fasteignir/fasteignir.service';
 import { uniqueLandeignarnumer } from './fasteignir/fasteignir.types';
 import { landUnion, measureLineM, validateLine } from './geometry';
+import { createTranslator, type Locale, type Translator } from './i18n';
 import { WindbreakRegistryService } from './windbreaks/windbreak-registry.service';
 import type {
   ParcelFeature,
@@ -29,6 +30,7 @@ export interface ApplyContext {
   identity: { fullName: string; kennitala: string };
   landeignarnumer: number[];
   lookupSummary: string;
+  helpDrawExisting: string;
   parcels: ParcelFeature[];
   windbreaks: WindbreakFeature[];
   parcelsJson: string;
@@ -41,6 +43,7 @@ export interface SubmittedContext {
   applicationId: string;
   submittedAt: string;
   totalLengthM: number;
+  linesLabel: string;
   lines: Array<Record<string, unknown>>;
 }
 
@@ -65,7 +68,10 @@ export class AppService {
     private readonly windbreakRegistryService: WindbreakRegistryService,
   ) {}
 
-  private async getOgc<P>(path: string): Promise<OgcFeatureCollection<P>> {
+  private async getOgc<P>(
+    path: string,
+    t: Translator,
+  ): Promise<OgcFeatureCollection<P>> {
     let res: Response;
     try {
       res = await fetch(`${this.pygeoapiUrl}${path}`, {
@@ -73,12 +79,12 @@ export class AppService {
       });
     } catch {
       throw new ServiceUnavailableException(
-        `Cannot reach the OGC API backend at ${this.pygeoapiUrl}.`,
+        t('errorBackendUnreachable', { url: this.pygeoapiUrl }),
       );
     }
     if (!res.ok) {
       throw new ServiceUnavailableException(
-        `OGC API backend returned HTTP ${res.status} for ${path}.`,
+        t('errorBackendHttp', { status: res.status, path }),
       );
     }
     return (await res.json()) as OgcFeatureCollection<P>;
@@ -87,9 +93,11 @@ export class AppService {
   /** Land parcels for one landeignarnumer (property/land id). */
   private async fetchParcelsByLandeignarnumer(
     landeignarnumer: number,
+    t: Translator,
   ): Promise<ParcelFeature[]> {
     const data = await this.getOgc<ParcelProperties>(
       `/collections/farm_parcels/items?landeignarnumer=${encodeURIComponent(landeignarnumer)}&f=json&limit=100`,
+      t,
     );
     return data.features as ParcelFeature[];
   }
@@ -97,6 +105,7 @@ export class AppService {
   /** Existing windbreaks on the given parcels. */
   private async fetchWindbreaksForParcels(
     parcels: ParcelFeature[],
+    t: Translator,
   ): Promise<WindbreakFeature[]> {
     const parcelIds = [
       ...new Set(parcels.map((p) => p.properties.parcel_id)),
@@ -105,6 +114,7 @@ export class AppService {
       parcelIds.map((id) =>
         this.getOgc<WindbreakProperties>(
           `/collections/windbreak_applications/items?parcel_id=${encodeURIComponent(id)}&f=json&limit=100`,
+          t,
         ),
       ),
     );
@@ -116,31 +126,43 @@ export class AppService {
    *  1. look up the properties registered on the assumed kennitala
    *     (Fasteignir-Xroad, mocked in this prototype),
    *  2. build the unique list of landeignarnumer from them,
-   *  3. load the land parcels and their windbreaks from the OGC API,
+   *  3. load the land parcels and their windbreaks from the registries,
    * all embedded as GeoJSON for the Leaflet map.
    */
-  async getApplyContext(): Promise<ApplyContext> {
-    const properties = await this.fasteignirService.getFasteignir(
-      this.demoKennitala,
-    );
+  async getApplyContext(locale: Locale): Promise<ApplyContext> {
+    const t = createTranslator(locale);
+
+    let properties;
+    try {
+      properties = await this.fasteignirService.getFasteignir(
+        this.demoKennitala,
+      );
+    } catch (err) {
+      const detail = err instanceof Error ? err.message : String(err);
+      throw new ServiceUnavailableException(
+        t('errorFasteignirLookupFailed', { detail }),
+      );
+    }
     const propertyCount = properties.fasteignir?.length ?? 0;
     const landeignarnumer = uniqueLandeignarnumer(properties);
 
     if (landeignarnumer.length === 0) {
       throw new BadRequestException(
-        `Fasteignir-Xroad found no properties for kennitala ${this.demoKennitala}.`,
+        t('errorNoProperties', { kennitala: this.demoKennitala }),
       );
     }
 
     const parcels = (
       await Promise.all(
-        landeignarnumer.map((num) => this.fetchParcelsByLandeignarnumer(num)),
+        landeignarnumer.map((num) =>
+          this.fetchParcelsByLandeignarnumer(num, t),
+        ),
       )
     ).flat();
 
     if (parcels.length === 0) {
       throw new BadRequestException(
-        `No land parcels found for landeignarnumer ${landeignarnumer.join(', ')}.`,
+        t('errorNoParcels', { list: landeignarnumer.join(', ') }),
       );
     }
 
@@ -149,16 +171,29 @@ export class AppService {
     //    ISN93 -> WGS84), and
     //  - the application collection (submitted, not yet accepted).
     const union = landUnion(parcels);
-    const registeredWindbreaks = union
-      ? await this.windbreakRegistryService.getWindbreaks(
-          // Bare geometry: this PostGIS build's ST_GeomFromGeoJSON rejects
-          // Feature/FeatureCollection envelopes ("invalid GeoJson
-          // representation").
-          JSON.stringify(union.geometry),
-          landeignarnumer,
-        )
-      : [];
-    const pendingWindbreaks = await this.fetchWindbreaksForParcels(parcels);
+    let registeredWindbreaks: WindbreakFeature[] = [];
+    if (union) {
+      try {
+        registeredWindbreaks =
+          await this.windbreakRegistryService.getWindbreaks(
+            // Bare geometry: this PostGIS build's ST_GeomFromGeoJSON rejects
+            // Feature/FeatureCollection envelopes ("invalid GeoJson
+            // representation").
+            JSON.stringify(union.geometry),
+            landeignarnumer,
+          );
+      } catch (err) {
+        const detail =
+          err instanceof Error ? err.message : String(err);
+        throw new ServiceUnavailableException(
+          t('errorRegistryQuery', { detail }),
+        );
+      }
+    }
+    const pendingWindbreaks = await this.fetchWindbreaksForParcels(
+      parcels,
+      t,
+    );
 
     const windbreaks = [...registeredWindbreaks, ...pendingWindbreaks];
 
@@ -167,12 +202,26 @@ export class AppService {
     ).length;
     const pendingCount = windbreaks.length - establishedCount;
 
-    const lookupSummary = `Fasteignir-Xroad found ${propertyCount} propert${propertyCount === 1 ? 'y' : 'ies'} on kennitala ${this.demoKennitala}, on ${landeignarnumer.length} land parcel${landeignarnumer.length === 1 ? '' : 's'}: landeignarnumer ${landeignarnumer.join(', ')}.`;
+    const establishedLabel = t('countEstablished', {
+      count: establishedCount,
+    });
+    const pendingLabel = t('countPending', { count: pendingCount });
+
+    const lookupSummary = t('lookupSummary', {
+      propertyCount,
+      landCount: landeignarnumer.length,
+      kennitala: this.demoKennitala,
+      list: landeignarnumer.join(', '),
+    });
 
     return {
       identity: { fullName: this.demoFullName, kennitala: this.demoKennitala },
       landeignarnumer,
       lookupSummary,
+      helpDrawExisting: t('helpDrawExisting', {
+        established: `<strong>${establishedLabel}</strong>`,
+        pending: `<strong>${pendingLabel}</strong>`,
+      }),
       parcels,
       windbreaks,
       parcelsJson: JSON.stringify({
@@ -183,8 +232,8 @@ export class AppService {
         type: 'FeatureCollection',
         features: windbreaks,
       }),
-      establishedLabel: `${establishedCount} established windbreak${establishedCount === 1 ? '' : 's'}`,
-      pendingLabel: `${pendingCount} pending application${pendingCount === 1 ? '' : 's'}`,
+      establishedLabel,
+      pendingLabel,
     };
   }
 
@@ -192,14 +241,17 @@ export class AppService {
    * Store one windbreak line in the backend via an OGC API Features
    * transaction (POST /collections/windbreak_applications/items).
    */
-  private async postLine(input: {
-    line: Feature<LineString, Record<string, unknown>>;
-    lineId: string;
-    applicationId: string;
-    kennitala: string;
-    parcelId: string | null;
-    lengthM: number;
-  }): Promise<void> {
+  private async postLine(
+    input: {
+      line: Feature<LineString, Record<string, unknown>>;
+      lineId: string;
+      applicationId: string;
+      kennitala: string;
+      parcelId: string | null;
+      lengthM: number;
+    },
+    t: Translator,
+  ): Promise<void> {
     const feature: Feature<LineString> = {
       type: 'Feature',
       geometry: input.line.geometry,
@@ -229,7 +281,7 @@ export class AppService {
     if (!res.ok) {
       const detail = (await res.text().catch(() => '')).slice(0, 400);
       throw new BadGatewayException(
-        `Storing the windbreak failed (HTTP ${res.status}): ${detail}`,
+        t('errorStoreFailed', { status: res.status, detail }),
       );
     }
   }
@@ -240,8 +292,10 @@ export class AppService {
    */
   async submitApplication(
     lines: Feature<LineString, Record<string, unknown>>[],
+    locale: Locale,
   ): Promise<{ applicationId: string }> {
-    const { parcels, windbreaks } = await this.getApplyContext();
+    const t = createTranslator(locale);
+    const { parcels, windbreaks } = await this.getApplyContext(locale);
     const union = landUnion(parcels);
 
     const drawn: WindbreakLine[] = lines.map((feature, index) => ({
@@ -262,35 +316,47 @@ export class AppService {
 
     for (const entry of validated) {
       if (entry.validation.status === 'error') {
-        throw new BadRequestException(entry.validation.reason);
+        throw new BadRequestException(
+          t(entry.validation.messageId, entry.validation.values),
+        );
       }
     }
 
     const applicationId = newApplicationId();
     for (let i = 0; i < validated.length; i += 1) {
       const entry = validated[i];
-      await this.postLine({
-        line: entry.line.feature,
-        lineId: `${applicationId}-${i + 1}`,
-        applicationId,
-        kennitala: this.demoKennitala,
-        parcelId:
-          entry.validation.status === 'ok' ? entry.validation.parcelId : null,
-        lengthM: entry.line.lengthM,
-      });
+      await this.postLine(
+        {
+          line: entry.line.feature,
+          lineId: `${applicationId}-${i + 1}`,
+          applicationId,
+          kennitala: this.demoKennitala,
+          parcelId:
+            entry.validation.status === 'ok'
+              ? entry.validation.parcelId
+              : null,
+          lengthM: entry.line.lengthM,
+        },
+        t,
+      );
     }
 
     return { applicationId };
   }
 
   /** Read an application back from the backend for the confirmation page. */
-  async getSubmittedContext(applicationId: string): Promise<SubmittedContext> {
+  async getSubmittedContext(
+    applicationId: string,
+    locale: Locale,
+  ): Promise<SubmittedContext> {
+    const t = createTranslator(locale);
     const data = await this.getOgc<WindbreakProperties>(
       `/collections/windbreak_applications/items?application_id=${encodeURIComponent(applicationId)}&f=json&limit=100`,
+      t,
     );
     if (data.features.length === 0) {
       throw new BadRequestException(
-        `Application ${applicationId} was not found in the backend.`,
+        t('errorApplicationNotFound', { applicationId }),
       );
     }
 
@@ -314,7 +380,16 @@ export class AppService {
         .sort()
         .pop() ?? new Date().toISOString();
 
-    return { applicationId, submittedAt, totalLengthM, lines };
+    return {
+      applicationId,
+      submittedAt,
+      totalLengthM,
+      linesLabel: t('submittedLines', {
+        count: lines.length,
+        total: Math.round(totalLengthM),
+      }),
+      lines,
+    };
   }
 }
 

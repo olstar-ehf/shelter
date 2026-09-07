@@ -46,7 +46,9 @@ async function main() {
   page.on('pageerror', (err) => pageErrors.push(String(err)));
 
   const openApplyPage = async () => {
-    await page.goto(APP_URL, { waitUntil: 'domcontentloaded', timeout: 120000 });
+    // ?lang=en makes the rest of the run (and the cookie) English, so the
+    // assertions below stay stable across locales.
+    await page.goto(`${APP_URL}?lang=en`, { waitUntil: 'domcontentloaded', timeout: 120000 });
     await page.waitForSelector('text=Apply for windbreak', { timeout: 120000 });
     await page.click('a:has-text("Apply for windbreak")');
     await page.waitForURL('**/apply', { timeout: 120000 });
@@ -54,6 +56,15 @@ async function main() {
     await page.waitForSelector('.leaflet-overlay-pane path', { timeout: 120000 });
     await page.waitForTimeout(1500);
   };
+
+  // Icelandic spot check: default locale renders the Icelandic catalog.
+  await page.goto(`${APP_URL}?lang=is`, { waitUntil: 'domcontentloaded', timeout: 120000 });
+  await page.waitForSelector('text=Sækja um skjólbelti', { timeout: 120000 });
+  const isLanding = await page.evaluate(() => ({
+    cta: document.body.textContent.includes('Sækja um skjólbelti'),
+    title: document.body.textContent.includes('Sækja um styrk til að gróðursetja skjólbelti'),
+  }));
+  console.log('Icelandic landing:', JSON.stringify(isLanding));
 
   const drawState = () =>
     page.evaluate(() => ({
@@ -221,7 +232,9 @@ async function main() {
   console.log('pageerrors:', pageErrors.length ? pageErrors : 'none');
   console.log('console errors:', consoleErrors.length ? consoleErrors.slice(0, 5) : 'none');
 
-  const pass = session1Ok && session2Ok && pageErrors.length === 0;
+  const pass =
+    isLanding.cta && isLanding.title &&
+    session1Ok && session2Ok && pageErrors.length === 0;
   console.log(pass ? 'E2E RESULT: PASS' : 'E2E RESULT: FAIL');
   await browser.close();
   process.exit(pass ? 0 : 1);

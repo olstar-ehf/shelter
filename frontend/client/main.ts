@@ -13,6 +13,7 @@ import type {
   Feature,
   FeatureCollection,
   LineString,
+  MultiLineString,
   Polygon,
 } from 'geojson';
 import {
@@ -21,6 +22,8 @@ import {
   totalLengthM,
   validateLine,
 } from '../src/geometry';
+import { createTranslator, type Locale } from '../src/i18n';
+import { drawLocalByLocale } from '../src/i18n/drawLocal';
 import type {
   ParcelFeature,
   ParcelProperties,
@@ -61,11 +64,19 @@ function escapeHtml(value: string): string {
     .replace(/"/g, '&quot;');
 }
 
+// Locale chosen server side (query param / cookie / Accept-Language).
+const { locale } = readEmbeddedJson<{ locale: Locale }>('locale-data');
+const t = createTranslator(locale);
+
+// Translate leaflet-draw's own UI (toolbar buttons, tooltips, edit menus).
+(L as unknown as { drawLocal: Record<string, unknown> }).drawLocal =
+  drawLocalByLocale(locale);
+
 const parcels = readEmbeddedJson<
   FeatureCollection<Polygon, ParcelProperties>
 >('parcels-data').features as ParcelFeature[];
 const windbreaks = readEmbeddedJson<
-  FeatureCollection<LineString, WindbreakProperties>
+  FeatureCollection<LineString | MultiLineString, WindbreakProperties>
 >('windbreaks-data').features as WindbreakFeature[];
 
 const mapContainer = document.getElementById('map');
@@ -132,8 +143,12 @@ L.geoJSON(
       const status = String(p.status ?? '');
       const label =
         status === 'established'
-          ? `Established windbreak${p.planted_year !== undefined ? ` (planted ${p.planted_year})` : ''}`
-          : `Pending application ${p.application_id ?? '?'} — not accepted yet`;
+          ? p.planted_year !== undefined
+            ? t('popupEstablishedPlanted', { year: String(p.planted_year) })
+            : t('popupEstablished')
+          : t('popupPending', {
+              applicationId: String(p.application_id ?? '?'),
+            });
       layer.bindPopup(
         `<strong>${escapeHtml(label)}</strong><br/>${escapeHtml(String(p.line_id ?? ''))}`,
       );
@@ -194,7 +209,7 @@ const collectLines = (): WindbreakLine[] => {
 
 const parcelNameFor = (parcelId: string | null): string => {
   if (!parcelId) {
-    return 'Spans several parcels';
+    return t('spansSeveralParcels');
   }
   return (
     parcels.find((p) => p.properties.parcel_id === parcelId)?.properties
@@ -247,8 +262,12 @@ function renderSummary(): void {
         : '—';
     const checkCell =
       entry.validation.status === 'ok'
-        ? '<span class="chip chip-ok">Inside your land</span>'
-        : `<span class="chip chip-error" title="${escapeHtml(entry.validation.reason)}">${escapeHtml(entry.validation.reason)}</span>`;
+        ? `<span class="chip chip-ok">${escapeHtml(t('chipInsideLand'))}</span>`
+        : `<span class="chip chip-error" title="${escapeHtml(
+            t(entry.validation.messageId, entry.validation.values),
+          )}">${escapeHtml(
+            t(entry.validation.messageId, entry.validation.values),
+          )}</span>`;
     const tr = document.createElement('tr');
     tr.innerHTML = `
       <td>${index + 1}</td>
@@ -283,8 +302,8 @@ function setStep(current: number): void {
   const reviewing = current >= 3;
   if (stepTitleEl) {
     stepTitleEl.textContent = reviewing
-      ? 'Review your application'
-      : 'Draw your windbreak';
+      ? t('applyTitleReview')
+      : t('applyTitleDraw');
   }
   if (drawHelpEl) {
     drawHelpEl.hidden = reviewing;
@@ -350,7 +369,7 @@ async function submitApplication(): Promise<void> {
   submitBtn.disabled = true;
   submitErrorEl!.hidden = true;
   try {
-    const res = await fetch('/apply', {
+    const res = await fetch(`/apply?lang=${encodeURIComponent(locale)}`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -362,7 +381,7 @@ async function submitApplication(): Promise<void> {
     });
     if (res.ok) {
       const data = (await res.json()) as { applicationId: string };
-      window.location.href = `/submitted/${encodeURIComponent(data.applicationId)}`;
+      window.location.href = `/submitted/${encodeURIComponent(data.applicationId)}?lang=${encodeURIComponent(locale)}`;
       return;
     }
     const data = (await res.json().catch(() => null)) as {
@@ -370,12 +389,12 @@ async function submitApplication(): Promise<void> {
     } | null;
     const message = Array.isArray(data?.message)
       ? data.message.join(' ')
-      : (data?.message ?? `Submission failed (HTTP ${res.status}).`);
+      : (data?.message ?? `${t('submitFailedGeneric')} (HTTP ${res.status}).`);
     submitErrorEl!.textContent = message;
     submitErrorEl!.hidden = false;
   } catch (err) {
     submitErrorEl!.textContent =
-      err instanceof Error ? err.message : 'Submission failed.';
+      err instanceof Error ? err.message : t('submitFailedGeneric');
     submitErrorEl!.hidden = false;
   } finally {
     submitBtn.disabled = false;

@@ -123,44 +123,44 @@ export function validateLine(
 ): Validation {
   const coordinates = line.feature.geometry.coordinates;
   if (coordinates.length < 2) {
-    return { status: 'error', reason: 'A windbreak needs at least 2 points.' };
+    return { status: 'error', messageId: 'validationMinPoints' };
   }
   if (line.lengthM < MIN_LENGTH_M) {
     return {
       status: 'error',
-      reason: `Too short: ${Math.round(line.lengthM)} m (minimum ${MIN_LENGTH_M} m).`,
+      messageId: 'validationTooShort',
+      values: { length: Math.round(line.lengthM), min: MIN_LENGTH_M },
     };
   }
   if (!context.union || !lineContainedIn(context.union, line.feature)) {
-    return {
-      status: 'error',
-      reason: 'Outside your land: draw the windbreak inside your parcels.',
-    };
+    return { status: 'error', messageId: 'validationOutsideLand' };
   }
 
   const crossedExisting = context.existingWindbreaks.find((windbreak) =>
     linesConflict(line.feature, windbreak),
   );
   if (crossedExisting) {
-    const statusLabel =
-      crossedExisting.properties.status === 'established'
-        ? 'established windbreak'
-        : `pending application ${crossedExisting.properties.application_id}`;
-    return {
-      status: 'error',
-      reason: `Crosses or touches ${statusLabel} (${crossedExisting.properties.line_id}).`,
-    };
+    return crossedExisting.properties.status === 'established'
+      ? {
+          status: 'error',
+          messageId: 'validationCrossesEstablished',
+          values: { lineId: crossedExisting.properties.line_id },
+        }
+      : {
+          status: 'error',
+          messageId: 'validationCrossesPending',
+          values: {
+            applicationId: crossedExisting.properties.application_id ?? '?',
+            lineId: crossedExisting.properties.line_id,
+          },
+        };
   }
 
   const crossedDrawn = context.otherLines.find((other) =>
     linesConflict(line.feature, other.feature),
   );
   if (crossedDrawn) {
-    return {
-      status: 'error',
-      reason:
-        'Crosses or touches another windbreak you are drawing in this application.',
-    };
+    return { status: 'error', messageId: 'validationCrossesDrawn' };
   }
 
   const parcelId =
