@@ -37,7 +37,9 @@ services:
 
   frontend:
     build:
-      context: ./frontend
+      # Repo-root context: the frontend depends on libs/map (file: dep)
+      context: .
+      dockerfile: frontend/Dockerfile
       target: serve
     image: windbreak-frontend
     container_name: windbreak-frontend
@@ -55,6 +57,7 @@ services:
       # (skograekt.skjolbelti, ISN93). Mocked here; for the real database set
       # WINDBREAK_REGISTRY_MOCK=false and WINDBREAK_DATABASE_URL (or PG*).
       WINDBREAK_REGISTRY_MOCK: "${WINDBREAK_REGISTRY_MOCK:-true}"
+      WINDBREAK_DATABASE_URL: "${WINDBREAK_DATABASE_URL:-}"
       PORT: "3000"
     depends_on:
       - backend

@@ -45,7 +45,9 @@ services:
 
   frontend:
     build:
-      context: ./frontend
+      # Repo-root context: the frontend depends on libs/map (file: dep)
+      context: .
+      dockerfile: frontend/Dockerfile
       target: develop
     image: windbreak-frontend
     container_name: windbreak-frontend
@@ -56,21 +58,24 @@ services:
       # Server-side URL of the pygeoapi backend (service name + internal port)
       PYGEOAPI_URL: http://backend:80
       # Assumed portal-session identity: name + kennitala only
-      DEMO_FULL_NAME: "${DEMO_FULL_NAME}"
-      DEMO_KENNITALA: "${DEMO_KENNITALA}"
+      DEMO_FULL_NAME: "${DEMO_FULL_NAME:-Guðmundur Jónsson}"
+      DEMO_KENNITALA: "${DEMO_KENNITALA:-2409693949}"
       # Fasteignir-Xroad lookup is mocked (no island.is Bearer token yet)
       FASTEIGNIR_MOCK: "${FASTEIGNIR_MOCK:-true}"
       # Existing windbreaks come from the skógrækt PostGIS database
       # (skograekt.skjolbelti, ISN93). Mocked here; for the real database set
       # WINDBREAK_REGISTRY_MOCK=false and WINDBREAK_DATABASE_URL (or PG*).
-      WINDBREAK_REGISTRY_MOCK: "${WINDBREAK_REGISTRY_MOCK}"
-      WINDBREAK_DATABASE_URL: ${WINDBREAK_DATABASE_URL}   # or the PG* variables
+      WINDBREAK_REGISTRY_MOCK: "${WINDBREAK_REGISTRY_MOCK:-true}"
+      WINDBREAK_DATABASE_URL: "${WINDBREAK_DATABASE_URL:-}"   # or the PG* variables
       PORT: "3000"
     volumes:
-      - ./frontend:/app
-      - frontend_node_modules:/app/node_modules
+      - ./frontend:/workspace/frontend
+      - ./libs/map:/workspace/libs/map
+      - frontend_node_modules:/workspace/frontend/node_modules
+      - map_node_modules:/workspace/libs/map/node_modules
     depends_on:
       - backend
 
 volumes:
   frontend_node_modules:
+  map_node_modules:

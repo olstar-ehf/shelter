@@ -49,9 +49,6 @@ export const en: Record<string, string> = {
     '{count, plural, one {# pending application} other {# pending applications}}',
   helpReview:
     'Check the windbreaks you have drawn below and submit the application when you are satisfied. In this step the map is read-only: press Back to map to add, move or delete a line.',
-  legendParcels: 'Your parcels',
-  legendEstablished: 'Established windbreak',
-  legendPending: 'Pending (not accepted)',
   drawnHeadingLabel: 'Drawn windbreaks',
   drawnNone: 'No windbreaks drawn yet.',
   colNumber: '#',
@@ -65,7 +62,7 @@ export const en: Record<string, string> = {
   btnBackToMap: 'Back to map',
   btnSubmitApplication: 'Submit application',
   btnReviewApplication: 'Review application',
-  spansSeveralParcels: 'Spans several parcels',
+  submitFailedGeneric: 'Submission failed.',
 
   // confirmation page
   submittedTitle: 'Application submitted',
@@ -86,25 +83,6 @@ export const en: Record<string, string> = {
   btnApplyAgain: 'Apply for another windbreak',
   btnBackToApplication: 'Back to the application',
 
-  // client (map + dynamic UI)
-  chipInsideLand: 'Inside your land',
-  popupEstablished: 'Established windbreak',
-  popupEstablishedPlanted: 'Established windbreak (planted {year})',
-  popupPending: 'Pending application {applicationId} — not accepted yet',
-  submitFailedGeneric: 'Submission failed.',
-
-  // validation messages (keys returned by the shared geometry module)
-  validationMinPoints: 'A windbreak needs at least 2 points.',
-  validationTooShort: 'Too short: {length} m (minimum {min} m).',
-  validationOutsideLand:
-    'Outside your land: draw the windbreak inside your parcels.',
-  validationCrossesEstablished:
-    'Crosses or touches established windbreak ({lineId}).',
-  validationCrossesPending:
-    'Crosses or touches pending application {applicationId} ({lineId}).',
-  validationCrossesDrawn:
-    'Crosses or touches another windbreak you are drawing in this application.',
-
   // server-side error messages
   errorNoProperties:
     'Fasteignir-Xroad found no properties for kennitala {kennitala}.',
@@ -121,82 +99,4 @@ export const en: Record<string, string> = {
   errorFasteignirHttp: 'Fasteignir-Xroad returned HTTP {status} ({detail})',
   errorFasteignirLookupFailed: 'Fasteignir-Xroad lookup failed: {detail}',
   errorStoreFailed: 'Storing the windbreak failed (HTTP {status}): {detail}',
-};
-
-/** leaflet-draw's own UI strings (L.drawLocal override). */
-export const drawLocalEn = {
-  draw: {
-    toolbar: {
-      actions: { title: 'Cancel drawing', text: 'Cancel' },
-      finish: { title: 'Finish drawing', text: 'Finish' },
-      undo: { title: 'Delete last point drawn', text: 'Delete last point' },
-      buttons: {
-        polyline: 'Draw a windbreak line',
-        polygon: 'Draw a polygon',
-        rectangle: 'Draw a rectangle',
-        circle: 'Draw a circle',
-        marker: 'Draw a marker',
-        circlemarker: 'Draw a circlemarker',
-      },
-    },
-    handlers: {
-      circle: {
-        tooltip: { start: 'Click and drag to draw circle.' },
-        radius: 'Radius',
-      },
-      circlemarker: {
-        tooltip: { start: 'Click map to place circle marker.' },
-      },
-      marker: {
-        tooltip: { start: 'Click map to place marker.' },
-      },
-      polygon: {
-        tooltip: {
-          start: 'Click to start drawing shape.',
-          cont: 'Click to continue drawing shape.',
-          end: 'Click first point to close this shape.',
-        },
-      },
-      polyline: {
-        error: '<strong>Error:</strong> shape edges cannot cross!',
-        tooltip: {
-          start: 'Click to start drawing line.',
-          cont: 'Click to continue drawing line.',
-          end: 'Click last point to finish line.',
-        },
-      },
-      rectangle: {
-        tooltip: { start: 'Click and drag to draw rectangle.' },
-      },
-      simpleshape: {
-        tooltip: { end: 'Release mouse to finish drawing.' },
-      },
-    },
-  },
-  edit: {
-    toolbar: {
-      actions: {
-        save: { title: 'Save changes', text: 'Save' },
-        cancel: { title: 'Cancel editing, discards all changes', text: 'Cancel' },
-        clearAll: { title: 'Clear all layers', text: 'Clear All' },
-      },
-      buttons: {
-        edit: 'Edit layers',
-        editDisabled: 'No layers to edit',
-        remove: 'Delete layers',
-        removeDisabled: 'No layers to delete',
-      },
-    },
-    handlers: {
-      edit: {
-        tooltip: {
-          text: 'Drag handles or markers to edit features.',
-          subtext: 'Click cancel to undo changes.',
-        },
-      },
-      remove: {
-        tooltip: { text: 'Click on a feature to remove.' },
-      },
-    },
-  },
 };

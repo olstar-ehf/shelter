@@ -14,9 +14,11 @@ import type {
 } from 'geojson';
 import type {
   ParcelFeature,
+  ValidatedLine,
   Validation,
   WindbreakFeature,
   WindbreakLine,
+  WindbreakValidationContext,
 } from './types';
 
 /** Minimum accepted windbreak length (metres). */
@@ -49,13 +51,9 @@ export function totalLengthM(lines: WindbreakLine[]): number {
 }
 
 /**
- * Whether the whole line lies within the (multi)polygon.
- *
- * Note: @turf/boolean-contains throws "feature1 MultiPolygon geometry not
- * supported" when the container is a MultiPolygon (which is what landUnion
- * produces for disjoint parcels), so containment is checked by sampling the
- * line's vertices and segment midpoints with booleanPointInPolygon, which
- * supports both Polygon and MultiPolygon containers.
+ * Whether the whole line lies within the (multi)polygon. Sampled via
+ * vertices + segment midpoints because @turf/boolean-contains cannot handle
+ * MultiPolygon containers (it throws).
  */
 export function lineContainedIn(
   container: Feature<Polygon | MultiPolygon>,
@@ -75,11 +73,8 @@ export function lineContainedIn(
 }
 
 /**
- * Whether two windbreaks conflict, i.e. they cross, touch or overlap.
- * Pure crossings and touches are found with line-intersect; collinear
- * overlaps need line-overlap (line-intersect returns nothing for those).
- * lineB may be a MultiLineString (skograekt.skjolbelti stores those): each
- * part is checked separately.
+ * Whether two windbreaks conflict (cross, touch or overlap). lineB may be a
+ * MultiLineString (skograekt.skjolbelti stores those); each part is checked.
  */
 export function linesConflict(
   lineA: Feature<LineString>,
@@ -102,38 +97,30 @@ export function linesConflict(
   });
 }
 
-export interface ValidationContext {
-  union: Feature<Polygon | MultiPolygon> | null;
-  parcels: ParcelFeature[];
-  /** Windbreaks already on the land (established or pending acceptance). */
-  existingWindbreaks: WindbreakFeature[];
-  /** Other lines drawn in the current application. */
-  otherLines: WindbreakLine[];
-}
-
 /**
  * A windbreak is acceptable when it is long enough, lies entirely within the
- * farmer's land (the union of their registered parcels), and does not cross
- * or touch any other windbreak (established, pending, or drawn in this
- * application).
+ * farmer's land, and does not cross or touch any other windbreak
+ * (established, pending, or drawn in the same application).
  */
 export function validateLine(
   line: WindbreakLine,
-  context: ValidationContext,
+  union: Feature<Polygon | MultiPolygon> | null,
+  context: WindbreakValidationContext,
+  otherLines: WindbreakLine[],
 ): Validation {
   const coordinates = line.feature.geometry.coordinates;
   if (coordinates.length < 2) {
-    return { status: 'error', messageId: 'validationMinPoints' };
+    return { status: 'error', messageId: 'validation.minPoints' };
   }
   if (line.lengthM < MIN_LENGTH_M) {
     return {
       status: 'error',
-      messageId: 'validationTooShort',
+      messageId: 'validation.tooShort',
       values: { length: Math.round(line.lengthM), min: MIN_LENGTH_M },
     };
   }
-  if (!context.union || !lineContainedIn(context.union, line.feature)) {
-    return { status: 'error', messageId: 'validationOutsideLand' };
+  if (!union || !lineContainedIn(union, line.feature)) {
+    return { status: 'error', messageId: 'validation.outsideLand' };
   }
 
   const crossedExisting = context.existingWindbreaks.find((windbreak) =>
@@ -143,12 +130,12 @@ export function validateLine(
     return crossedExisting.properties.status === 'established'
       ? {
           status: 'error',
-          messageId: 'validationCrossesEstablished',
+          messageId: 'validation.crossesEstablished',
           values: { lineId: crossedExisting.properties.line_id },
         }
       : {
           status: 'error',
-          messageId: 'validationCrossesPending',
+          messageId: 'validation.crossesPending',
           values: {
             applicationId: crossedExisting.properties.application_id ?? '?',
             lineId: crossedExisting.properties.line_id,
@@ -156,15 +143,32 @@ export function validateLine(
         };
   }
 
-  const crossedDrawn = context.otherLines.find((other) =>
+  const crossedDrawn = otherLines.find((other) =>
     linesConflict(line.feature, other.feature),
   );
   if (crossedDrawn) {
-    return { status: 'error', messageId: 'validationCrossesDrawn' };
+    return { status: 'error', messageId: 'validation.crossesDrawn' };
   }
 
   const parcelId =
     context.parcels.find((parcel) => lineContainedIn(parcel, line.feature))
       ?.properties.parcel_id ?? null;
   return { status: 'ok', parcelId };
+}
+
+/** Validate a whole application: each line against the context + the others. */
+export function validateWindbreakLines(
+  lines: WindbreakLine[],
+  context: WindbreakValidationContext,
+): ValidatedLine[] {
+  const union = landUnion(context.parcels);
+  return lines.map((line) => ({
+    line,
+    validation: validateLine(
+      line,
+      union,
+      context,
+      lines.filter((other) => other.clientId !== line.clientId),
+    ),
+  }));
 }

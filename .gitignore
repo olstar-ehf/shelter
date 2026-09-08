@@ -27,5 +27,11 @@ __pycache__/
 .pw-browsers/
 .pw-libs/
 
+# Storybook build output
+storybook-static/
+
+# lib build output
+libs/map/dist/
+
 # OS
 .DS_Store

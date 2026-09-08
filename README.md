@@ -32,9 +32,9 @@ draws lines on a map of their own land and submits.
 * The **frontend** is a [NestJS](https://nestjs.com/) application written in
   TypeScript. Pages are **server-rendered** with Handlebars (Nest MVC), and
   the Nest server performs the lookups and the application submissions
-  itself. The interactive map is a Leaflet client bundle
-  (`client/main.ts`, compiled with esbuild) that Nest serves as a static
-  asset.
+  itself. The interactive map is a **React client** (`client/main.tsx`,
+  compiled with esbuild) built on the reusable `@island.is/map` component
+  library (`libs/map/`, Phase 1 of the island.is monorepo migration).
 * The **Fasteignir-Xroad** property lookup (`src/fasteignir/`) is **mocked**
   in this prototype because the real service requires an island.is Bearer
   token. The mock returns, for kennitala `2409693949`, two registered
@@ -100,13 +100,22 @@ gunicorn --workers 1 --bind 127.0.0.1:5000 windbreak_app:APP
 Frontend:
 
 ```bash
-cd frontend
+cd libs/map && npm install && npm run build   # build the lib first
+cd ../frontend
 npm install
 npm run build          # nest build + esbuild client bundle
 PYGEOAPI_URL=http://localhost:5000 PORT=8000 npm start
 # or, with watch mode:
 npm run start:dev
 ```
+
+The frontend consumes the compiled lib (`@island.is/map`, a
+`file:../../libs/map` dependency), so `libs/map` must be rebuilt after lib
+changes. The Docker builds do this automatically (monorepo build context).
+
+Troubleshooting: if `@island.is/map` fails to resolve after `npm install`
+(link target one level too deep), recreate the link with
+`ln -sfn ../../../libs/map frontend/node_modules/@island.is/map`.
 
 * `PYGEOAPI_URL` — base URL of the pygeoapi backend as seen **from the
   NestJS server** (default `http://localhost:5000`; in Docker it is
@@ -128,25 +137,38 @@ npm run start:dev
 ## Internationalisation (is + en)
 
 The app follows the island.is pattern: one flat **message catalog per
-locale** with **ICU MessageFormat** strings (`src/messages/en.ts`,
-`src/messages/is.ts`), formatted by `intl-messageformat` (the engine
-underneath react-intl, adapted to this NestJS + Handlebars + vanilla
-TypeScript stack).
+locale** with **ICU MessageFormat** strings. The catalogs are split by
+ownership, exactly like island.is's `libs/localization` namespaces:
+
+* `libs/map/src/messages/{en,is}.ts` — the map lib's namespaces:
+  `map.*` (legend, popups, chips), `validation.*` (validation message ids
+  returned by the lib's geometry code) and `drawLocal.*` (leaflet-draw's own
+  UI strings).
+* `frontend/src/messages/{en,is}.ts` — the app's chrome/stepper/apply/
+  submitted/error keys.
+
+Both sides merge them into one flat catalog (`flattenMessages` in the lib,
+`frontend/src/i18n/index.ts` on the server, `client/main.tsx` in the
+browser), so the server and the client format the exact same messages —
+including the shared `validation.*` ids.
 
 * The **locale** is resolved island.is-style: `?lang=is|en` query parameter
   → `lang` cookie → `Accept-Language` header → default Icelandic. The
   top-bar **Íslenska | English** switcher sets the cookie.
 * **Server side** (`src/i18n/`): views receive the raw catalog (`{{t.key}}`)
   and pre-formatted ICU strings (lookup summary, plurals, validation
-  errors); `createTranslator(locale)` formats everything else.
-* **Client side**: the apply page embeds the chosen locale; the Leaflet
-  client formats validation chips, popups and step titles with the same
-  catalogs, and overrides leaflet-draw's own UI strings (`L.drawLocal`,
-  including tooltips and edit menus).
-* Shared validation messages are returned as **message ids** by
-  `src/geometry.ts` and formatted per locale on both sides.
-* Adding a locale = adding `src/messages/<locale>.ts` with the same keys,
-  registering it in `src/i18n/index.ts`, and adding a switcher link.
+  errors); `createTranslator(locale)` formats everything else. The server
+  imports the lib through the **React-free** `@island.is/map/server` entry,
+  so the NestJS process never loads react-leaflet.
+* **Client side**: the apply page embeds the chosen locale; the React client
+  (`DrawApplication`) renders everything with `react-intl`
+  (`IntlProvider` + `formatMessage`), and `WindbreakDrawControl` overrides
+  leaflet-draw's own UI strings (`L.drawLocal`) from `drawLocal.*`.
+* Shared validation messages are returned as **message ids** by the lib's
+  geometry code and formatted per locale on both sides.
+* Adding a locale = adding `libs/map/src/messages/<locale>.ts` and
+  `frontend/src/messages/<locale>.ts` with the same keys and registering it
+  in `frontend/src/i18n/index.ts` (plus a switcher link).
 
 ## OGC API backend
 
@@ -208,8 +230,9 @@ established, dashed orange = pending). **A new windbreak may not cross or
 touch any other windbreak** — neither established ones nor pending
 applications, nor the other lines drawn in the same application. The rule is
 checked in the browser (immediate feedback) and again by the NestJS server
-before storage, both using the same shared `src/geometry.ts` module
-(`@turf/line-intersect` + `@turf/line-overlap`).
+before storage, both using the same shared `libs/map/src/geometry.ts` module
+(`@turf/line-intersect` + `@turf/line-overlap`) — the lib is the single
+source of truth; the frontend only imports it.
 
 ## Repository layout
 
@@ -220,7 +243,7 @@ backend/
   windbreak_app.py           # WSGI entry point with transaction body patch
   data/                      # seed GeoJSON (farmers, parcels, applications)
 frontend/
-  Dockerfile                 # multi-stage: develop / build / serve (node)
+  Dockerfile                 # multi-stage: develop / build / serve (monorepo context)
   nest-cli.json
   tsconfig.json / tsconfig.build.json
   src/
@@ -237,28 +260,41 @@ frontend/
       windbreaks.module.ts   # provider: mock by default (WINDBREAK_REGISTRY_MOCK)
     i18n/
       index.ts               # locale resolution (query/cookie/header) + ICU translator
-      drawLocal.ts           # leaflet-draw UI strings per locale
+                             # merges the lib's map/validation/drawLocal catalogs
     messages/
-      en.ts / is.ts          # ICU MessageFormat catalogs (island.is style)
-    geometry.ts              # shared turf.js validation (inside parcels, no crossings)
-    types.ts                 # shared domain types
+      en.ts / is.ts          # app ICU MessageFormat catalogs (island.is style)
   views/
     index.hbs                # landing page (server-rendered)
-    apply.hbs                # draw page with embedded parcels/windbreaks JSON
+    apply.hbs                # draw page shell + embedded parcels/windbreaks JSON
     submitted.hbs            # confirmation page (reads lines back)
   client/
-    main.ts                  # Leaflet map + leaflet-draw + submit (esbuild bundle)
+    main.tsx                 # React bootstrap: IntlProvider + merged catalogs
+    DrawApplication.tsx      # stepper, map, lines summary, review + submit (React)
   public/
     styles.css / favicon.svg # static assets (app.js + app.css are built)
   e2e-draw-test.js           # headless-browser regression test
+libs/map/                     # Phase 1: reusable React map lib (island.is style)
+  src/
+    index.ts                  # React entry: WindbreakMap + hooks + messages + types
+    server.ts                 # React-free entry (@island.is/map/server) for the Nest server
+    WindbreakMap.tsx          # Leaflet map + parcels + windbreaks (react-leaflet)
+    WindbreakDrawControl.tsx  # leaflet-draw polyline control (L.drawLocal i18n)
+    WindbreakLegend.tsx       # presentational legend (island-ui swap point)
+    useWindbreakValidation.ts # validation hook (react-intl message ids)
+    geometry.ts / types.ts    # shared turf.js validation
+    messages/en.ts + is.ts    # react-intl ICU message namespaces
+  WindbreakMap.stories.tsx    # Storybook stories (drawable / read-only / Icelandic)
+  test/                       # Jest: geometry, locale parity, component smoke
 docker-compose.yml           # development stack
 docker-compose.prod.yml      # production stack
 ```
 
 ## Testing
 
-* `npm run typecheck` — TypeScript check (server + client).
-* `npm run build` — `nest build` + esbuild client bundle.
+* `libs/map`: `npm run typecheck`, `npm test` (Jest — geometry rules,
+  locale parity, component smoke), `npm run storybook` (stories on :6006).
+* `frontend`: `npm run typecheck` — TypeScript check (server + client);
+  `npm run build` — `nest build` + esbuild client bundle.
 * `frontend/e2e-draw-test.js` — headless-browser regression test covering
   the draw flow (inside/outside/crossing validation) and a full submission
   through the NestJS server to the confirmation page. Requires a running

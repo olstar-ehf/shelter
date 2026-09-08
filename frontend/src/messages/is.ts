@@ -47,9 +47,6 @@ export const is: Record<string, string> = {
     '{count, plural, one {# umsókn í bið} other {# umsóknir í bið}}',
   helpReview:
     'Yfirfarðu skjólbeltin sem þú hefur teiknað hér að neðan og sendu umsóknina þegar þú ert sátt(ur). Í þessu skrefi er kortið skrifvarið: ýttu á Til baka á kortið til að bæta við, færa eða eyða línu.',
-  legendParcels: 'Land þitt',
-  legendEstablished: 'Skjólbelti (eldri)',
-  legendPending: 'Í bið (ekki samþykkt)',
   drawnHeadingLabel: 'Teiknuð skjólbelti',
   drawnNone: 'Engin skjólbelti teiknuð enn.',
   colNumber: '#',
@@ -63,7 +60,7 @@ export const is: Record<string, string> = {
   btnBackToMap: 'Til baka á kortið',
   btnSubmitApplication: 'Senda umsókn',
   btnReviewApplication: 'Yfirfara umsókn',
-  spansSeveralParcels: 'Nær yfir fleiri landspildur',
+  submitFailedGeneric: 'Sending tókst ekki.',
 
   // staðfestingarsíða
   submittedTitle: 'Umsókn móttekin',
@@ -84,25 +81,6 @@ export const is: Record<string, string> = {
   btnApplyAgain: 'Sækja um annað skjólbelti',
   btnBackToApplication: 'Til baka í umsókn',
 
-  // biðlari (kort og dýnamískur texti)
-  chipInsideLand: 'Innan lands þíns',
-  popupEstablished: 'Skjólbelti',
-  popupEstablishedPlanted: 'Skjólbelti (gróðursett {year})',
-  popupPending: 'Umsókn í bið {applicationId} — ekki samþykkt enn',
-  submitFailedGeneric: 'Sending tókst ekki.',
-
-  // staðfestingarskilaboð (lyklar frá sameiginlega geometry-einingunni)
-  validationMinPoints: 'Skjólbelti þarf að minnsta kosti 2 punkta.',
-  validationTooShort: 'Of stutt: {length} m (lágmark {min} m).',
-  validationOutsideLand:
-    'Fyrir utan land þitt: teiknaðu skjólbeltið innan landspildna þinna.',
-  validationCrossesEstablished:
-    'Sker eða snertir skjólbelti ({lineId}).',
-  validationCrossesPending:
-    'Sker eða snertir umsókn í bið {applicationId} ({lineId}).',
-  validationCrossesDrawn:
-    'Sker eða snertir annað skjólbelti sem þú ert að teikna í þessari umsókn.',
-
   // villuskilaboð þjónustu
   errorNoProperties:
     'Fasteignir-Xroad fann engar fasteignir á kennitölu {kennitala}.',
@@ -119,85 +97,4 @@ export const is: Record<string, string> = {
   errorFasteignirHttp: 'Fasteignir-Xroad skilaði HTTP {status} ({detail})',
   errorFasteignirLookupFailed: 'Fasteignir-Xroad uppfletting mistókst: {detail}',
   errorStoreFailed: 'Vista skjólbeltið tókst ekki (HTTP {status}): {detail}',
-};
-
-/** Íslenskir textar fyrir leaflet-draw (L.drawLocal override). */
-export const drawLocalIs = {
-  draw: {
-    toolbar: {
-      actions: { title: 'Hætta við teikningu', text: 'Hætta við' },
-      finish: { title: 'Ljúka teikningu', text: 'Ljúka' },
-      undo: { title: 'Eyða síðasta punkti', text: 'Eyða síðasta punkti' },
-      buttons: {
-        polyline: 'Teikna skjólbeltislínu',
-        polygon: 'Teikna marghyrning',
-        rectangle: 'Teikna rétthyrning',
-        circle: 'Teikna hring',
-        marker: 'Setja merki',
-        circlemarker: 'Setja hringmerki',
-      },
-    },
-    handlers: {
-      circle: {
-        tooltip: { start: 'Smelltu og dragðu til að teikna hring.' },
-        radius: 'Radíus',
-      },
-      circlemarker: {
-        tooltip: { start: 'Smelltu á kortið til að setja hringmerki.' },
-      },
-      marker: {
-        tooltip: { start: 'Smelltu á kortið til að setja merki.' },
-      },
-      polygon: {
-        tooltip: {
-          start: 'Smelltu til að hefja teikningu.',
-          cont: 'Smelltu til að halda áfram.',
-          end: 'Smelltu á fyrsta punkt til að loka forminu.',
-        },
-      },
-      polyline: {
-        error: '<strong>Villa:</strong> brúnir mega ekki skerast!',
-        tooltip: {
-          start: 'Smelltu til að hefja teikningu.',
-          cont: 'Smelltu til að halda áfram.',
-          end: 'Smelltu á síðasta punkt til að ljúka.',
-        },
-      },
-      rectangle: {
-        tooltip: { start: 'Smelltu og dragðu til að teikna rétthyrning.' },
-      },
-      simpleshape: {
-        tooltip: { end: 'Slepptu músinni til að ljúka teikningu.' },
-      },
-    },
-  },
-  edit: {
-    toolbar: {
-      actions: {
-        save: { title: 'Vista breytingar', text: 'Vista' },
-        cancel: {
-          title: 'Hætta við breytingar, fleygir öllum breytingum',
-          text: 'Hætta við',
-        },
-        clearAll: { title: 'Hreinsa alla laga', text: 'Hreinsa allt' },
-      },
-      buttons: {
-        edit: 'Breyta lögum',
-        editDisabled: 'Engin lög til að breyta',
-        remove: 'Eyða lögum',
-        removeDisabled: 'Engin lög til að eyða',
-      },
-    },
-    handlers: {
-      edit: {
-        tooltip: {
-          text: 'Dragðu handföng eða merki til að breyta.',
-          subtext: 'Smelltu á hætta við til að afturkalla breytingar.',
-        },
-      },
-      remove: {
-        tooltip: { text: 'Smelltu á hlut til að fjarlægja.' },
-      },
-    },
-  },
 };

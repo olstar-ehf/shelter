@@ -5,19 +5,20 @@ import {
   ServiceUnavailableException,
 } from '@nestjs/common';
 import type { Feature, Geometry, LineString } from 'geojson';
+import {
+  landUnion,
+  measureLineM,
+  validateWindbreakLines,
+  type ParcelFeature,
+  type ParcelProperties,
+  type WindbreakFeature,
+  type WindbreakLine,
+  type WindbreakProperties,
+} from '@island.is/map/server';
 import { FasteignirService } from './fasteignir/fasteignir.service';
 import { uniqueLandeignarnumer } from './fasteignir/fasteignir.types';
-import { landUnion, measureLineM, validateLine } from './geometry';
 import { createTranslator, type Locale, type Translator } from './i18n';
 import { WindbreakRegistryService } from './windbreaks/windbreak-registry.service';
-import type {
-  ParcelFeature,
-  ParcelProperties,
-  ValidatedLine,
-  WindbreakFeature,
-  WindbreakLine,
-  WindbreakProperties,
-} from './types';
 
 interface OgcFeatureCollection<P> {
   type: 'FeatureCollection';
@@ -30,13 +31,10 @@ export interface ApplyContext {
   identity: { fullName: string; kennitala: string };
   landeignarnumer: number[];
   lookupSummary: string;
-  helpDrawExisting: string;
   parcels: ParcelFeature[];
   windbreaks: WindbreakFeature[];
   parcelsJson: string;
   windbreaksJson: string;
-  establishedLabel: string;
-  pendingLabel: string;
 }
 
 export interface SubmittedContext {
@@ -197,16 +195,6 @@ export class AppService {
 
     const windbreaks = [...registeredWindbreaks, ...pendingWindbreaks];
 
-    const establishedCount = windbreaks.filter(
-      (w) => w.properties.status === 'established',
-    ).length;
-    const pendingCount = windbreaks.length - establishedCount;
-
-    const establishedLabel = t('countEstablished', {
-      count: establishedCount,
-    });
-    const pendingLabel = t('countPending', { count: pendingCount });
-
     const lookupSummary = t('lookupSummary', {
       propertyCount,
       landCount: landeignarnumer.length,
@@ -218,10 +206,6 @@ export class AppService {
       identity: { fullName: this.demoFullName, kennitala: this.demoKennitala },
       landeignarnumer,
       lookupSummary,
-      helpDrawExisting: t('helpDrawExisting', {
-        established: `<strong>${establishedLabel}</strong>`,
-        pending: `<strong>${pendingLabel}</strong>`,
-      }),
       parcels,
       windbreaks,
       parcelsJson: JSON.stringify({
@@ -232,8 +216,6 @@ export class AppService {
         type: 'FeatureCollection',
         features: windbreaks,
       }),
-      establishedLabel,
-      pendingLabel,
     };
   }
 
@@ -296,7 +278,6 @@ export class AppService {
   ): Promise<{ applicationId: string }> {
     const t = createTranslator(locale);
     const { parcels, windbreaks } = await this.getApplyContext(locale);
-    const union = landUnion(parcels);
 
     const drawn: WindbreakLine[] = lines.map((feature, index) => ({
       clientId: `server-${index}`,
@@ -304,15 +285,10 @@ export class AppService {
       lengthM: measureLineM(feature),
     }));
 
-    const validated: ValidatedLine[] = drawn.map((line) => ({
-      line,
-      validation: validateLine(line, {
-        union,
-        parcels,
-        existingWindbreaks: windbreaks,
-        otherLines: drawn.filter((other) => other !== line),
-      }),
-    }));
+    const validated = validateWindbreakLines(drawn, {
+      parcels,
+      existingWindbreaks: windbreaks,
+    });
 
     for (const entry of validated) {
       if (entry.validation.status === 'error') {

@@ -34,13 +34,6 @@
     </header>
 
     <main class="container">
-      <ol class="stepper" id="stepper" aria-label="Application steps">
-        <li data-step="1" class="active"><span class="step-no">1</span> {{t.stepYourDetails}}</li>
-        <li data-step="2" class="active"><span class="step-no">2</span> {{t.stepDrawWindbreak}}</li>
-        <li data-step="3"><span class="step-no">3</span> {{t.stepReview}}</li>
-        <li data-step="4"><span class="step-no">4</span> {{t.stepSubmitted}}</li>
-      </ol>
-
       {{#if error}}
         <div class="error-banner" role="alert">
           <strong>{{t.errorSomethingWrong}}</strong> {{error}}
@@ -51,74 +44,10 @@
       {{#if lookupSummary}}
       <p class="muted lookup-info">{{lookupSummary}}</p>
       {{/if}}
-      <div class="card">
-        <h2 id="step-title">{{t.applyTitleDraw}}</h2>
-        <div id="draw-help">
-          <p class="muted">{{{t.helpDrawParcels}}}</p>
-          <p class="muted">{{{helpDrawExisting}}}</p>
-        </div>
-        <div id="review-help" hidden>
-          <p class="muted">{{{t.helpReview}}}</p>
-        </div>
-
-        <div class="map-container" id="map"></div>
-
-        <div class="map-legend" aria-hidden="true">
-          <span><i class="legend-swatch legend-parcel"></i> {{t.legendParcels}}</span>
-          <span><i class="legend-swatch legend-established"></i> {{t.legendEstablished}}</span>
-          <span><i class="legend-swatch legend-pending"></i> {{t.legendPending}}</span>
-        </div>
-
-        <div class="lines-summary">
-          <h3>{{t.drawnHeadingLabel}} (<span id="line-count">0</span>)</h3>
-          <p class="muted" id="no-lines">{{t.drawnNone}}</p>
-          <table class="lines-table" id="lines-table" hidden>
-            <thead>
-              <tr>
-                <th>{{t.colNumber}}</th>
-                <th>{{t.colLength}}</th>
-                <th>{{t.colParcel}}</th>
-                <th>{{t.colCheck}}</th>
-              </tr>
-            </thead>
-            <tbody id="lines-body"></tbody>
-          </table>
-
-          <div class="review-panel" id="review-panel" hidden>
-            <h3>{{t.reviewPanelHeading}}</h3>
-            <p class="muted">{{t.reviewPanelNote}}</p>
-            <table class="lines-table">
-              <thead>
-                <tr><th>{{t.colNumber}}</th><th>{{t.colLength}}</th><th>{{t.colParcel}}</th></tr>
-              </thead>
-              <tbody id="review-body"></tbody>
-            </table>
-            <p class="muted">
-              {{t.totalLength}}
-              <strong><span id="review-total">0</span> m</strong>
-            </p>
-            <p class="error-text" id="submit-error" hidden></p>
-            <div class="step-actions">
-              <button type="button" class="btn btn-secondary" id="back-btn">
-                {{t.btnBackToMap}}
-              </button>
-              <button type="button" class="btn btn-primary" id="submit-btn">
-                {{t.btnSubmitApplication}}
-              </button>
-            </div>
-          </div>
-
-          <div class="step-actions">
-            <span class="muted">
-              {{t.totalLength}}
-              <strong><span id="total-length">0</span> m</strong>
-            </span>
-            <button type="button" class="btn btn-primary" id="review-btn" disabled>
-              {{t.btnReviewApplication}}
-            </button>
-          </div>
-        </div>
-      </div>
+      {{! The stepper, draw card, map and review panel are rendered by the
+          React client (client/main.tsx -> DrawApplication) from the embedded
+          GeoJSON below. }}
+      <div id="app-root"></div>
       {{/unless}}
     </main>
 

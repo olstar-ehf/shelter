@@ -1,10 +1,29 @@
 import IntlMessageFormat from 'intl-messageformat';
+import { flattenMessages, messages as mapMessages } from '@island.is/map/server';
 import { en } from '../messages/en';
 import { is } from '../messages/is';
 
 export type Locale = 'is' | 'en';
 
-export const messages: Record<Locale, Record<string, string>> = { is, en };
+/**
+ * One flat catalog per locale: the app's own chrome/stepper/error keys plus
+ * the map lib's `map.*`, `validation.*` and `drawLocal.*` namespaces, so the
+ * server and the client render the exact same messages (locale parity).
+ * The lib wins on collisions - it owns the shared keys.
+ */
+const enFlat: Record<string, string> = {
+  ...en,
+  ...flattenMessages(mapMessages.en),
+};
+const isFlat: Record<string, string> = {
+  ...is,
+  ...flattenMessages(mapMessages.is),
+};
+
+export const messages: Record<Locale, Record<string, string>> = {
+  en: enFlat,
+  is: isFlat,
+};
 
 const FALLBACK_LOCALE: Locale = 'en';
 

@@ -3,7 +3,7 @@ import {
   ServiceUnavailableException,
 } from '@nestjs/common';
 import { Pool } from 'pg';
-import type { WindbreakFeature } from '../types';
+import type { WindbreakFeature } from '@island.is/map/server';
 
 /**
  * Registry of existing windbreaks on the land, read from the
