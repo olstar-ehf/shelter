@@ -287,6 +287,7 @@ libs/map/                     # Phase 1: reusable React map lib (island.is style
   test/                       # Jest: geometry, locale parity, component smoke
 docker-compose.yml           # development stack
 docker-compose.prod.yml      # production stack
+.dockerignore                # keeps host node_modules/dist out of the image contexts
 ```
 
 ## Testing

@@ -1,0 +1,23 @@
+# dependencies + build output (reinstalled / rebuilt inside the images)
+**/node_modules
+**/dist
+**/.cache
+storybook-static/
+
+# local dev scratch
+.git
+.gitignore
+.npm-home
+.npm-cache
+.pw-browsers
+.pw-libs
+.env
+
+# frontend static build artifacts (app.js / app.css are built by esbuild)
+frontend/public/*
+!frontend/public/styles.css
+!frontend/public/favicon.svg
+
+# python scratch
+**/__pycache__
+.venv
