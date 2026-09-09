@@ -20,6 +20,9 @@ RUN python3 -m pip install --no-cache-dir flask-cors psycopg2-binary geoalchemy2
 
 COPY windbreak_app.py pygeoapi.config.yml docgen-config.py entrypoint.sh \
      /pygeoapi/
+# Normalize line endings: dash rejects CRLF ("set: Illegal option -" on
+# `set -e` when the file was checked out with CRLF on the host).
+RUN sed -i 's/\r$//' /pygeoapi/entrypoint.sh
 # Self-contained default data (the compose files overlay ./backend/data).
 COPY data /pygeoapi/data
 

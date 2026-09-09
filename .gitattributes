@@ -1,0 +1,9 @@
+# Keep line endings deterministic across checkouts: shell scripts and the
+# entrypoint must stay LF (dash rejects CRLF, e.g. "set: Illegal option -").
+* text=auto
+*.sh text eol=lf
+*.py text eol=lf
+*.yml text eol=lf
+*.yaml text eol=lf
+Dockerfile text eol=lf
+*.dockerfile text eol=lf
