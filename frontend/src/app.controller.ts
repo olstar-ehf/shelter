@@ -10,7 +10,6 @@ import {
   Res,
 } from '@nestjs/common';
 import type { Request, Response } from 'express';
-import type { Feature, LineString } from 'geojson';
 import { AppService } from './app.service';
 import {
   createTranslator,
@@ -19,18 +18,41 @@ import {
   type Locale,
 } from './i18n';
 
-/** Body of POST /apply: the GeoJSON lines drawn by the farmer. */
+/** Body of POST /apply: the template's answers (see windbreakAnswersSchema). */
 export interface SubmitApplicationBody {
-  lines?: Feature<LineString, Record<string, unknown>>[];
+  answers?: unknown;
 }
 
-/** A small per-request i18n helper shared by all routes. */
+/** A per-request i18n helper shared by all routes. */
 interface I18n {
   locale: Locale;
   /** Raw catalog for the views (static keys via {{t.key}}). */
   t: Record<string, string>;
   isActive: boolean;
   enActive: boolean;
+}
+
+/** Stepper view model: the 4 template steps, pre-formatted per locale. */
+export interface StepperStepViewModel {
+  no: number;
+  label: string;
+  active: boolean;
+}
+
+/** Steps 1..activeCount rendered as active (index: 1, submitted: 4). */
+function stepperSteps(locale: Locale, activeCount: number): StepperStepViewModel[] {
+  const t = createTranslator(locale);
+  const labels = [
+    'windbreak.step.yourDetails',
+    'windbreak.step.drawWindbreak',
+    'windbreak.step.review',
+    'windbreak.step.submitted',
+  ];
+  return labels.map((labelId, index) => ({
+    no: index + 1,
+    label: t(labelId),
+    active: index + 1 <= activeCount,
+  }));
 }
 
 function parseCookies(req: Request): Record<string, string | undefined> {
@@ -83,6 +105,7 @@ export class AppController {
     const t = createTranslator(i18n.locale);
     return {
       ...i18n,
+      stepperSteps: stepperSteps(i18n.locale, 1),
       indexIdentity: t('indexIdentity', {
         name: this.appService.demoFullName,
         kennitala: this.appService.demoKennitala,
@@ -123,8 +146,9 @@ export class AppController {
   }
 
   /**
-   * Receive the drawn windbreak lines, re-validate them server side and
-   * store them in the OGC API backend. Returns the new application id.
+   * Receive the application answers (the drawn windbreak lines), re-check
+   * them against the template's data schema and the land server side, and
+   * store them in PostGIS. Returns the new application id.
    */
   @Post('apply')
   async submit(
@@ -137,10 +161,10 @@ export class AppController {
       req.headers['accept-language'],
     );
     const t = createTranslator(locale);
-    if (!body || !Array.isArray(body.lines) || body.lines.length === 0) {
+    if (!body || typeof body.answers !== 'object' || body.answers === null) {
       throw new BadRequestException(t('errorNoLines'));
     }
-    return this.appService.submitApplication(body.lines, locale);
+    return this.appService.submitApplication(body.answers, locale);
   }
 
   /** Confirmation page for a submitted application. */
@@ -155,6 +179,7 @@ export class AppController {
     try {
       return {
         ...i18n,
+        stepperSteps: stepperSteps(i18n.locale, 4),
         ...(await this.appService.getSubmittedContext(
           applicationId,
           i18n.locale,

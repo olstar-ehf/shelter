@@ -27,10 +27,11 @@
 
     <main class="container">
       <ol class="stepper" aria-label="Application steps">
-        <li class="active"><span class="step-no">1</span> {{t.stepYourDetails}}</li>
-        <li class="active"><span class="step-no">2</span> {{t.stepDrawWindbreak}}</li>
-        <li class="active"><span class="step-no">3</span> {{t.stepReview}}</li>
-        <li class="active"><span class="step-no">4</span> {{t.stepSubmitted}}</li>
+        {{#each stepperSteps}}
+        <li class="{{#if active}}active{{/if}}" data-step="{{no}}">
+          <span class="step-no">{{no}}</span> {{label}}
+        </li>
+        {{/each}}
       </ol>
 
       {{#if error}}

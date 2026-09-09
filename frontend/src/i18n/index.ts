@@ -1,23 +1,30 @@
 import IntlMessageFormat from 'intl-messageformat';
 import { flattenMessages, messages as mapMessages } from '@island.is/map/server';
+import {
+  flattenMessages as flattenTemplateMessages,
+  messages as templateMessages,
+} from '@island.is/windbreak-application/server';
 import { en } from '../messages/en';
 import { is } from '../messages/is';
 
 export type Locale = 'is' | 'en';
 
 /**
- * One flat catalog per locale: the app's own chrome/stepper/error keys plus
- * the map lib's `map.*`, `validation.*` and `drawLocal.*` namespaces, so the
- * server and the client render the exact same messages (locale parity).
- * The lib wins on collisions - it owns the shared keys.
+ * One flat catalog per locale: the app's chrome/error keys, the map lib's
+ * `map.*`, `validation.*` and `drawLocal.*` namespaces and the windbreak
+ * template's `windbreak.*` namespace - the same merge the client performs,
+ * so the server and the client render the exact same messages (locale
+ * parity). The libs win on collisions - they own their keyspaces.
  */
 const enFlat: Record<string, string> = {
   ...en,
   ...flattenMessages(mapMessages.en),
+  ...flattenTemplateMessages(templateMessages.en),
 };
 const isFlat: Record<string, string> = {
   ...is,
   ...flattenMessages(mapMessages.is),
+  ...flattenTemplateMessages(templateMessages.is),
 };
 
 export const messages: Record<Locale, Record<string, string>> = {

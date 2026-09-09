@@ -120,9 +120,26 @@ resources:
                 bbox: [-24.6, 54, 13, 66.6]
                 crs: http://www.opengis.net/def/crs/OGC/1.3/CRS84
         providers:
+            # Phase 2: applications are persisted in PostGIS
+            # (windbreak_applications, schema owned by the db migrations in
+            # frontend/db/migrations). pygeoapi's PostgreSQL provider is
+            # read-only - the NestJS application writes to the same table
+            # through its applications store.
+            # ${VAR} placeholders are expanded from the environment by
+            # windbreak_app.py (credentials never live in this file).
             - type: feature
-              name: GeoJSON
-              data: /pygeoapi/data/windbreak_applications.json
+              name: PostgreSQL
+              # Bare table name: the schema comes from the search_path.
+              # (pygeoapi 0.21's sql provider reflects only=[table_name] and
+              # does not split 'schema.table'.)
+              table: windbreak_applications
               id_field: line_id
-              # editable enables OGC API Features transactions (POST items)
-              editable: true
+              geom_field: geometry
+              storage_crs: http://www.opengis.net/def/crs/OGC/1.3/CRS84
+              data:
+                  host: ${WINDBREAK_DB_HOST:-localhost}
+                  port: ${WINDBREAK_DB_PORT:-5432}
+                  dbname: ${WINDBREAK_DB_NAME:-sde}
+                  user: ${WINDBREAK_DB_USER:-sde}
+                  password: ${WINDBREAK_DB_PASSWORD:-sde}
+                  search_path: [public]

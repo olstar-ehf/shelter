@@ -14,12 +14,6 @@ export const is: Record<string, string> = {
     'Frumgerð — gert er ráð fyrir að innskráning bónda hafi þegar farið fram í gáttinni. Gögn koma frá pygeoapi OGC API og eru geymd í GeoJSON-skrám.',
   errorSomethingWrong: 'Eitthvað fór úrskeiðis:',
 
-  // skref
-  stepYourDetails: 'Þínar upplýsingar',
-  stepDrawWindbreak: 'Teikna skjólbelti',
-  stepReview: 'Yfirfara',
-  stepSubmitted: 'Sótt um',
-
   // forsíða
   indexTitle: 'Sækja um styrk til að gróðursetja skjólbelti',
   indexLead:
@@ -33,34 +27,6 @@ export const is: Record<string, string> = {
   // uppfletting
   lookupSummary:
     'Fasteignir-Xroad fann {propertyCount, plural, one {# fasteign} other {# fasteignir}} á kennitölu {kennitala}, á {landCount, plural, one {# landspildu} other {# landspildum}}: landeignarnúmer {list}.',
-
-  // umsóknarsíða
-  applyTitleDraw: 'Teiknaðu skjólbeltið',
-  applyTitleReview: 'Yfirfarðu umsóknina',
-  helpDrawParcels:
-    'Landspildur þínar eru sýndar á kortinu. Notaðu línutólið (efst til hægri) til að teikna eitt eða fleiri skjólbelti innan lands þíns. Smelltu til að bæta við punktum, tvísmelltu (eða ýttu á Enter) til að ljúka. Notaðu breytingatól til að færa eða eyða línum.',
-  helpDrawExisting:
-    'Á landi þínu eru þegar {established} og {pending} (ekki samþykktar enn). Nýtt skjólbelti má ekki skerast eða snerta neitt þeirra, né annað skjólbelti í þessari umsókn.',
-  countEstablished:
-    '{count, plural, one {# skjólbelti} other {# skjólbelti}}',
-  countPending:
-    '{count, plural, one {# umsókn í bið} other {# umsóknir í bið}}',
-  helpReview:
-    'Yfirfarðu skjólbeltin sem þú hefur teiknað hér að neðan og sendu umsóknina þegar þú ert sátt(ur). Í þessu skrefi er kortið skrifvarið: ýttu á Til baka á kortið til að bæta við, færa eða eyða línu.',
-  drawnHeadingLabel: 'Teiknuð skjólbelti',
-  drawnNone: 'Engin skjólbelti teiknuð enn.',
-  colNumber: '#',
-  colLength: 'Lengd',
-  colParcel: 'Á landspildu',
-  colCheck: 'Athugun',
-  reviewPanelHeading: 'Skjólbelti í þessari umsókn',
-  reviewPanelNote:
-    'Stofnunin yfirfer þessi skjólbelti aftur þegar þú sendir umsóknina.',
-  totalLength: 'Heildarlengd:',
-  btnBackToMap: 'Til baka á kortið',
-  btnSubmitApplication: 'Senda umsókn',
-  btnReviewApplication: 'Yfirfara umsókn',
-  submitFailedGeneric: 'Sending tókst ekki.',
 
   // staðfestingarsíða
   submittedTitle: 'Umsókn móttekin',
@@ -86,6 +52,7 @@ export const is: Record<string, string> = {
     'Fasteignir-Xroad fann engar fasteignir á kennitölu {kennitala}.',
   errorNoParcels: 'Engar landspildur fundust fyrir landeignarnúmer {list}.',
   errorNoLines: 'Engar skjólbeltislínur bárust.',
+  errorInvalidAnswers: 'Innsend umsókn stóðst ekki gagnaþrýf (schema).',
   errorApplicationNotFound:
     'Umsókn {applicationId} fannst ekki í bakvinnslu.',
   errorBackendUnreachable: 'Næ ekki sambandi við OGC API bakvinnsluna ({url}).',
@@ -96,5 +63,8 @@ export const is: Record<string, string> = {
   errorFasteignirUnreachable: 'Næ ekki sambandi við Fasteignir-Xroad ({url}).',
   errorFasteignirHttp: 'Fasteignir-Xroad skilaði HTTP {status} ({detail})',
   errorFasteignirLookupFailed: 'Fasteignir-Xroad uppfletting mistókst: {detail}',
+  errorApplicationsQuery:
+    'Ekki tókst að sækja innsendar skjólbeltisumsóknir: {detail}',
+  errorApplicationsWrite: 'Vistun skjólbeltisumsóknar mistókst: {detail}',
   errorStoreFailed: 'Vista skjólbeltið tókst ekki (HTTP {status}): {detail}',
 };

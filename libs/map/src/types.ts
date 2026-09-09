@@ -19,6 +19,8 @@ export interface WindbreakProperties {
   line_id: string;
   application_id?: string;
   parcel_id?: string | null;
+  /** Applicant (submitted windbreak applications). */
+  kennitala?: string;
   /** For windbreaks read from skograekt.skjolbelti. */
   objectid?: number;
   source?: string;

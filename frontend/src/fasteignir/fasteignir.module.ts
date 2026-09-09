@@ -6,18 +6,20 @@ import {
 } from './fasteignir.service';
 
 /**
- * Provides the Fasteignir-Xroad lookup. The mock is the default because the
- * real service requires an island.is Bearer token; set FASTEIGNIR_MOCK=false
- * and FASTEIGNIR_TOKEN to use the real X-Road endpoint.
+ * Provides the Fasteignir-Xroad lookup - the real client by default, as in
+ * the island.is monorepo: FASTEIGNIR_MOCK=true is the explicit escape hatch
+ * for running the prototype without an island.is Bearer token. The real
+ * client requires FASTEIGNIR_TOKEN and fails with a clear error when it is
+ * missing.
  */
 @Module({
   providers: [
     {
       provide: FasteignirService,
       useFactory: (): FasteignirService => {
-        return process.env.FASTEIGNIR_MOCK === 'false'
-          ? new XroadFasteignirService()
-          : new MockFasteignirService();
+        return process.env.FASTEIGNIR_MOCK === 'true'
+          ? new MockFasteignirService()
+          : new XroadFasteignirService();
       },
     },
   ],

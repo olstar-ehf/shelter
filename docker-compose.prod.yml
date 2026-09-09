@@ -19,6 +19,7 @@ services:
     environment:
       WSGI_APP: windbreak_app:APP
       WSGI_WORKERS: "1"
+      WINDBREAK_DATABASE_URL: "${WINDBREAK_DATABASE_URL:-}"
     volumes:
       - ./backend/pygeoapi.config.yml:/pygeoapi/local.config.yml:ro
       - ./backend/data:/pygeoapi/data
@@ -51,12 +52,18 @@ services:
       # Assumed portal-session identity: name + kennitala only
       DEMO_FULL_NAME: "${DEMO_FULL_NAME:-Guðmundur Jónsson}"
       DEMO_KENNITALA: "${DEMO_KENNITALA:-2409693949}"
-      # Fasteignir-Xroad lookup is mocked (no island.is Bearer token yet)
-      FASTEIGNIR_MOCK: "${FASTEIGNIR_MOCK:-true}"
+      # Real clients by default (Phase 2): the Fasteignir-Xroad lookup needs
+      # FASTEIGNIR_TOKEN (island.is Bearer JWT); FASTEIGNIR_MOCK=true is the
+      # escape hatch for running without one.
+      FASTEIGNIR_MOCK: "${FASTEIGNIR_MOCK:-false}"
+      FASTEIGNIR_API_URL: "${FASTEIGNIR_API_URL:-}"
+      FASTEIGNIR_TOKEN: "${FASTEIGNIR_TOKEN:-}"
       # Existing windbreaks come from the skógrækt PostGIS database
-      # (skograekt.skjolbelti, ISN93). Mocked here; for the real database set
-      # WINDBREAK_REGISTRY_MOCK=false and WINDBREAK_DATABASE_URL (or PG*).
-      WINDBREAK_REGISTRY_MOCK: "${WINDBREAK_REGISTRY_MOCK:-true}"
+      # (skograekt.skjolbelti, ISN93); submitted applications are persisted
+      # in PostGIS (windbreak_applications). WINDBREAK_REGISTRY_MOCK /
+      # WINDBREAK_APPLICATIONS_MOCK=true select the prototype mocks.
+      WINDBREAK_REGISTRY_MOCK: "${WINDBREAK_REGISTRY_MOCK:-false}"
+      WINDBREAK_APPLICATIONS_MOCK: "${WINDBREAK_APPLICATIONS_MOCK:-false}"
       WINDBREAK_DATABASE_URL: "${WINDBREAK_DATABASE_URL:-}"
       PORT: "3000"
     depends_on:

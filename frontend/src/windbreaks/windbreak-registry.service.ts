@@ -42,6 +42,17 @@ export class PostgresWindbreakRegistryService extends WindbreakRegistryService {
 
   constructor() {
     super();
+    // Fail fast when the real registry is selected but not configured.
+    const hasConfig =
+      !!process.env.WINDBREAK_DATABASE_URL ||
+      !!process.env.PGHOST ||
+      !!process.env.PGDATABASE;
+    if (!hasConfig) {
+      throw new Error(
+        'PostgresWindbreakRegistryService requires WINDBREAK_DATABASE_URL ' +
+          '(or PGHOST/PGDATABASE, see the PG* variables)',
+      );
+    }
     this.pool = new Pool(
       process.env.WINDBREAK_DATABASE_URL
         ? { connectionString: process.env.WINDBREAK_DATABASE_URL }

@@ -1,15 +1,14 @@
 /**
  * Browser entry for the draw page: reads the GeoJSON (parcels + existing
  * windbreaks) and the locale embedded in the page by the NestJS server and
- * mounts the React draw application (Phase 1: client rendered by
- * @island.is/map's WindbreakMap).
+ * mounts the windbreak application template (Phase 2: the custom map field
+ * and the flow renderer come from @island.is/windbreak-application, the map
+ * itself from @island.is/map).
  */
 import { createRoot } from 'react-dom/client';
 import { IntlProvider } from 'react-intl';
-import {
-  flattenMessages,
-  messages as mapMessages,
-} from '@island.is/map';
+import { flattenMessages, messages as mapMessages } from '@island.is/map';
+import { flattenMessages as flattenTemplate, messages as templateMessages } from '@island.is/windbreak-application';
 import type {
   FeatureCollection,
   LineString,
@@ -22,7 +21,7 @@ import type {
   WindbreakFeature,
   WindbreakProperties,
 } from '@island.is/map';
-import { DrawApplication } from './DrawApplication';
+import { WindbreakApplyPage } from './WindbreakApplyPage';
 import { en as appEn } from '../src/messages/en';
 import { is as appIs } from '../src/messages/is';
 
@@ -47,12 +46,14 @@ const windbreaks = readEmbeddedJson<
   FeatureCollection<LineString | MultiLineString, WindbreakProperties>
 >('windbreaks-data').features as WindbreakFeature[];
 
-// One flat catalog per locale: app keys + the lib's map/validation/drawLocal
-// namespaces (same merge the server uses for locale parity).
+// One flat catalog per locale: app keys + the map lib's map/validation/
+// drawLocal namespaces + the template's windbreak.* namespace (same merge
+// the server does for locale parity).
 const mapLocale = locale === 'is' ? 'is' : 'en';
 const catalog: Record<string, string> = {
   ...(mapLocale === 'is' ? appIs : appEn),
   ...flattenMessages(mapMessages[mapLocale]),
+  ...flattenTemplate(templateMessages[mapLocale]),
 };
 
 const rootEl = document.getElementById('app-root');
@@ -70,6 +71,6 @@ createRoot(rootEl).render(
       // clean in the prototype.
     }}
   >
-    <DrawApplication locale={locale} parcels={parcels} windbreaks={windbreaks} />
+    <WindbreakApplyPage locale={locale} parcels={parcels} windbreaks={windbreaks} />
   </IntlProvider>,
 );

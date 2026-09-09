@@ -25,10 +25,15 @@ services:
       WSGI_APP: windbreak_app:APP
       # GeoJSON provider assumes a single process (no write locking)
       WSGI_WORKERS: "1"
+      # The windbreak_applications collection is served from PostGIS:
+      # WINDBREAK_DATABASE_URL is split into the per-part connection
+      # variables the pygeoapi PostgreSQL provider config uses.
+      WINDBREAK_DATABASE_URL: "${WINDBREAK_DATABASE_URL:-}"
     volumes:
       - ./backend/pygeoapi.config.yml:/pygeoapi/local.config.yml:ro
-      # Read-write: submitted windbreak lines are appended to
-      # windbreak_applications.json in this directory.
+      # Read-write: file-backed mock fallback for submitted lines
+      # (WINDBREAK_APPLICATIONS_MOCK=true on the frontend) - and the seed
+      # farmers/parcels the GeoJSON providers serve.
       - ./backend/data:/pygeoapi/data
     healthcheck:
       test:
@@ -60,22 +65,31 @@ services:
       # Assumed portal-session identity: name + kennitala only
       DEMO_FULL_NAME: "${DEMO_FULL_NAME:-Guðmundur Jónsson}"
       DEMO_KENNITALA: "${DEMO_KENNITALA:-2409693949}"
-      # Fasteignir-Xroad lookup is mocked (no island.is Bearer token yet)
-      FASTEIGNIR_MOCK: "${FASTEIGNIR_MOCK:-true}"
+      # Real clients by default (Phase 2): the Fasteignir-Xroad lookup needs
+      # FASTEIGNIR_TOKEN (island.is Bearer JWT); FASTEIGNIR_MOCK=true is the
+      # escape hatch for running without one.
+      FASTEIGNIR_MOCK: "${FASTEIGNIR_MOCK:-false}"
+      FASTEIGNIR_API_URL: "${FASTEIGNIR_API_URL:-}"
+      FASTEIGNIR_TOKEN: "${FASTEIGNIR_TOKEN:-}"
       # Existing windbreaks come from the skógrækt PostGIS database
-      # (skograekt.skjolbelti, ISN93). Mocked here; for the real database set
-      # WINDBREAK_REGISTRY_MOCK=false and WINDBREAK_DATABASE_URL (or PG*).
-      WINDBREAK_REGISTRY_MOCK: "${WINDBREAK_REGISTRY_MOCK:-true}"
+      # (skograekt.skjolbelti, ISN93); submitted applications are persisted
+      # in PostGIS (windbreak_applications). WINDBREAK_REGISTRY_MOCK /
+      # WINDBREAK_APPLICATIONS_MOCK=true select the prototype mocks.
+      WINDBREAK_REGISTRY_MOCK: "${WINDBREAK_REGISTRY_MOCK:-false}"
+      WINDBREAK_APPLICATIONS_MOCK: "${WINDBREAK_APPLICATIONS_MOCK:-false}"
       WINDBREAK_DATABASE_URL: "${WINDBREAK_DATABASE_URL:-}"   # or the PG* variables
       PORT: "3000"
     volumes:
       - ./frontend:/workspace/frontend
       - ./libs/map:/workspace/libs/map
+      - ./libs/application:/workspace/libs/application
       - frontend_node_modules:/workspace/frontend/node_modules
       - map_node_modules:/workspace/libs/map/node_modules
+      - windbreak_node_modules:/workspace/libs/application/templates/windbreak/node_modules
     depends_on:
       - backend
 
 volumes:
   frontend_node_modules:
   map_node_modules:
+  windbreak_node_modules:

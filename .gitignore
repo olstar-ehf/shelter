@@ -31,7 +31,7 @@ __pycache__/
 storybook-static/
 
 # lib build output
-libs/map/dist/
+libs/**/dist/
 
 # OS
 .DS_Store

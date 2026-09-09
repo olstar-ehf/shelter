@@ -16,12 +16,6 @@ export const en: Record<string, string> = {
     'Prototype — farmer authentication is assumed to have happened in the portal. Data is served by a pygeoapi OGC API and stored in local GeoJSON files.',
   errorSomethingWrong: 'Something went wrong:',
 
-  // stepper
-  stepYourDetails: 'Your details',
-  stepDrawWindbreak: 'Draw windbreak',
-  stepReview: 'Review',
-  stepSubmitted: 'Submitted',
-
   // landing page
   indexTitle: 'Apply for a grant to plant a windbreak',
   indexLead:
@@ -35,34 +29,6 @@ export const en: Record<string, string> = {
   // lookup summary
   lookupSummary:
     'Fasteignir-Xroad found {propertyCount, plural, one {# property} other {# properties}} on kennitala {kennitala}, on {landCount, plural, one {# land parcel} other {# land parcels}}: landeignarnumer {list}.',
-
-  // apply page
-  applyTitleDraw: 'Draw your windbreak',
-  applyTitleReview: 'Review your application',
-  helpDrawParcels:
-    'Your registered parcels are shown on the map. Use the line tool (top right) to draw one or more windbreaks inside your land. Click to add points, double-click (or press Enter) to finish. Use the edit tools to move or delete lines.',
-  helpDrawExisting:
-    'Your land already has {established} and {pending} (not accepted yet). A new windbreak may not cross or touch any of them, or another windbreak in this application.',
-  countEstablished:
-    '{count, plural, one {# established windbreak} other {# established windbreaks}}',
-  countPending:
-    '{count, plural, one {# pending application} other {# pending applications}}',
-  helpReview:
-    'Check the windbreaks you have drawn below and submit the application when you are satisfied. In this step the map is read-only: press Back to map to add, move or delete a line.',
-  drawnHeadingLabel: 'Drawn windbreaks',
-  drawnNone: 'No windbreaks drawn yet.',
-  colNumber: '#',
-  colLength: 'Length',
-  colParcel: 'On parcel',
-  colCheck: 'Check',
-  reviewPanelHeading: 'Windbreaks in this application',
-  reviewPanelNote:
-    'The grant service checks these windbreaks again when you submit.',
-  totalLength: 'Total length:',
-  btnBackToMap: 'Back to map',
-  btnSubmitApplication: 'Submit application',
-  btnReviewApplication: 'Review application',
-  submitFailedGeneric: 'Submission failed.',
 
   // confirmation page
   submittedTitle: 'Application submitted',
@@ -88,6 +54,7 @@ export const en: Record<string, string> = {
     'Fasteignir-Xroad found no properties for kennitala {kennitala}.',
   errorNoParcels: 'No land parcels found for landeignarnumer {list}.',
   errorNoLines: 'No windbreak lines were received.',
+  errorInvalidAnswers: 'The submitted application failed the schema check.',
   errorApplicationNotFound:
     'Application {applicationId} was not found in the backend.',
   errorBackendUnreachable: 'Cannot reach the OGC API backend at {url}.',
@@ -98,5 +65,8 @@ export const en: Record<string, string> = {
   errorFasteignirUnreachable: 'Cannot reach Fasteignir-Xroad at {url}.',
   errorFasteignirHttp: 'Fasteignir-Xroad returned HTTP {status} ({detail})',
   errorFasteignirLookupFailed: 'Fasteignir-Xroad lookup failed: {detail}',
+  errorApplicationsQuery:
+    'Could not load submitted windbreak applications: {detail}',
+  errorApplicationsWrite: 'Storing the windbreak application failed: {detail}',
   errorStoreFailed: 'Storing the windbreak failed (HTTP {status}): {detail}',
 };

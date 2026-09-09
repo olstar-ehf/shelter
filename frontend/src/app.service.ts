@@ -13,12 +13,23 @@ import {
   type ParcelProperties,
   type WindbreakFeature,
   type WindbreakLine,
-  type WindbreakProperties,
 } from '@island.is/map/server';
-import { FasteignirService } from './fasteignir/fasteignir.service';
+import {
+  FASTEIGNIR_DEFAULT_API_URL,
+  FasteignirService,
+  PropertiesLookupError,
+} from './fasteignir/fasteignir.service';
+import {
+  windbreakAnswersSchema,
+  type WindbreakAnswers,
+} from '@island.is/windbreak-application/server';
 import { uniqueLandeignarnumer } from './fasteignir/fasteignir.types';
 import { createTranslator, type Locale, type Translator } from './i18n';
 import { WindbreakRegistryService } from './windbreaks/windbreak-registry.service';
+import {
+  type NewWindbreakApplicationLine,
+  WindbreakApplicationsStore,
+} from './windbreaks/windbreak-applications.store';
 
 interface OgcFeatureCollection<P> {
   type: 'FeatureCollection';
@@ -64,6 +75,7 @@ export class AppService {
   constructor(
     private readonly fasteignirService: FasteignirService,
     private readonly windbreakRegistryService: WindbreakRegistryService,
+    private readonly windbreakApplicationsStore: WindbreakApplicationsStore,
   ) {}
 
   private async getOgc<P>(
@@ -100,32 +112,49 @@ export class AppService {
     return data.features as ParcelFeature[];
   }
 
-  /** Existing windbreaks on the given parcels. */
-  private async fetchWindbreaksForParcels(
-    parcels: ParcelFeature[],
+  /** Map a Fasteignir-Xroad failure to a localized HTTP error. */
+  private propertiesError(
+    err: unknown,
     t: Translator,
-  ): Promise<WindbreakFeature[]> {
-    const parcelIds = [
-      ...new Set(parcels.map((p) => p.properties.parcel_id)),
-    ];
-    const batches = await Promise.all(
-      parcelIds.map((id) =>
-        this.getOgc<WindbreakProperties>(
-          `/collections/windbreak_applications/items?parcel_id=${encodeURIComponent(id)}&f=json&limit=100`,
-          t,
-        ),
-      ),
+  ): ServiceUnavailableException {
+    if (err instanceof PropertiesLookupError) {
+      switch (err.code) {
+        case 'NO_TOKEN':
+          return new ServiceUnavailableException(t('errorFasteignirNoToken'));
+        case 'UNREACHABLE':
+          return new ServiceUnavailableException(
+            t('errorFasteignirUnreachable', {
+              url: process.env.FASTEIGNIR_API_URL || FASTEIGNIR_DEFAULT_API_URL,
+            }),
+          );
+        case 'HTTP':
+          return new ServiceUnavailableException(
+            t('errorFasteignirHttp', {
+              status: err.status ?? 0,
+              detail: err.detail ?? '',
+            }),
+          );
+        case 'PARSE':
+          return new ServiceUnavailableException(
+            t('errorFasteignirLookupFailed', { detail: err.message }),
+          );
+      }
+    }
+    return new ServiceUnavailableException(
+      t('errorFasteignirLookupFailed', {
+        detail: err instanceof Error ? err.message : String(err),
+      }),
     );
-    return batches.flatMap((b) => b.features as WindbreakFeature[]);
   }
 
   /**
    * Everything the draw page needs:
    *  1. look up the properties registered on the assumed kennitala
-   *     (Fasteignir-Xroad, mocked in this prototype),
+   *     (Fasteignir-Xroad; real client by default, mocked explicitly),
    *  2. build the unique list of landeignarnumer from them,
-   *  3. load the land parcels and their windbreaks from the registries,
-   * all embedded as GeoJSON for the Leaflet map.
+   *  3. load the land parcels and their windbreaks from the registries
+   *     (skógrækt PostGIS registry + the submitted applications store),
+   * all embedded as GeoJSON for the map.
    */
   async getApplyContext(locale: Locale): Promise<ApplyContext> {
     const t = createTranslator(locale);
@@ -136,10 +165,7 @@ export class AppService {
         this.demoKennitala,
       );
     } catch (err) {
-      const detail = err instanceof Error ? err.message : String(err);
-      throw new ServiceUnavailableException(
-        t('errorFasteignirLookupFailed', { detail }),
-      );
+      throw this.propertiesError(err, t);
     }
     const propertyCount = properties.fasteignir?.length ?? 0;
     const landeignarnumer = uniqueLandeignarnumer(properties);
@@ -167,7 +193,7 @@ export class AppService {
     // Existing windbreaks come from two places:
     //  - the skógrækt PostGIS registry (established windbreaks on the land,
     //    ISN93 -> WGS84), and
-    //  - the application collection (submitted, not yet accepted).
+    //  - the applications store (submitted, not yet accepted).
     const union = landUnion(parcels);
     let registeredWindbreaks: WindbreakFeature[] = [];
     if (union) {
@@ -188,10 +214,22 @@ export class AppService {
         );
       }
     }
-    const pendingWindbreaks = await this.fetchWindbreaksForParcels(
-      parcels,
-      t,
-    );
+
+    let pendingWindbreaks: WindbreakFeature[] = [];
+    try {
+      const parcelIds = [
+        ...new Set(parcels.map((p) => p.properties.parcel_id)),
+      ];
+      pendingWindbreaks = await this.windbreakApplicationsStore.find({
+        parcelIds,
+      });
+    } catch (err) {
+      throw new ServiceUnavailableException(
+        t('errorApplicationsQuery', {
+          detail: err instanceof Error ? err.message : String(err),
+        }),
+      );
+    }
 
     const windbreaks = [...registeredWindbreaks, ...pendingWindbreaks];
 
@@ -220,69 +258,38 @@ export class AppService {
   }
 
   /**
-   * Store one windbreak line in the backend via an OGC API Features
-   * transaction (POST /collections/windbreak_applications/items).
-   */
-  private async postLine(
-    input: {
-      line: Feature<LineString, Record<string, unknown>>;
-      lineId: string;
-      applicationId: string;
-      kennitala: string;
-      parcelId: string | null;
-      lengthM: number;
-    },
-    t: Translator,
-  ): Promise<void> {
-    const feature: Feature<LineString> = {
-      type: 'Feature',
-      geometry: input.line.geometry,
-      properties: {
-        line_id: input.lineId,
-        application_id: input.applicationId,
-        kennitala: input.kennitala,
-        parcel_id: input.parcelId,
-        // Submitted for review: the windbreak is not accepted yet.
-        status: 'pending',
-        length_m: Math.round(input.lengthM * 10) / 10,
-        submitted_at: new Date().toISOString(),
-      },
-    };
-
-    const res = await fetch(
-      `${this.pygeoapiUrl}/collections/windbreak_applications/items?f=json`,
-      {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/geo+json',
-          Accept: 'application/json',
-        },
-        body: JSON.stringify(feature),
-      },
-    );
-    if (!res.ok) {
-      const detail = (await res.text().catch(() => '')).slice(0, 400);
-      throw new BadGatewayException(
-        t('errorStoreFailed', { status: res.status, detail }),
-      );
-    }
-  }
-
-  /**
-   * Validate the submitted lines server side (the client-side check is only
-   * for immediate feedback) and store them in the OGC API backend.
+   * Validate the submitted answers against the template's data schema
+   * (shape), re-validate each line against the land and the existing
+   * windbreaks server side (the client-side check is only for immediate
+   * feedback), and persist them in PostGIS through the applications store
+   * (windbreak_applications, exposed read-only through the OGC API).
+   *
+   * Lengths are re-measured here - the client-provided lengthM is part of
+   * the answers shape but never trusted for storage.
    */
   async submitApplication(
-    lines: Feature<LineString, Record<string, unknown>>[],
+    answers: unknown,
     locale: Locale,
   ): Promise<{ applicationId: string }> {
     const t = createTranslator(locale);
+
+    const parsed = windbreakAnswersSchema.safeParse(answers);
+    if (!parsed.success) {
+      throw new BadRequestException(t('errorInvalidAnswers'));
+    }
+    const validatedAnswers: WindbreakAnswers = parsed.data;
+    if (validatedAnswers.lines.length === 0) {
+      throw new BadRequestException(t('errorNoLines'));
+    }
+
     const { parcels, windbreaks } = await this.getApplyContext(locale);
 
-    const drawn: WindbreakLine[] = lines.map((feature, index) => ({
-      clientId: `server-${index}`,
-      feature,
-      lengthM: measureLineM(feature),
+    // The zod feature shape is structurally the lib's WindbreakLine feature.
+    const drawn: WindbreakLine[] = validatedAnswers.lines.map((answer) => ({
+      clientId: answer.clientId,
+      feature: answer.feature,
+      // Re-measured server side: never trust the client's length.
+      lengthM: measureLineM(answer.feature),
     }));
 
     const validated = validateWindbreakLines(drawn, {
@@ -299,44 +306,58 @@ export class AppService {
     }
 
     const applicationId = newApplicationId();
-    for (let i = 0; i < validated.length; i += 1) {
-      const entry = validated[i];
-      await this.postLine(
-        {
-          line: entry.line.feature,
-          lineId: `${applicationId}-${i + 1}`,
-          applicationId,
-          kennitala: this.demoKennitala,
-          parcelId:
-            entry.validation.status === 'ok'
-              ? entry.validation.parcelId
-              : null,
-          lengthM: entry.line.lengthM,
-        },
-        t,
-      );
+    const now = new Date().toISOString();
+    const toStore: NewWindbreakApplicationLine[] = validated.map(
+      (entry, index) => ({
+        lineId: `${applicationId}-${index + 1}`,
+        applicationId,
+        kennitala: this.demoKennitala,
+        parcelId:
+          entry.validation.status === 'ok'
+            ? entry.validation.parcelId
+            : null,
+        lengthM: entry.line.lengthM,
+        submittedAt: now,
+        feature: entry.line.feature,
+      }),
+    );
+
+    try {
+      await this.windbreakApplicationsStore.insertLines(toStore);
+    } catch (err) {
+      const detail =
+        err instanceof Error ? err.message : String(err);
+      throw new BadGatewayException(t('errorApplicationsWrite', { detail }));
     }
 
     return { applicationId };
   }
 
-  /** Read an application back from the backend for the confirmation page. */
+  /** Read an application back from the store for the confirmation page. */
   async getSubmittedContext(
     applicationId: string,
     locale: Locale,
   ): Promise<SubmittedContext> {
     const t = createTranslator(locale);
-    const data = await this.getOgc<WindbreakProperties>(
-      `/collections/windbreak_applications/items?application_id=${encodeURIComponent(applicationId)}&f=json&limit=100`,
-      t,
-    );
-    if (data.features.length === 0) {
+    let features: WindbreakFeature[];
+    try {
+      features = await this.windbreakApplicationsStore.find({
+        applicationId,
+      });
+    } catch (err) {
+      throw new ServiceUnavailableException(
+        t('errorApplicationsQuery', {
+          detail: err instanceof Error ? err.message : String(err),
+        }),
+      );
+    }
+    if (features.length === 0) {
       throw new BadRequestException(
         t('errorApplicationNotFound', { applicationId }),
       );
     }
 
-    const lines = data.features.map((f) => {
+    const lines = features.map((f) => {
       const p = f.properties;
       return {
         line_id: p.line_id,
@@ -346,12 +367,12 @@ export class AppService {
         submitted_at: p.submitted_at,
       };
     });
-    const totalLengthM = data.features.reduce(
+    const totalLengthM = features.reduce(
       (sum, f) => sum + (f.properties.length_m ?? 0),
       0,
     );
     const submittedAt =
-      data.features.map((f) => f.properties.submitted_at ?? '')
+      features.map((f) => f.properties.submitted_at ?? '')
         .filter((v) => v.length > 0)
         .sort()
         .pop() ?? new Date().toISOString();
