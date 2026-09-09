@@ -169,15 +169,17 @@ FASTEIGNIR_MOCK=true WINDBREAK_REGISTRY_MOCK=true WINDBREAK_APPLICATIONS_MOCK=tr
 ```
 
 Troubleshooting: if a `file:` lib fails to resolve after `npm install`
-(npm can create the scoped symlink one level too deep), recreate the link,
-e.g. `ln -sfn ../../../libs/map frontend/node_modules/@island.is/map` and
-`ln -sfn ../../../libs/application/templates/windbreak frontend/node_modules/@island.is/windbreak-application`.
-The template lib is deliberately resilient to this: its `tsconfig.json`
-maps `@island.is/map` to the map lib's sources, and the client esbuild
-build aliases `@island.is/map` to the frontend's own install, so a broken
-link inside `libs/application/templates/windbreak/node_modules` cannot
-break the builds. The Dockerfiles apply the same fixup explicitly
-(`fix-lib-links`).
+(npm can create the scoped symlink one level too deep, e.g. "Cannot find
+module '@island.is/map'"), the template lib fixes its own link
+automatically: its `prebuild`/`pretypecheck`/`pretest` hooks run
+`npm run fix:link` (`libs/application/templates/windbreak/scripts/
+fix-lib-link.cjs`), which repoints `node_modules/@island.is/map` at
+`libs/map`. The frontend's links can be recreated manually with
+`ln -sfn ../../../libs/map frontend/node_modules/@island.is/map` and
+`ln -sfn ../../../libs/application/templates/windbreak frontend/node_modules/@island.is/windbreak-application`,
+and the client esbuild build aliases `@island.is/map` to the frontend's own
+install as an extra guard. The Dockerfiles apply the same fixup via those
+npm hooks.
 
 * `PYGEOAPI_URL` — base URL of the pygeoapi backend as seen **from the
   NestJS server** (default `http://localhost:5000`; in Docker it is

@@ -16,8 +16,12 @@
     }
   },
   "scripts": {
+    "fix:link": "node scripts/fix-lib-link.cjs",
+    "prebuild": "node scripts/fix-lib-link.cjs",
     "build": "tsc -p tsconfig.lib.json",
+    "pretypecheck": "node scripts/fix-lib-link.cjs",
     "typecheck": "tsc --noEmit -p tsconfig.json",
+    "pretest": "node scripts/fix-lib-link.cjs",
     "test": "jest",
     "storybook": "storybook dev -p 6007",
     "build-storybook": "storybook build"
