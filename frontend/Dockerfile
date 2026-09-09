@@ -13,6 +13,16 @@ ENV NODE_ENV=development
 # ENV (not ARG): the develop stage's runtime CMD also needs the list.
 ENV LIB_DEPS="libs/map libs/application/templates/windbreak"
 
+# Fix npm's file: link inside the template's own node_modules: npm can
+# create it one level too deep for scoped packages ("Cannot find module
+# '@island.is/map'"), so point it at the map lib explicitly before any
+# template build or bundle step.
+RUN echo '#!/bin/sh' > /usr/local/bin/fix-lib-links.sh \
+ && echo 'set -e' >> /usr/local/bin/fix-lib-links.sh \
+ && echo 'rm -rf /workspace/libs/application/templates/windbreak/node_modules/@island.is/map' >> /usr/local/bin/fix-lib-links.sh \
+ && echo 'ln -sfn /workspace/libs/map /workspace/libs/application/templates/windbreak/node_modules/@island.is/map' >> /usr/local/bin/fix-lib-links.sh \
+ && chmod +x /usr/local/bin/fix-lib-links.sh
+
 # ---------- develop: NestJS dev server (sources bind-mounted by compose) ----------
 FROM base AS develop
 COPY frontend/package.json frontend/package-lock.json ./frontend/
@@ -26,10 +36,10 @@ EXPOSE 3000
 # build-time install would be shadowed). Libs are installed + built before
 # the frontend, and npm's file: links are replaced with explicit absolute
 # symlinks (npm can create them with the wrong depth for scoped packages).
-CMD ["sh", "-c", "for d in $LIB_DEPS; do (cd /workspace/$d && npm ci --no-audit --no-fund && npm run build) || exit 1; done && cd /workspace/frontend && npm ci --no-audit --no-fund && rm -rf node_modules/@island.is/map node_modules/@island.is/windbreak-application && ln -sfn /workspace/libs/map node_modules/@island.is/map && ln -sfn /workspace/libs/application/templates/windbreak node_modules/@island.is/windbreak-application && if [ \"$WINDBREAK_APPLICATIONS_MOCK\" != \"true\" ] && { [ -n \"$WINDBREAK_DATABASE_URL\" ] || [ -n \"$PGHOST\" ]; }; then node db/migrate.cjs || exit 1; fi && npm run start:dev"]
+CMD ["sh", "-c", "for d in $LIB_DEPS; do (cd /workspace/$d && npm ci --no-audit --no-fund) || exit 1; done && fix-lib-links && for d in $LIB_DEPS; do (cd /workspace/$d && npm run build) || exit 1; done && cd /workspace/frontend && npm ci --no-audit --no-fund && rm -rf node_modules/@island.is/map node_modules/@island.is/windbreak-application && ln -sfn /workspace/libs/map node_modules/@island.is/map && ln -sfn /workspace/libs/application/templates/windbreak node_modules/@island.is/windbreak-application && if [ \"$WINDBREAK_APPLICATIONS_MOCK\" != \"true\" ] && { [ -n \"$WINDBREAK_DATABASE_URL\" ] || [ -n \"$PGHOST\" ]; }; then node db/migrate.cjs || exit 1; fi && npm run start:dev"]
 
 # ---------- build: compile libs + server + client bundle ----------
-FROM node:20-slim AS build
+FROM base AS build
 WORKDIR /workspace
 ENV NODE_ENV=production
 COPY frontend/package.json frontend/package-lock.json ./frontend/
@@ -38,11 +48,12 @@ COPY libs/application/templates/windbreak/package.json \
      libs/application/templates/windbreak/package-lock.json \
      ./libs/application/templates/windbreak/
 # Each lib installs its own toolchain; the frontend install also links them.
+# The template's own @island.is/map link is fixed before its build.
 RUN for d in $LIB_DEPS; do (cd /workspace/$d && npm ci --no-audit --no-fund) || exit 1; done
 RUN cd /workspace/frontend && npm ci --no-audit --no-fund
 COPY libs/map ./libs/map
 COPY libs/application ./libs/application
-RUN for d in $LIB_DEPS; do (cd /workspace/$d && npm run build) || exit 1; done
+RUN fix-lib-links && for d in $LIB_DEPS; do (cd /workspace/$d && npm run build) || exit 1; done
 # Deterministic links to the built libs (replaces npm's file: symlinks).
 RUN rm -rf /workspace/frontend/node_modules/@island.is/map \
            /workspace/frontend/node_modules/@island.is/windbreak-application && \

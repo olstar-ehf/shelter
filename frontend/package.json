@@ -5,7 +5,7 @@
   "description": "Windbreak grant application form - NestJS server + React Leaflet map client",
   "scripts": {
     "build": "nest build && npm run build:client",
-    "build:client": "esbuild client/main.tsx --bundle --minify --sourcemap --jsx=automatic --outfile=public/app.js --loader:.png=file --loader:.svg=file --alias:react=./node_modules/react --alias:react-dom=./node_modules/react-dom --alias:react-intl=./node_modules/react-intl",
+    "build:client": "esbuild client/main.tsx --bundle --minify --sourcemap --jsx=automatic --outfile=public/app.js --loader:.png=file --loader:.svg=file --alias:react=./node_modules/react --alias:react-dom=./node_modules/react-dom --alias:react-intl=./node_modules/react-intl --alias:@island.is/map=./node_modules/@island.is/map",
     "prestart": "npm run build:client",
     "start": "node dist/main.js",
     "prestart:dev": "npm run build:client",

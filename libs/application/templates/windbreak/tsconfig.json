@@ -14,7 +14,12 @@
     "isolatedModules": true,
     "noEmit": true,
     "forceConsistentCasingInFileNames": true,
-    "types": ["jest", "node"]
+    "types": ["jest", "node"],
+    "baseUrl": ".",
+    "paths": {
+      "@island.is/map": ["../../../map/src/index.ts"],
+      "@island.is/map/server": ["../../../map/src/server.ts"]
+    }
   },
   "include": [
     "src/**/*.ts",

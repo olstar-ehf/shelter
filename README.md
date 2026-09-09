@@ -172,6 +172,12 @@ Troubleshooting: if a `file:` lib fails to resolve after `npm install`
 (npm can create the scoped symlink one level too deep), recreate the link,
 e.g. `ln -sfn ../../../libs/map frontend/node_modules/@island.is/map` and
 `ln -sfn ../../../libs/application/templates/windbreak frontend/node_modules/@island.is/windbreak-application`.
+The template lib is deliberately resilient to this: its `tsconfig.json`
+maps `@island.is/map` to the map lib's sources, and the client esbuild
+build aliases `@island.is/map` to the frontend's own install, so a broken
+link inside `libs/application/templates/windbreak/node_modules` cannot
+break the builds. The Dockerfiles apply the same fixup explicitly
+(`fix-lib-links`).
 
 * `PYGEOAPI_URL` — base URL of the pygeoapi backend as seen **from the
   NestJS server** (default `http://localhost:5000`; in Docker it is
