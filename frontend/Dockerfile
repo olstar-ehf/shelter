@@ -17,11 +17,11 @@ ENV LIB_DEPS="libs/map libs/application/templates/windbreak"
 # create it one level too deep for scoped packages ("Cannot find module
 # '@island.is/map'"), so point it at the map lib explicitly before any
 # template build or bundle step.
-RUN echo '#!/bin/sh' > /usr/local/bin/fix-lib-links.sh \
- && echo 'set -e' >> /usr/local/bin/fix-lib-links.sh \
- && echo 'rm -rf /workspace/libs/application/templates/windbreak/node_modules/@island.is/map' >> /usr/local/bin/fix-lib-links.sh \
- && echo 'ln -sfn /workspace/libs/map /workspace/libs/application/templates/windbreak/node_modules/@island.is/map' >> /usr/local/bin/fix-lib-links.sh \
- && chmod +x /usr/local/bin/fix-lib-links.sh
+RUN echo '#!/bin/sh' > /usr/local/bin/fix-lib-links \
+ && echo 'set -e' >> /usr/local/bin/fix-lib-links \
+ && echo 'rm -rf /workspace/libs/application/templates/windbreak/node_modules/@island.is/map' >> /usr/local/bin/fix-lib-links \
+ && echo 'ln -sfn /workspace/libs/map /workspace/libs/application/templates/windbreak/node_modules/@island.is/map' >> /usr/local/bin/fix-lib-links \
+ && chmod +x /usr/local/bin/fix-lib-links
 
 # ---------- develop: NestJS dev server (sources bind-mounted by compose) ----------
 FROM base AS develop
