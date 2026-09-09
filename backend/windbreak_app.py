@@ -36,6 +36,18 @@ def _db_url_to_env():
     uses the DSN form, the pygeoapi config uses per-part parameters."""
     dsn = os.environ.get("WINDBREAK_DATABASE_URL")
     if not dsn or os.environ.get("WINDBREAK_DB_HOST"):
+        if not dsn and not any(
+            os.environ.get(k)
+            for k in ("WINDBREAK_DB_HOST", "WINDBREAK_DB_NAME", "PGHOST")
+        ):
+            print(
+                "WARNING windbreak_app: WINDBREAK_DATABASE_URL is not set; "
+                "windbreak_applications will try the config defaults "
+                "(localhost). Set WINDBREAK_DATABASE_URL in .env (e.g. "
+                "postgres://USER:PASS@HOST:5432/DB) to serve applications "
+                "from PostGIS.",
+                flush=True,
+            )
         return
     parts = urlsplit(dsn)
     os.environ.setdefault("WINDBREAK_DB_HOST", parts.hostname or "")

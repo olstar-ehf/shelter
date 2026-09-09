@@ -9,11 +9,25 @@
 #     placeholders in the pygeoapi config and patches APIRequest.from_flask
 #     so OGC API Features transaction (POST) bodies are decoded to JSON
 #     before reaching the GeoJSON provider (file-backed mock fallback)
+#   * a replacement entrypoint (entrypoint.sh): the stock one regenerates
+#     the OpenAPI document on every start, which instantiates the
+#     PostgreSQL provider and therefore requires a live database just to
+#     boot. Here the document is baked at build time from the GeoJSON
+#     docgen variant (no database needed); the DB provider stays lazy.
 FROM geopython/pygeoapi:0.21.0
 
 RUN python3 -m pip install --no-cache-dir flask-cors psycopg2-binary geoalchemy2
 
-COPY windbreak_app.py /pygeoapi/windbreak_app.py
+COPY windbreak_app.py pygeoapi.config.yml docgen-config.py entrypoint.sh \
+     /pygeoapi/
+# Self-contained default data (the compose files overlay ./backend/data).
+COPY data /pygeoapi/data
 
-# The image entrypoint (/entrypoint.sh) starts gunicorn with the app module
-# from $WSGI_APP; docker-compose.yml sets it to windbreak_app:APP.
+# Bake the OpenAPI document (GeoJSON docgen variant - no DB connection).
+RUN python3 /pygeoapi/docgen-config.py /tmp/docgen.config.yml /pygeoapi/data \
+    && pygeoapi openapi generate /tmp/docgen.config.yml \
+       --output-file /pygeoapi/local.openapi.yml
+
+# docker-compose.yml mounts ./backend/pygeoapi.config.yml over
+# /pygeoapi/local.config.yml and sets WSGI_APP=windbreak_app:APP.
+ENTRYPOINT ["/bin/sh", "/pygeoapi/entrypoint.sh"]

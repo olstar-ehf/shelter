@@ -61,12 +61,29 @@ draws lines on a map of their own land and submits.
 
 ## Quick start (development)
 
+**First, configure the environment** (`.env` is gitignored — copy the
+example and adjust; both compose files interpolate it):
+
+```bash
+cp .env.example .env
+# .env: set WINDBREAK_DATABASE_URL to your PostGIS server (reachable from
+# your machine/VPN), e.g. postgres://USER:PASS@server1.logs.is:5432/sde
+```
+
 ```bash
 docker compose up --build
 ```
 
 * Frontend: <http://localhost:8000> (NestJS dev server with watch mode)
 * Backend (OGC API): <http://localhost:5000>
+
+> The real clients are the default: without `WINDBREAK_DATABASE_URL` in
+> `.env`, the backend container previously fell back to a `localhost`
+> PostgreSQL and failed to boot ("connection refused"); the entrypoint now
+> boots without a database (the OpenAPI document is baked at build time,
+> the PostgreSQL provider stays lazy) and logs a clear warning instead.
+> The frontend still fails fast with a clear message when the registry is
+> real but no database is configured.
 
 Then, in the UI:
 
@@ -91,6 +108,9 @@ Then, in the UI:
    `GET /collections/windbreak_applications/items?application_id=WB-...`.
 
 ## Quick start (production-style build)
+
+Uses the same `.env` (see above — `WINDBREAK_DATABASE_URL` required for the
+real PostGIS clients):
 
 ```bash
 docker compose -f docker-compose.prod.yml up --build -d
