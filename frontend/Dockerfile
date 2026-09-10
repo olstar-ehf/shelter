@@ -27,7 +27,7 @@ EXPOSE 3000
 # the frontend; the template's prebuild hook fixes its own @island.is/map
 # link, and the frontend links are replaced with explicit absolute symlinks
 # (npm can create scoped file: links with the wrong depth).
-CMD ["sh", "-c", "for d in $LIB_DEPS; do (cd /workspace/$d && npm ci --no-audit --no-fund) || exit 1; done && for d in $LIB_DEPS; do (cd /workspace/$d && npm run build) || exit 1; done && cd /workspace/frontend && npm ci --no-audit --no-fund && rm -rf node_modules/@island.is/map node_modules/@island.is/windbreak-application && ln -sfn /workspace/libs/map node_modules/@island.is/map && ln -sfn /workspace/libs/application/templates/windbreak node_modules/@island.is/windbreak-application && if [ \"$WINDBREAK_APPLICATIONS_MOCK\" != \"true\" ] && { [ -n \"$WINDBREAK_DATABASE_URL\" ] || [ -n \"$PGHOST\" ]; }; then node db/migrate.cjs || exit 1; fi && npm run start:dev"]
+CMD ["sh", "-c", "for d in $LIB_DEPS; do (cd /workspace/$d && npm ci --no-audit --no-fund) || exit 1; done && for d in $LIB_DEPS; do (cd /workspace/$d && npm run build) || exit 1; done && cd /workspace/frontend && npm ci --no-audit --no-fund && rm -rf node_modules/@island.is/map node_modules/@island.is/windbreak-application && ln -sfn /workspace/libs/map node_modules/@island.is/map && ln -sfn /workspace/libs/application/templates/windbreak node_modules/@island.is/windbreak-application && npm run start:dev"]
 
 # ---------- build: compile libs + server + client bundle ----------
 FROM base AS build
@@ -84,8 +84,9 @@ COPY --from=build /workspace/libs/application/templates/windbreak/dist \
 COPY --from=build /workspace/frontend/dist ./frontend/dist
 COPY --from=build /workspace/frontend/public ./frontend/public
 COPY --from=build /workspace/frontend/views ./frontend/views
-# DB migrations + runner (idempotent; skipped in the file-backed mock mode)
+# Migration runner kept for manual/local use (the deployed DB is read-only;
+# submissions go to Zendesk, see src/zendesk)
 COPY frontend/db ./frontend/db
 WORKDIR /workspace/frontend
 EXPOSE 3000
-CMD ["sh", "-c", "if [ \"$WINDBREAK_APPLICATIONS_MOCK\" != \"true\" ]; then node db/migrate.cjs || exit 1; fi && node dist/main.js"]
+CMD ["node", "dist/main.js"]

@@ -9,8 +9,8 @@
  *   LD_LIBRARY_PATH=/workspace/shelter/.pw-libs/root/lib/x86_64-linux-gnu:/workspace/shelter/.pw-libs/root/usr/lib/x86_64-linux-gnu \
  *   node e2e-draw-test.js
  *
- * NOTE: the submission scenario appends a line to
- * backend/data/windbreak_applications.json - restore the seed file afterwards.
+ * NOTE: submissions create an in-memory Zendesk mock ticket
+ * (ZENDESK_MOCK=true) - no files or databases are written.
  */
 const { chromium } = require('playwright-core');
 
@@ -207,8 +207,10 @@ async function main() {
   await page.waitForTimeout(800);
   const submitted = await page.evaluate(() => ({
     url: window.location.pathname,
-    hasPending: document.body.textContent.includes('pending — not accepted yet'),
-    hasStoredLine: document.body.textContent.includes('Stored in the backend'),
+    hasTicketHeading: document.body.textContent.includes('Zendesk ticket'),
+    hasApplicationRef: document.body.textContent.includes('WB-'),
+    hasTicketNo: /Ticket no\./.test(document.body.textContent) &&
+      /\d+/.test(document.body.textContent),
     startPageVisible: !!document.querySelector('h1') &&
       document.querySelector('h1').textContent.includes('Apply for a grant'),
   }));
@@ -226,7 +228,8 @@ async function main() {
     !backState.reviewBtnHidden && backState.drawToolbarBack &&
     backState.title.includes('Draw your windbreak') &&
     !backState.drawHelpHidden &&
-    submitted.hasPending && submitted.hasStoredLine && !submitted.startPageVisible;
+    submitted.hasTicketHeading && submitted.hasApplicationRef &&
+    submitted.hasTicketNo && !submitted.startPageVisible;
   console.log(session2Ok ? 'SESSION 2: PASS' : 'SESSION 2: FAIL');
 
   console.log('pageerrors:', pageErrors.length ? pageErrors : 'none');

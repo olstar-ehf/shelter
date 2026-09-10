@@ -51,12 +51,18 @@ draws lines on a map of their own land and submits.
   come from GeoJSON files, and the `windbreak_applications` collection is
   served **from PostGIS** (pygeoapi's PostgreSQL provider is read-only, so
   the OGC API is the agency-facing read interface for submitted lines).
-* **PostGIS persistence**: submitted applications are written by the
-  NestJS `WindbreakApplicationsStore` into the `windbreak_applications`
-  table (WGS84), whose schema is owned by the migrations in
-  `frontend/db/migrations` (`npm run db:migrate`, run automatically by the
-  containers). Established windbreaks stay in the skógrækt registry
-  (`skograekt.skjolbelti`, EPSG:3057).
+* **Read-only database + Zendesk submissions**: the grant authority only
+  has read access to the database, so submitted applications are NOT
+  written to PostGIS. Submitting creates a **Zendesk ticket** (Support API
+  v2) and uploads the drawn windbreak lines as a **GeoJSON attachment**
+  (`src/zendesk/`): upload → `POST /api/v2/uploads.json`, then
+  `POST /api/v2/tickets.json` with the upload token in the comment. The
+  confirmation page shows the ticket number + agent link. Established
+  windbreaks keep coming from the read-only skógrækt registry
+  (`skograekt.skjolbelti`, EPSG:3057); pending lines come from the
+  `windbreak_applications` table when it is readable and degrade to an
+  empty list otherwise. The migrations in `frontend/db/migrations` remain
+  for optional local development; the containers no longer run them.
 * Both run in Docker via `docker-compose`.
 
 ## Quick start (development)
@@ -165,7 +171,8 @@ automatically (monorepo build context).
 Without a database or token, run with the prototype mocks:
 
 ```bash
-FASTEIGNIR_MOCK=true WINDBREAK_REGISTRY_MOCK=true WINDBREAK_APPLICATIONS_MOCK=true npm start
+FASTEIGNIR_MOCK=true WINDBREAK_REGISTRY_MOCK=true \
+WINDBREAK_APPLICATIONS_MOCK=true ZENDESK_MOCK=true npm start
 ```
 
 Troubleshooting: if a `file:` lib fails to resolve after `npm install`
@@ -193,16 +200,22 @@ npm hooks.
   existing-windbreak registry. The real registry reads `skograekt.skjolbelti`
   from PostGIS.
 * `WINDBREAK_APPLICATIONS_MOCK` — **real by default**; `true` selects the
-  GeoJSON-file fallback for submitted applications. The real store reads and
-  writes the `windbreak_applications` table (migrations in
-  `frontend/db/migrations`, applied by `npm run db:migrate` or on container
-  start).
+  GeoJSON-file fallback for **reading** previously submitted (pending)
+  applications. The real read store queries the `windbreak_applications`
+  table and degrades to an empty list when the table is missing or not
+  readable (the deployed database is read-only). Submissions no longer
+  write here - they go to Zendesk.
 * `WINDBREAK_DATABASE_URL` — the PostGIS DSN (or the standard `PGHOST`,
   `PGPORT`, `PGDATABASE`, `PGUSER`, `PGPASSWORD`). Used by the registry, the
-  applications store and the backend container, which splits it into the
-  per-part connection variables the pygeoapi PostgreSQL provider config
+  applications read store and the backend container, which splits it into
+  the per-part connection variables the pygeoapi PostgreSQL provider config
   expands (`windbreak_app.py` also expands `${VAR}` placeholders in the
   pygeoapi config, so no credentials live in the committed YAML).
+* `ZENDESK_MOCK` — **real by default**; `true` selects the in-memory mock
+  (tickets live for the server lifetime). The real client needs
+  `ZENDESK_SUBDOMAIN` (e.g. `myagency` → `https://myagency.zendesk.com`),
+  `ZENDESK_EMAIL` and `ZENDESK_API_TOKEN` (Support API basic auth). If the
+  configuration is missing, the server fails fast with a clear message.
 * `PORT` — server port (default `3000`; the compose files publish it as
   8000/8080).
 
@@ -275,14 +288,28 @@ directly; the provider config (`backend/pygeoapi.config.yml`) takes
 `${WINDBREAK_DB_*}` env placeholders that `windbreak_app.py` expands
 (credentials never live in the committed YAML).
 
-### PostGIS migrations (windbreak applications)
+### PostGIS migrations (optional, local development)
 
 The `windbreak_applications` schema is owned by SQL migrations in
 `frontend/db/migrations` (one row per drawn line: `line_id` PK,
 `application_id`, `kennitala`, `parcel_id`, `status`, `length_m`,
 `submitted_at` and the WGS84 `geometry`). The runner (`frontend/db/migrate.cjs`,
 `npm run db:migrate`) tracks applied files in `schema_migrations` and is
-idempotent; the containers run it before starting the server.
+idempotent. The deployed database is **read-only** and submissions go to
+Zendesk, so the containers no longer run the migrations; apply them only
+for local development against a database you can write to.
+
+**Database privileges (PostgreSQL 15+).** The public schema is no longer
+writable by default, so the role in `WINDBREAK_DATABASE_URL` must own the
+database or be granted rights once (as a superuser/database owner):
+
+```sql
+CREATE EXTENSION IF NOT EXISTS postgis;       -- if not installed already
+GRANT CREATE, USAGE ON SCHEMA public TO <role>;  -- the role from the DSN
+```
+
+`db:migrate` explains this in its error output when it hits a permission
+denial.
 
 Note: `pygeoapi openapi generate` instantiates the providers, so generating
 the OpenAPI document requires the database to be reachable. Generate it
@@ -358,8 +385,12 @@ frontend/
       fasteignir.module.ts   # provider: real by default (FASTEIGNIR_MOCK=true escapes)
     windbreaks/
       windbreak-registry.service.ts  # skograekt.skjolbelti (PostGIS, ISN93->WGS84) + mock
-      windbreak-applications.store.ts # applications: PostGIS store (default) + GeoJSON mock
+      windbreak-applications.store.ts # pending apps read store: PostGIS (default) + GeoJSON mock
       windbreaks.module.ts   # providers: real by default (WINDBREAK_*_MOCK=true escapes)
+    zendesk/
+      zendesk.service.ts     # Zendesk Support API client (ticket + attachment) + mock
+      windbreak-attachment.ts # GeoJSON attachment builder for the ticket
+      zendesk.module.ts      # provider: real by default (ZENDESK_MOCK=true escapes)
     i18n/
       index.ts               # locale resolution + ICU translator; merges the map
                              # lib and template catalogs (map.*/windbreak.* etc.)
@@ -368,7 +399,7 @@ frontend/
   views/
     index.hbs                # landing page (server-rendered, stepper from template labels)
     apply.hbs                # draw page shell + embedded parcels/windbreaks JSON
-    submitted.hbs            # confirmation page (reads lines back)
+    submitted.hbs            # confirmation page (shows the Zendesk ticket)
   client/
     main.tsx                 # React bootstrap: IntlProvider + 3-way merged catalogs
     WindbreakApplyPage.tsx   # host: mounts the template flow, submits POST /apply
@@ -418,26 +449,26 @@ docker-compose.prod.yml      # production stack
   `npm run storybook` (stories on :6007).
 * `frontend`: `npm run typecheck` — TypeScript check (server + client);
   `npm test` — Jest (X-Road client contract tests against the OpenAPI
-  fixtures, applications store round-trips; the live PostGIS suite runs when
-  `WINDBREAK_DATABASE_URL` is set); `npm run build` — `nest build` +
-  esbuild client bundle.
+  fixtures, applications store round-trips, Zendesk attachment builder +
+  Support API transport contract with mocked fetch; the live PostGIS suite
+  runs when `WINDBREAK_DATABASE_URL` is set); `npm run build` — `nest build`
+  + esbuild client bundle.
 * `frontend/e2e-draw-test.js` — headless-browser regression test covering
   the draw flow (inside/outside/crossing validation) and a full submission
-  through the NestJS server to the confirmation page. Requires a running
-  stack and Playwright's chromium:
+  through the NestJS server to the Zendesk-ticket confirmation page.
+  Requires a running stack and Playwright's chromium:
 
   ```bash
   cd frontend
   npm install --no-save playwright-core
   npx playwright-core install chromium-headless-shell
-  # with backend (:5000) and the NestJS server (:8000) running:
+  # with backend (:5000) and the NestJS server (:8000) running (mocks incl.
+  # ZENDESK_MOCK=true for the submission step):
   node e2e-draw-test.js
   ```
 
-  Note: the submission scenario appends a line to
-  `backend/data/windbreak_applications.json` (file-backed mock mode);
-  reset that file afterwards. In PostGIS mode, submitted lines land in the
-  `windbreak_applications` table and can be cleaned with SQL.
+  Note: submissions create an in-memory Zendesk mock ticket
+  (`ZENDESK_MOCK=true`) — no files or databases are written.
 
 ## Prototype assumptions & limitations
 
@@ -452,16 +483,20 @@ docker-compose.prod.yml      # production stack
   the app builds the unique landeignarnumer list (`[163368]`) exactly as it
   would with the real service. The real client's wire contract is pinned by
   fixture tests against the OpenAPI spec (`frontend/Fasteignir-Xroad.json`).
-* **The windbreak registry and the applications store are real by
+* **The windbreak registry and the applications read store are real by
   default** (`src/windbreaks/`). The registry reads `skograekt.skjolbelti`
   from PostGIS (geometry in ISN93, transformed to WGS84); the applications
-  store reads/writes the `windbreak_applications` table (schema owned by
-  the `frontend/db` migrations). `WINDBREAK_REGISTRY_MOCK=true` /
-  `WINDBREAK_APPLICATIONS_MOCK=true` select the prototype mocks.
-* **pygeoapi 0.21's PostgreSQL provider is read-only**, so submitted lines
-  are written by the NestJS applications store directly; the OGC API serves
-  the same rows read-only. In the file-backed mock mode the GeoJSON seed at
-  `backend/data/windbreak_applications.json` is appended instead.
+  store reads the `windbreak_applications` table and degrades to an empty
+  list when the table is missing or not readable. Neither writes to the
+  database: **submissions create a Zendesk ticket** (`src/zendesk/`) with
+  the drawn lines attached as GeoJSON, and the confirmation page reads the
+  ticket back. `WINDBREAK_REGISTRY_MOCK=true` /
+  `WINDBREAK_APPLICATIONS_MOCK=true` / `ZENDESK_MOCK=true` select the
+  prototype mocks.
+* **pygeoapi 0.21's PostgreSQL provider is read-only**; the OGC API serves
+  the `windbreak_applications` rows for agency/curl access when the table
+  exists. In the file-backed mock mode the GeoJSON seed at
+  `backend/data/windbreak_applications.json` is the pending-lines source.
 * **Validation runs twice**: in the browser (immediate feedback) and again
   in the NestJS server before storage. A line must be ≥ 10 m, lie entirely
   inside the farmer's registered parcels, and not cross or touch any other

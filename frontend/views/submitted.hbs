@@ -44,40 +44,29 @@
         <h2>{{t.submittedTitle}}</h2>
         <p>{{t.submittedLead}}</p>
 
+        <h3>{{t.submittedTicketHeading}}</h3>
         <dl class="details">
+          {{#if applicationId}}
           <dt>{{t.labelApplicationNo}}</dt>
           <dd><strong>{{applicationId}}</strong></dd>
+          {{/if}}
+          <dt>{{t.labelTicketNo}}</dt>
+          <dd><strong>{{ticketId}}</strong></dd>
           <dt>{{t.labelSubmitted}}</dt>
           <dd>{{submittedAt}}</dd>
-          <dt>{{t.labelWindbreaks}}</dt>
-          <dd>{{linesLabel}}</dd>
-          <dt>{{t.labelStatus}}</dt>
-          <dd><span class="chip chip-ok">{{t.statusPending}}</span></dd>
         </dl>
 
-        <p class="muted">{{t.submittedNote}}</p>
+        {{#if ticketUrl}}
+        <div class="step-actions">
+          <a class="btn btn-secondary" href="{{ticketUrl}}" target="_blank" rel="noopener">
+            {{t.ticketOpenButton}}
+          </a>
+        </div>
+        {{else}}
+        <p class="muted">{{t.submittedNoTicketUrl}}</p>
+        {{/if}}
 
-        <h3>{{t.submittedStoredHeading}}</h3>
-        <table class="lines-table">
-          <thead>
-            <tr>
-              <th>{{t.colLineId}}</th>
-              <th>{{t.colParcel}}</th>
-              <th>{{t.colLength}}</th>
-              <th>{{t.colStatus}}</th>
-            </tr>
-          </thead>
-          <tbody>
-            {{#each lines}}
-            <tr>
-              <td>{{line_id}}</td>
-              <td>{{parcel_id}}</td>
-              <td>{{length_m}} m</td>
-              <td>{{status}}</td>
-            </tr>
-            {{/each}}
-          </tbody>
-        </table>
+        <p class="muted">{{t.submittedNote}}</p>
 
         <div class="step-actions">
           <a class="btn btn-primary" href="/apply">

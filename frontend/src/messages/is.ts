@@ -31,21 +31,33 @@ export const is: Record<string, string> = {
   // staðfestingarsíða
   submittedTitle: 'Umsókn móttekin',
   submittedLead:
-    'Umsókn þín um skjólbeltisstyrk hefur verið móttekin og vistuð hjá stofnuninni.',
+    'Umsókn þín um skjólbeltisstyrk hefur verið skráð sem þjónustumiði. Stofnunin fer nú yfir hana; teiknuðu skjólbeltislínurnar fylgja miðanum.',
   labelApplicationNo: 'Umsóknarnúmer',
   labelSubmitted: 'Sent',
-  labelWindbreaks: 'Skjólbelti',
-  labelStatus: 'Staða',
-  statusPending: 'í bið — ekki samþykkt enn',
+  submittedTicketHeading: 'Zendesk-miði',
+  labelTicketNo: 'Miðanúmer',
+  labelTicketStatus: 'Staða',
+  ticketStatusNew: 'ný',
+  ticketStatusOpen: 'opin',
+  ticketStatusPending: 'í bið',
+  ticketStatusSolved: 'leyst',
+  ticketStatusClosed: 'lokað',
+  ticketOpenButton: 'Opna miða í Zendesk',
   submittedNote:
-    'Stofnunin fer nú yfir umsókn þína. Þar til hún hefur verið samþykkt telst umbeðið skjólbelti vera fyrirliggjandi skjólbelti: nýjar umsóknir mega ekki skerast það.',
-  submittedStoredHeading: 'Vistað í bakvinnslu',
-  colLineId: 'Línunúmer',
-  colStatus: 'Staða',
-  submittedLines:
-    '{count, plural, one {# lína} other {# línur}}, {total} m samtals',
+    'Teiknuðu skjólbeltislínurnar fylgja miðanum sem GeoJSON-viðhengi. Þar til umsóknin er samþykkt telst umbeðið skjólbelti vera fyrirliggjandi skjólbelti: nýjar umsóknir mega ekki skerast það.',
+  submittedNoTicketUrl:
+    'Miðinn er aðeins sýnilegur inni í Zendesk (enginn opinber hlekkur er stilltur í þessari frumgerð).',
   btnApplyAgain: 'Sækja um annað skjólbelti',
   btnBackToApplication: 'Til baka í umsókn',
+
+  // Zendesk-miði (skráningarstaður umsókna; gagnagrunnur er lesaðgengi)
+  ticketSubject:
+    'Skjólbeltisumsókn {applicationId} (kt. {kennitala})',
+  ticketBody:
+    '{count, plural, one {# skjólbeltislína} other {# skjólbeltislínur}} ' +
+    '({total} m) send af kennitölu {kennitala}. Landspildur: {parcels}. ' +
+    'Línurnar fylgja sem GeoJSON.',
+  ticketNoParcels: '—',
 
   // villuskilaboð þjónustu
   errorNoProperties:
@@ -67,4 +79,9 @@ export const is: Record<string, string> = {
     'Ekki tókst að sækja innsendar skjólbeltisumsóknir: {detail}',
   errorApplicationsWrite: 'Vistun skjólbeltisumsóknar mistókst: {detail}',
   errorStoreFailed: 'Vista skjólbeltið tókst ekki (HTTP {status}): {detail}',
+  errorZendeskConfig:
+    'Zendesk er ekki stillt: {detail}. Stilltu ZENDESK_SUBDOMAIN, ZENDESK_EMAIL og ZENDESK_API_TOKEN, eða ZENDESK_MOCK=true.',
+  errorZendeskFailed: 'Stofnun Zendesk-miða mistókst: {detail}',
+  errorZendeskHttp: 'Zendesk skilaði HTTP {status}: {detail}',
+  errorTicketNotFound: 'Zendesk-miði {ticketId} fannst ekki.',
 };

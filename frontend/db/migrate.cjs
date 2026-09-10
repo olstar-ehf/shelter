@@ -38,10 +38,16 @@ async function main() {
   const client = new Client(connectionConfig());
   await client.connect();
   try {
-    await client.query(
-      'CREATE TABLE IF NOT EXISTS schema_migrations (' +
-        'version text PRIMARY KEY, applied_at timestamptz NOT NULL DEFAULT now())',
-    );
+    try {
+      await client.query(
+        'CREATE TABLE IF NOT EXISTS schema_migrations (' +
+          'version text PRIMARY KEY, applied_at timestamptz NOT NULL DEFAULT now())',
+      );
+    } catch (err) {
+      throw new Error(
+        `preparing schema_migrations failed: ${err.message}${remediation(err)}`,
+      );
+    }
     const { rows } = await client.query('SELECT version FROM schema_migrations');
     const applied = new Set(rows.map((r) => r.version));
 
@@ -62,13 +68,40 @@ async function main() {
         await client.query('COMMIT');
       } catch (err) {
         await client.query('ROLLBACK');
-        throw new Error(`${file} failed: ${err.message}`);
+        throw new Error(`${file} failed: ${err.message}${remediation(err)}`);
       }
     }
     console.log('Migrations up to date.');
   } finally {
     await client.end();
   }
+}
+
+/** Actionable hints for common migration failures. */
+function remediation(err) {
+  if (!err || err.code !== '42501') {
+    return ''; // not a privilege error
+  }
+  const message = String(err.message || '');
+  if (message.includes('schema public')) {
+    return (
+      ' The DB role is not allowed to create objects in the public schema ' +
+      '(PostgreSQL 15+ made it non-writable by default). Run once as a ' +
+      'superuser or database owner, then retry: ' +
+      'GRANT CREATE, USAGE ON SCHEMA public TO <role>; ' +
+      '(use the role from WINDBREAK_DATABASE_URL)'
+    );
+  }
+  if (message.includes('extension')) {
+    return (
+      ' Creating the postgis extension usually requires a superuser. ' +
+      'Install it once as a superuser: CREATE EXTENSION IF NOT EXISTS postgis;'
+    );
+  }
+  return (
+    ' The DB role needs more privileges; grant it ownership of the target ' +
+    'schema/database or use the database owner in WINDBREAK_DATABASE_URL.'
+  );
 }
 
 main().catch((err) => {

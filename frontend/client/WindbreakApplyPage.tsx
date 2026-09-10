@@ -43,8 +43,11 @@ export function WindbreakApplyPage({
       throw new Error(fallback);
     }
     if (res.ok) {
-      const data = (await res.json()) as { applicationId: string };
-      window.location.href = `/submitted/${encodeURIComponent(data.applicationId)}?lang=${encodeURIComponent(locale)}`;
+      const data = (await res.json()) as {
+        applicationId: string;
+        ticketId: string;
+      };
+      window.location.href = `/submitted/${encodeURIComponent(data.ticketId)}?lang=${encodeURIComponent(locale)}`;
       return;
     }
     const data = (await res.json().catch(() => null)) as {

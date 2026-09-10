@@ -117,7 +117,22 @@ export class PostgresWindbreakApplicationsStore extends WindbreakApplicationsSto
       ${where}
       ORDER BY submitted_at, line_id
     `;
-    const result = await this.pool.query(sql, params);
+    let result;
+    try {
+      result = await this.pool.query(sql, params);
+    } catch (err) {
+      const code = (err as { code?: string }).code;
+      if (code === '42P01' || code === '42501') {
+        // Read-only deployments may not expose the applications table
+        // (submissions now go to Zendesk) - degrade to "no pending lines".
+        console.warn(
+          `windbreak_applications not readable (${code}); treating as empty:`,
+          (err as Error).message,
+        );
+        return [];
+      }
+      throw err;
+    }
     return (result.rows as ApplicationRow[]).map(rowToFeature);
   }
 

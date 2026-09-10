@@ -26,10 +26,12 @@ import {
 import { uniqueLandeignarnumer } from './fasteignir/fasteignir.types';
 import { createTranslator, type Locale, type Translator } from './i18n';
 import { WindbreakRegistryService } from './windbreaks/windbreak-registry.service';
+import { WindbreakApplicationsStore } from './windbreaks/windbreak-applications.store';
 import {
-  type NewWindbreakApplicationLine,
-  WindbreakApplicationsStore,
-} from './windbreaks/windbreak-applications.store';
+  buildWindbreakAttachment,
+  validatedToAttachmentLines,
+} from './zendesk/windbreak-attachment';
+import { ZendeskError, ZendeskService } from './zendesk/zendesk.service';
 
 interface OgcFeatureCollection<P> {
   type: 'FeatureCollection';
@@ -49,11 +51,13 @@ export interface ApplyContext {
 }
 
 export interface SubmittedContext {
-  applicationId: string;
+  /** Zendesk ticket id the application was logged as. */
+  ticketId: string;
+  /** Agent-facing ticket URL (null when not configured, e.g. mocks). */
+  ticketUrl: string | null;
+  /** The WB-... reference from the ticket subject, when present. */
+  applicationId: string | null;
   submittedAt: string;
-  totalLengthM: number;
-  linesLabel: string;
-  lines: Array<Record<string, unknown>>;
 }
 
 @Injectable()
@@ -76,7 +80,42 @@ export class AppService {
     private readonly fasteignirService: FasteignirService,
     private readonly windbreakRegistryService: WindbreakRegistryService,
     private readonly windbreakApplicationsStore: WindbreakApplicationsStore,
+    private readonly zendeskService: ZendeskService,
   ) {}
+
+  /** Map a Zendesk failure to a localized HTTP error. */
+  private zendeskError(
+    err: unknown,
+    t: Translator,
+  ): BadGatewayException | ServiceUnavailableException {
+    const fallback = t('errorZendeskFailed', {
+      detail: err instanceof Error ? err.message : String(err),
+    });
+    if (!(err instanceof ZendeskError)) {
+      return new BadGatewayException(fallback);
+    }
+    switch (err.code) {
+      case 'CONFIG':
+        return new ServiceUnavailableException(
+          t('errorZendeskConfig', { detail: err.message }),
+        );
+      case 'HTTP':
+        if (err.status === 404) {
+          return new BadRequestException(
+            t('errorTicketNotFound', { ticketId: err.detail ?? '' }),
+          );
+        }
+        return new BadGatewayException(
+          t('errorZendeskHttp', {
+            status: err.status ?? 0,
+            detail: err.detail ?? '',
+          }),
+        );
+      case 'UNREACHABLE':
+      case 'PARSE':
+        return new ServiceUnavailableException(fallback);
+    }
+  }
 
   private async getOgc<P>(
     path: string,
@@ -270,7 +309,7 @@ export class AppService {
   async submitApplication(
     answers: unknown,
     locale: Locale,
-  ): Promise<{ applicationId: string }> {
+  ): Promise<{ applicationId: string; ticketId: string; ticketUrl: string | null }> {
     const t = createTranslator(locale);
 
     const parsed = windbreakAnswersSchema.safeParse(answers);
@@ -307,85 +346,78 @@ export class AppService {
 
     const applicationId = newApplicationId();
     const now = new Date().toISOString();
-    const toStore: NewWindbreakApplicationLine[] = validated.map(
-      (entry, index) => ({
-        lineId: `${applicationId}-${index + 1}`,
+
+    // The grant authority's database is read-only: the lines go to a
+    // Zendesk ticket as a GeoJSON attachment instead of PostGIS.
+    const attachmentLines = validatedToAttachmentLines(validated, applicationId);
+    const parcelNames = Object.fromEntries(
+      parcels
+        .filter((p) => p.properties.parcel_name)
+        .map((p) => [p.properties.parcel_id, p.properties.parcel_name]),
+    );
+    const attachment = buildWindbreakAttachment(
+      {
         applicationId,
         kennitala: this.demoKennitala,
-        parcelId:
-          entry.validation.status === 'ok'
-            ? entry.validation.parcelId
-            : null,
-        lengthM: entry.line.lengthM,
         submittedAt: now,
-        feature: entry.line.feature,
-      }),
+        parcelNames,
+      },
+      attachmentLines,
     );
+    const parcelLabel =
+      attachment.parcelIds.map((id) => parcelNames[id] ?? id).join(', ') ||
+      t('ticketNoParcels');
 
+    let ticket;
     try {
-      await this.windbreakApplicationsStore.insertLines(toStore);
-    } catch (err) {
-      const detail =
-        err instanceof Error ? err.message : String(err);
-      throw new BadGatewayException(t('errorApplicationsWrite', { detail }));
-    }
-
-    return { applicationId };
-  }
-
-  /** Read an application back from the store for the confirmation page. */
-  async getSubmittedContext(
-    applicationId: string,
-    locale: Locale,
-  ): Promise<SubmittedContext> {
-    const t = createTranslator(locale);
-    let features: WindbreakFeature[];
-    try {
-      features = await this.windbreakApplicationsStore.find({
+      ticket = await this.zendeskService.createWindbreakTicket({
         applicationId,
+        kennitala: this.demoKennitala,
+        subject: t('ticketSubject', {
+          applicationId,
+          kennitala: this.demoKennitala,
+        }),
+        comment: t('ticketBody', {
+          count: attachmentLines.length,
+          total: Math.round(attachment.totalLengthM),
+          parcels: parcelLabel,
+          kennitala: this.demoKennitala,
+        }),
+        attachment: {
+          filename: attachment.filename,
+          content: attachment.content,
+        },
       });
     } catch (err) {
-      throw new ServiceUnavailableException(
-        t('errorApplicationsQuery', {
-          detail: err instanceof Error ? err.message : String(err),
-        }),
-      );
+      throw this.zendeskError(err, t);
     }
-    if (features.length === 0) {
-      throw new BadRequestException(
-        t('errorApplicationNotFound', { applicationId }),
-      );
-    }
-
-    const lines = features.map((f) => {
-      const p = f.properties;
-      return {
-        line_id: p.line_id,
-        parcel_id: p.parcel_id,
-        status: p.status,
-        length_m: p.length_m,
-        submitted_at: p.submitted_at,
-      };
-    });
-    const totalLengthM = features.reduce(
-      (sum, f) => sum + (f.properties.length_m ?? 0),
-      0,
-    );
-    const submittedAt =
-      features.map((f) => f.properties.submitted_at ?? '')
-        .filter((v) => v.length > 0)
-        .sort()
-        .pop() ?? new Date().toISOString();
 
     return {
       applicationId,
-      submittedAt,
-      totalLengthM,
-      linesLabel: t('submittedLines', {
-        count: lines.length,
-        total: Math.round(totalLengthM),
-      }),
-      lines,
+      ticketId: ticket.ticketId,
+      ticketUrl: ticket.ticketUrl,
+    };
+  }
+
+  /** Read the Zendesk ticket back for the confirmation page. */
+  async getSubmittedContext(
+    ticketId: string,
+    locale: Locale,
+  ): Promise<SubmittedContext> {
+    const t = createTranslator(locale);
+    let ticket;
+    try {
+      ticket = await this.zendeskService.getTicket(ticketId);
+    } catch (err) {
+      throw this.zendeskError(err, t);
+    }
+    // The WB-... reference lives in the ticket subject.
+    const match = /(WB-\d{4}-[A-Z0-9]+)/.exec(ticket.subject ?? '');
+    return {
+      ticketId: ticket.ticketId,
+      ticketUrl: ticket.ticketUrl,
+      applicationId: match ? match[1] : null,
+      submittedAt: ticket.createdAt,
     };
   }
 }

@@ -78,6 +78,16 @@ export class PostgresWindbreakRegistryService extends WindbreakRegistryService {
     try {
       result = await this.pool.query(sql, [landGeoJson]);
     } catch (err) {
+      const code = (err as { code?: string }).code;
+      if (code === '42P01' || code === '42501') {
+        // Read-only deployments may not grant access to the registry -
+        // degrade to "no established windbreaks" instead of failing.
+        console.warn(
+          `skograekt.skjolbelti not readable (${code}); treating as empty:`,
+          err instanceof Error ? err.message : String(err),
+        );
+        return [];
+      }
       throw new ServiceUnavailableException(
         `Windbreak registry query failed: ${err instanceof Error ? err.message : String(err)}`,
       );

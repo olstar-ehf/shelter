@@ -65,6 +65,13 @@ services:
       WINDBREAK_REGISTRY_MOCK: "${WINDBREAK_REGISTRY_MOCK:-false}"
       WINDBREAK_APPLICATIONS_MOCK: "${WINDBREAK_APPLICATIONS_MOCK:-false}"
       WINDBREAK_DATABASE_URL: "${WINDBREAK_DATABASE_URL:-}"
+      # Submissions create a Zendesk ticket with a GeoJSON attachment (the
+      # grant authority's database is read-only). Real by default; requires
+      # ZENDESK_SUBDOMAIN, ZENDESK_EMAIL and ZENDESK_API_TOKEN.
+      ZENDESK_MOCK: "${ZENDESK_MOCK:-false}"
+      ZENDESK_SUBDOMAIN: "${ZENDESK_SUBDOMAIN:-}"
+      ZENDESK_EMAIL: "${ZENDESK_EMAIL:-}"
+      ZENDESK_API_TOKEN: "${ZENDESK_API_TOKEN:-}"
       PORT: "3000"
     depends_on:
       - backend

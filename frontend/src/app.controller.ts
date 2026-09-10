@@ -148,13 +148,15 @@ export class AppController {
   /**
    * Receive the application answers (the drawn windbreak lines), re-check
    * them against the template's data schema and the land server side, and
-   * store them in PostGIS. Returns the new application id.
+   * log the application as a Zendesk ticket with a GeoJSON attachment of
+   * the lines (the grant authority's database is read-only). Returns the
+   * WB reference and the Zendesk ticket id.
    */
   @Post('apply')
   async submit(
     @Body() body: SubmitApplicationBody,
     @Req() req: Request,
-  ): Promise<{ applicationId: string }> {
+  ): Promise<{ applicationId: string; ticketId: string; ticketUrl: string | null }> {
     const locale = resolveLocale(
       req.query,
       parseCookies(req),
@@ -167,11 +169,11 @@ export class AppController {
     return this.appService.submitApplication(body.answers, locale);
   }
 
-  /** Confirmation page for a submitted application. */
-  @Get('submitted/:applicationId')
+  /** Confirmation page: shows the Zendesk ticket the application became. */
+  @Get('submitted/:ticketId')
   @Render('submitted')
   async submitted(
-    @Param('applicationId') applicationId: string,
+    @Param('ticketId') ticketId: string,
     @Req() req: Request,
     @Res({ passthrough: true }) res: Response,
   ) {
@@ -180,10 +182,7 @@ export class AppController {
       return {
         ...i18n,
         stepperSteps: stepperSteps(i18n.locale, 4),
-        ...(await this.appService.getSubmittedContext(
-          applicationId,
-          i18n.locale,
-        )),
+        ...(await this.appService.getSubmittedContext(ticketId, i18n.locale)),
       };
     } catch (err) {
       return {

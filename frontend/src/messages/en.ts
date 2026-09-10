@@ -33,21 +33,33 @@ export const en: Record<string, string> = {
   // confirmation page
   submittedTitle: 'Application submitted',
   submittedLead:
-    'Your windbreak grant application has been received and stored by the grant service.',
+    'Your windbreak grant application has been logged as a support ticket. The grant authority will now review it; the drawn windbreak lines were attached to the ticket.',
   labelApplicationNo: 'Application no.',
   labelSubmitted: 'Submitted',
-  labelWindbreaks: 'Windbreaks',
-  labelStatus: 'Status',
-  statusPending: 'pending — not accepted yet',
+  submittedTicketHeading: 'Zendesk ticket',
+  labelTicketNo: 'Ticket no.',
+  labelTicketStatus: 'Status',
+  ticketStatusNew: 'new',
+  ticketStatusOpen: 'open',
+  ticketStatusPending: 'pending',
+  ticketStatusSolved: 'solved',
+  ticketStatusClosed: 'closed',
+  ticketOpenButton: 'Open ticket in Zendesk',
   submittedNote:
-    'The grant authority will now review your application. Until it is accepted, the requested windbreak counts as an existing windbreak: new applications cannot cross it.',
-  submittedStoredHeading: 'Stored in the backend',
-  colLineId: 'Line id',
-  colStatus: 'Status',
-  submittedLines:
-    '{count, plural, one {# line} other {# lines}}, {total} m in total',
+    'The drawn windbreak lines were attached to the ticket as GeoJSON. Until the application is accepted, the requested windbreak counts as an existing windbreak: new applications cannot cross it.',
+  submittedNoTicketUrl:
+    'The ticket is only visible inside Zendesk (no public link is configured in this prototype).',
   btnApplyAgain: 'Apply for another windbreak',
   btnBackToApplication: 'Back to the application',
+
+  // Zendesk ticket (submission target; the DB is read-only)
+  ticketSubject:
+    'Windbreak grant application {applicationId} (kennitala {kennitala})',
+  ticketBody:
+    '{count, plural, one {# windbreak line} other {# windbreak lines}} ' +
+    '({total} m) submitted by kennitala {kennitala}. Parcels: {parcels}. ' +
+    'The lines are attached as GeoJSON.',
+  ticketNoParcels: '—',
 
   // server-side error messages
   errorNoProperties:
@@ -69,4 +81,9 @@ export const en: Record<string, string> = {
     'Could not load submitted windbreak applications: {detail}',
   errorApplicationsWrite: 'Storing the windbreak application failed: {detail}',
   errorStoreFailed: 'Storing the windbreak failed (HTTP {status}): {detail}',
+  errorZendeskConfig:
+    'Zendesk is not configured: {detail}. Set ZENDESK_SUBDOMAIN, ZENDESK_EMAIL and ZENDESK_API_TOKEN, or ZENDESK_MOCK=true.',
+  errorZendeskFailed: 'Creating the Zendesk ticket failed: {detail}',
+  errorZendeskHttp: 'Zendesk returned HTTP {status}: {detail}',
+  errorTicketNotFound: 'Zendesk ticket {ticketId} was not found.',
 };
