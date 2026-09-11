@@ -313,8 +313,10 @@ denial.
 Note: `pygeoapi openapi generate` instantiates the providers, so generating
 the OpenAPI document requires the database to be reachable. Generate it
 against the GeoJSON variant instead (`backend/docgen-config.py`, which
-swaps the PostgreSQL provider for the file provider in a config copy). The
-running server itself loads providers lazily.
+swaps the PostgreSQL provider for the file provider in a config copy; it
+also writes a placeholder applications GeoJSON next to the config, since
+pygeoapi 0.21's GeoJSON provider crashes on an empty seed
+FeatureCollection). The running server itself loads providers lazily.
 
 ### Existing windbreaks (skógrækt PostGIS)
 
