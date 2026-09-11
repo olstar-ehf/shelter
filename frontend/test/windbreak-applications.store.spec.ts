@@ -28,7 +28,7 @@ function line(
   return {
     lineId,
     applicationId,
-    kennitala: '2409693949',
+    kennitala: '061050-4429',
     parcelId,
     lengthM: 500.25,
     submittedAt: '2026-01-02T03:04:05Z',
@@ -73,7 +73,7 @@ describe('GeoJsonWindbreakApplicationsStore', () => {
       line_id: 'A-1',
       application_id: 'A',
       parcel_id: 'IS-1',
-      kennitala: '2409693949',
+      kennitala: '061050-4429',
       status: 'pending',
       length_m: 500.3,
     });
@@ -134,9 +134,9 @@ maybeDescribe('PostgresWindbreakApplicationsStore (live)', () => {
 
   it('inserts lines and reads them back with WGS84 geometry', async () => {
     await store.insertLines([
-      line(`${applicationId}-1`, applicationId, 'IS-163368', [
-        [-18.55057, 63.486069],
-        [-18.547356, 63.486328],
+      line(`${applicationId}-1`, applicationId, 'IS-139555', [
+        [-21.830402087733127, 65.45004213049053],
+        [-21.82040208773313, 65.45004213049053],
       ]),
     ]);
     const found = await store.find({ applicationId });
@@ -148,7 +148,7 @@ maybeDescribe('PostgresWindbreakApplicationsStore (live)', () => {
     const coords = (
       found[0].geometry as { coordinates: number[][] }
     ).coordinates;
-    expect(coords[0][0]).toBeCloseTo(-18.55057, 5);
-    expect(coords[1][1]).toBeCloseTo(63.486328, 5);
+    expect(coords[0][0]).toBeCloseTo(-21.830402, 5);
+    expect(coords[1][1]).toBeCloseTo(65.450042, 5);
   });
 });

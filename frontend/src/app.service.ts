@@ -72,9 +72,9 @@ export class AppService {
    * known by the portal session. Everything else - which land they own, its
    * parcels and windbreaks - is looked up from the registries.
    */
-  readonly demoKennitala = process.env.DEMO_KENNITALA || '2409693949';
+  readonly demoKennitala = process.env.DEMO_KENNITALA || '061050-4429';
   readonly demoFullName =
-    process.env.DEMO_FULL_NAME || 'Guðmundur Jónsson';
+    process.env.DEMO_FULL_NAME || 'Hafliði Viðar Ólafsson';
 
   constructor(
     private readonly fasteignirService: FasteignirService,

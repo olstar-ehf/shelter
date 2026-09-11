@@ -43,9 +43,8 @@ draws lines on a map of their own land and submits.
   **real client by default** (X-Road gateway, island.is Bearer token via
   `FASTEIGNIR_TOKEN`). Failures surface as typed `PropertiesLookupError`
   codes mapped to localized messages; `FASTEIGNIR_MOCK=true` selects the
-  mock. The mock returns, for kennitala `2409693949`, two registered
-  properties that both sit on the same land — so the unique
-  `landeignarnumer` list step yields `[163368]`.
+  mock. The mock returns, for kennitala `061050-4429` (the only demo user),
+  one registered property on landeignarnumer `139555` (Garpsdalur).
 * The **backend** is [pygeoapi](https://pygeoapi.io/) serving an
   [OGC API - Features](https://ogcapi.ogc.org/features/) interface: parcels
   come from GeoJSON files, and the `windbreak_applications` collection is
@@ -94,13 +93,13 @@ docker compose up --build
 Then, in the UI:
 
 1. Click **Apply for windbreak** (the prototype assumes the demo user —
-   `DEMO_FULL_NAME` / `DEMO_KENNITALA`, default Guðmundur Jónsson /
-   2409693949 — is already signed in).
+   `DEMO_FULL_NAME` / `DEMO_KENNITALA`, default Hafliði Viðar Ólafsson /
+   061050-4429 — is already signed in).
 2. The NestJS server asks Fasteignir-Xroad for the properties on the
    kennitala (mock when `FASTEIGNIR_MOCK=true`), builds the unique
-   `landeignarnumer` list (163368), and loads those parcels and their
-   existing windbreaks, rendering the draw page with the GeoJSON embedded
-   in it.
+   `landeignarnumer` list (139555, Garpsdalur), and loads those parcels and
+   their existing windbreaks, rendering the draw page with the GeoJSON
+   embedded in it.
 3. Use the line tool (top right of the map) to draw one or more windbreaks
    inside the parcels. Lines outside the farmer's land, or crossing an
    existing/pending windbreak, are rejected.
@@ -192,7 +191,7 @@ npm hooks.
   NestJS server** (default `http://localhost:5000`; in Docker it is
   `http://backend:80`).
 * `DEMO_FULL_NAME` / `DEMO_KENNITALA` — the only assumed facts about the
-  user (default `Guðmundur Jónsson` / `2409693949`).
+  user (default `Hafliði Viðar Ólafsson` / `061050-4429`).
 * `FASTEIGNIR_MOCK` — **real by default**; `true` selects the mock
   Fasteignir-Xroad lookup. The real client needs `FASTEIGNIR_TOKEN` (an
   island.is Bearer JWT) and optionally `FASTEIGNIR_API_URL`.
@@ -273,8 +272,8 @@ are read from the PostGIS-backed applications store (the `windbreak_applications
 collection serves the same rows read-only for agency/curl access):
 
 ```text
-GET  /collections/farm_parcels/items?landeignarnumer=163368&f=json&limit=100
-GET  /collections/windbreak_applications/items?parcel_id=IS-163368&f=json&limit=100
+GET  /collections/farm_parcels/items?landeignarnumer=139555&f=json&limit=100
+GET  /collections/windbreak_applications/items?parcel_id=IS-139555&f=json&limit=100
 GET  /collections/windbreak_applications/items?application_id=WB-...&f=json
 ```
 
@@ -344,9 +343,8 @@ Statuses:
 
 * `established` — windbreaks that already exist on the land, read from
   `skograekt.skjolbelti` (identified on the map as `skjolbelti-<objectid>`).
-* `pending` — submitted but **not accepted yet** (e.g. the seeded
-  `WB-2026-0042-1` on parcel `IS-163368`); new applications posted by the
-  form also get `pending`.
+* `pending` — submitted but **not accepted yet** (now logged as Zendesk
+  tickets with a GeoJSON attachment instead of DB rows).
 
 The draw page shows the farmer's windbreaks on the map (dark green =
 established, dashed orange = pending). **A new windbreak may not cross or
@@ -475,14 +473,15 @@ docker-compose.prod.yml      # production stack
 * **Authentication is assumed to have happened** in the government portal,
   and the only facts assumed about the user are their **name and
   kennitala** (`DEMO_FULL_NAME` / `DEMO_KENNITALA`, default
-  `Guðmundur Jónsson` / `2409693949`). No `farmer_id` is assumed.
+  `Hafliði Viðar Ólafsson` / `061050-4429`). No `farmer_id` is assumed.
 * **The Fasteignir-Xroad client is real by default** but needs an island.is
   Bearer token (`FASTEIGNIR_TOKEN`) that this prototype does not ship with;
-  set `FASTEIGNIR_MOCK=true` to run the mock, which returns two registered
-  properties for kennitala `2409693949`, both on landeignarnumer `163368` —
-  the app builds the unique landeignarnumer list (`[163368]`) exactly as it
-  would with the real service. The real client's wire contract is pinned by
-  fixture tests against the OpenAPI spec (`frontend/Fasteignir-Xroad.json`).
+  set `FASTEIGNIR_MOCK=true` to run the mock, which returns one registered
+  property for kennitala `061050-4429` on landeignarnumer `139555`
+  (Garpsdalur) — the app builds the unique landeignarnumer list (`[139555]`)
+  exactly as it would with the real service. The real client's wire contract
+  is pinned by fixture tests against the OpenAPI spec
+  (`frontend/Fasteignir-Xroad.json`).
 * **The windbreak registry and the applications read store are real by
   default** (`src/windbreaks/`). The registry reads `skograekt.skjolbelti`
   from PostGIS (geometry in ISN93, transformed to WGS84); the applications
@@ -521,9 +520,8 @@ docker-compose.prod.yml      # production stack
   documents a single-process assumption.
 * The OpenStreetMap basemap needs internet access. The farm/parcel data
   itself comes from pygeoapi.
-* Demo data: farmer `farmer-123` is **Guðmundur Jónsson** of Jörð 163368
-  (Skaftárhreppur, Iceland). His land parcel (`IS-163368`, ~6,868 ha of
-  rangeland) is the geometry of Icelandic land registry property 163368 from
-  <https://landeignaskra.hms.is/api/landeign/163368>, converted from ISN93
-  (EPSG:3057) to WGS84. A second demo farmer (Maria Sørensen, Denmark) is
-  kept for exercising the `farmer_id` filtering.
+* Demo data: the only demo user is farmer `farmer-007`, **Hafliði Viðar
+  Ólafsson** of Garpsdalur (Reykhólahreppur, kennitala `061050-4429`). His
+  land (`IS-139555`, ~2,990 ha, landeignarnumer 139555) is the geometry of
+  Icelandic land registry property 139555, converted from ISN93 (EPSG:3057)
+  to WGS84 (source WKT kept in `backend/data/wkt_geom_farmer-007.txt`).

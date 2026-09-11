@@ -91,19 +91,44 @@ async function main() {
       const rect = container.getBoundingClientRect();
       const path = document.querySelector('.leaflet-overlay-pane path');
       const b = path.getBBox();
-      // Fractions of the parcel bbox verified (via shapely) to lie inside
-      // the land and clear of the existing windbreaks.
+      // Fractions of the Garpsdalur parcel bbox, verified (turf) to lie
+      // inside the land and clear of the mock established windbreak. The
+      // two points must stay >20 px apart: leaflet-draw's vertex marker
+      // (20x20 touch icon) would otherwise swallow the second mousedown.
       return {
-        p1: { x: rect.left + b.x + b.width * 0.4276, y: rect.top + b.y + b.height * 0.5454 },
-        p2: { x: rect.left + b.x + b.width * 0.4676, y: rect.top + b.y + b.height * 0.5454 },
+        p1: { x: rect.left + b.x + b.width * 0.40, y: rect.top + b.y + b.height * 0.30 },
+        p2: { x: rect.left + b.x + b.width * 0.50, y: rect.top + b.y + b.height * 0.30 },
         bbox: { x: b.x, y: b.y, w: b.width, h: b.height },
         rect: { left: rect.left, top: rect.top, w: rect.width, h: rect.height },
       };
     });
 
+  const drawToolEnabled = () =>
+    page.evaluate(() =>
+      document
+        .querySelector('a.leaflet-draw-draw-polyline')
+        ?.classList.contains('leaflet-draw-toolbar-button-enabled'),
+    );
+
+  // The toolbar's click handler is attached in a React effect; retry until
+  // the polyline button is actually enabled (avoids losing the first draw).
+  const activateDrawTool = async () => {
+    for (let attempt = 0; attempt < 5; attempt += 1) {
+      if (await drawToolEnabled()) {
+        return;
+      }
+      await page.click('a.leaflet-draw-draw-polyline');
+      await page.waitForTimeout(300);
+      if (await drawToolEnabled()) {
+        return;
+      }
+    }
+    throw new Error('draw tool did not activate');
+  };
+
   const drawLine = async (from, to, finishAt) => {
-    await page.click('a.leaflet-draw-draw-polyline');
-    await page.waitForTimeout(300);
+    await activateDrawTool();
+    await page.waitForTimeout(200);
     await page.mouse.click(from.x, from.y);
     await page.waitForTimeout(250);
     await page.mouse.click(to.x, to.y);
@@ -124,10 +149,11 @@ async function main() {
   const s1 = await drawState();
   console.log('STEP 1a state:', JSON.stringify(s1));
 
-  // 1b. line outside the parcels (bottom-left corner, clear of controls)
+  // 1b. line outside the parcels (left edge of the map view, turf-verified
+  // outside the Garpsdalur polygon)
   const outPts = [
-    { x: pts.rect.left + pts.rect.w * 0.05, y: pts.rect.top + pts.rect.h * 0.88 },
-    { x: pts.rect.left + pts.rect.w * 0.12, y: pts.rect.top + pts.rect.h * 0.88 },
+    { x: pts.rect.left + pts.rect.w * 0.04, y: pts.rect.top + pts.rect.h * 0.78 },
+    { x: pts.rect.left + pts.rect.w * 0.10, y: pts.rect.top + pts.rect.h * 0.78 },
   ];
   await drawLine(outPts[0], outPts[1], outPts[1]);
   const s2 = await drawState();
@@ -136,8 +162,8 @@ async function main() {
   // 1c. draw a vertical line through the established windbreak's midpoint.
   //     Vertical in screen space means constant longitude, so the drawn
   //     segment passes exactly through the windbreak's midpoint lat/lng and
-  //     must be rejected as crossing it. (Endpoints ~470 m off the
-  //     windbreak - verified with shapely to stay inside the land.)
+  //     must be rejected as crossing it. (Endpoints ~30 px off the
+  //     windbreak - turf-verified to stay inside the land.)
   const windbreakPts = await page.evaluate(() => {
     const path = document.querySelector('.leaflet-overlay-pane path[stroke="#14532d"]');
     if (!path) return null;

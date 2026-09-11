@@ -27,7 +27,7 @@ function lineFeature(coords: number[][]): Feature<LineString> {
 describe('buildWindbreakAttachment', () => {
   const meta = {
     applicationId: 'WB-2026-TEST01',
-    kennitala: '2409693949',
+    kennitala: '061050-4429',
     submittedAt: '2026-01-02T03:04:05Z',
     parcelNames: { 'IS-1': 'Jörð 1' },
   };
@@ -68,7 +68,7 @@ describe('buildWindbreakAttachment', () => {
     expect(fc.features[0].properties).toMatchObject({
       line_id: 'WB-2026-TEST01-1',
       application_id: 'WB-2026-TEST01',
-      kennitala: '2409693949',
+      kennitala: '061050-4429',
       parcel_id: 'IS-1',
       line_index: 1,
       length_m: 100.3,
@@ -124,7 +124,7 @@ describe('ZendeskApiService (transport contract)', () => {
 
   const input = {
     applicationId: 'WB-2026-TEST01',
-    kennitala: '2409693949',
+    kennitala: '061050-4429',
     subject: 'Windbreak grant application WB-2026-TEST01',
     comment: '1 line (150 m)',
     attachment: { filename: 'windbreaks-WB-2026-TEST01.geojson', content: '{}' },
@@ -205,7 +205,7 @@ describe('ZendeskApiService (transport contract)', () => {
         json: async () => ({
           ticket: {
             id: 424242,
-            subject: 'Windbreak grant application WB-2026-TEST01 (kennitala 2409693949)',
+            subject: 'Windbreak grant application WB-2026-TEST01 (kennitala 061050-4429)',
             status: 'new',
             created_at: '2026-01-02T03:04:05Z',
           },
@@ -228,7 +228,7 @@ describe('MockZendeskService', () => {
     const service = new MockZendeskService();
     const created = await service.createWindbreakTicket({
       applicationId: 'WB-2026-MOCK01',
-      kennitala: '2409693949',
+      kennitala: '061050-4429',
       subject: 'subject',
       comment: 'comment',
       attachment: { filename: 'a.geojson', content: '{}' },

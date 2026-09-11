@@ -5,7 +5,10 @@
       "type": "Feature",
       "geometry": {
         "type": "Point",
-        "coordinates": [65.455517, -21.830261]
+        "coordinates": [
+          65.455517,
+          -21.830261
+        ]
       },
       "properties": {
         "farmer_id": "farmer-007",
@@ -15,38 +18,6 @@
         "address": "381 Reykhólahreppur",
         "phone": "+354 434 7799",
         "email": "garpsdalur@simnet.is"
-      }
-    },
-    {
-      "type": "Feature",
-      "geometry": {
-        "type": "Point",
-        "coordinates": [-18.560724, 63.483055]
-      },
-      "properties": {
-        "farmer_id": "farmer-123",
-        "full_name": "Guðmundur Jónsson",
-        "farm_name": "Jörð 163368",
-        "kennitala": "000000-0000",
-        "address": "Skaftárhreppur, 880 Kirkjubæjarklaustur",
-        "phone": "+354 555 0123",
-        "email": "gudmundur.jonsson@example.is"
-      }
-    },
-    {
-      "type": "Feature",
-      "geometry": {
-        "type": "Point",
-        "coordinates": [9.0550, 56.4084]
-      },
-      "properties": {
-        "farmer_id": "farmer-456",
-        "full_name": "Maria Sørensen",
-        "farm_name": "Østergård",
-        "cvr": "DK87654321",
-        "address": "Østergårdvej 12, 8800 Viborg",
-        "phone": "+45 44 55 66 77",
-        "email": "maria@ostergaard.example"
       }
     }
   ]

@@ -1,32 +1,4 @@
 {
   "type": "FeatureCollection",
-  "features": [
-    {
-      "type": "Feature",
-      "geometry": {
-        "type": "LineString",
-        "coordinates": [
-          [
-            -18.55057,
-            63.486069
-          ],
-          [
-            -18.547356,
-            63.486328
-          ]
-        ]
-      },
-      "properties": {
-        "line_id": "WB-2026-0042-1",
-        "application_id": "WB-2026-0042",
-        "farmer_id": "farmer-123",
-        "kennitala": "2409693949",
-        "parcel_id": "IS-163368",
-        "status": "pending",
-        "length_m": 162.1,
-        "submitted_at": "2026-06-10T08:30:00Z"
-      },
-      "id": "WB-2026-0042-1"
-    }
-  ]
+  "features": []
 }

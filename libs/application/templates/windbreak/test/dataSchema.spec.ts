@@ -17,8 +17,8 @@ function validAnswers(overrides: Partial<WindbreakAnswers> = {}): WindbreakAnswe
           geometry: {
             type: 'LineString',
             coordinates: [
-              [-18.55, 63.486],
-              [-18.54, 63.486],
+              [-21.830402, 65.450042],
+              [-21.820402, 65.450042],
             ],
           },
           properties: {},
@@ -55,7 +55,7 @@ describe('windbreakAnswersSchema', () => {
             ...validAnswers().lines[0].feature,
             geometry: {
               type: 'LineString',
-              coordinates: [[-18.55, 63.486]],
+              coordinates: [[-21.830402, 65.450042]],
             },
           },
         },
@@ -67,7 +67,7 @@ describe('windbreakAnswersSchema', () => {
           ...validAnswers().lines[0],
           feature: {
             type: 'Feature',
-            geometry: { type: 'Point', coordinates: [-18.55, 63.486] },
+            geometry: { type: 'Point', coordinates: [-21.830402, 65.450042] },
             properties: {},
           },
         },

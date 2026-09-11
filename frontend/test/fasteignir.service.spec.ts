@@ -16,33 +16,35 @@ import { uniqueLandeignarnumer } from '../src/fasteignir/fasteignir.types';
 import type { FasteignSimpleWrapper } from '../src/fasteignir/fasteignir.types';
 
 /** Fixture recorded from the real API shape (schema-conformant). */
+// Schema-conformant fixture shaped like the Garpsdalur demo (two properties
+// on the same land, so the unique-landeignarnumer step is exercised).
 const recordedResponse: FasteignSimpleWrapper = {
   fasteignir: [
     {
-      fasteignanumer: 'F2620115',
+      fasteignanumer: 'F13955501',
       sjalfgefidStadfang: {
-        stadfanganumer: 2341005,
-        landeignarnumer: 163368,
-        postnumer: 880,
-        sveitarfelagBirting: 'Skaftárhreppur',
-        birting: 'Jörð 163368, 880 Kirkjubæjarklaustur',
-        birtingStutt: 'Jörð 163368',
+        stadfanganumer: 2100555,
+        landeignarnumer: 139555,
+        postnumer: 381,
+        sveitarfelagBirting: 'Reykhólahreppur',
+        birting: 'Garpsdalur, 381 Reykhólahreppur',
+        birtingStutt: 'Garpsdalur',
       },
     },
     {
-      fasteignanumer: 'F2620116',
+      fasteignanumer: 'F13955502',
       sjalfgefidStadfang: {
-        stadfanganumer: 2341006,
-        landeignarnumer: 163368,
-        postnumer: 880,
-        sveitarfelagBirting: 'Skaftárhreppur',
-        birting: 'Jörð 163368 - útihús, 880 Kirkjubæjarklaustur',
-        birtingStutt: 'Jörð 163368 - útihús',
+        stadfanganumer: 2100556,
+        landeignarnumer: 139555,
+        postnumer: 381,
+        sveitarfelagBirting: 'Reykhólahreppur',
+        birting: 'Garpsdalur - útihús, 381 Reykhólahreppur',
+        birtingStutt: 'Garpsdalur - útihús',
       },
     },
     {
       // A property without an address/land association must be tolerated.
-      fasteignanumer: 'F2620999',
+      fasteignanumer: 'F13955599',
       sjalfgefidStadfang: null,
     },
   ],
@@ -78,7 +80,7 @@ describe('parseFasteignirResponse (schema contract)', () => {
       'a non-numeric landeignarnumer',
       {
         fasteignir: [
-          { sjalfgefidStadfang: { landeignarnumer: '163368' } },
+          { sjalfgefidStadfang: { landeignarnumer: '139555' } },
         ],
       },
     ],
@@ -94,7 +96,7 @@ describe('parseFasteignirResponse (schema contract)', () => {
 
 describe('uniqueLandeignarnumer', () => {
   it('deduplicates lands shared by several properties and keeps order', () => {
-    expect(uniqueLandeignarnumer(recordedResponse)).toEqual([163368]);
+    expect(uniqueLandeignarnumer(recordedResponse)).toEqual([139555]);
   });
 
   it('collects several lands in first-seen order', () => {
@@ -140,7 +142,7 @@ describe('XroadFasteignirService (transport contract)', () => {
 
   it('fails with NO_TOKEN when the Bearer token is missing', async () => {
     const service = new XroadFasteignirService();
-    await expect(service.getFasteignir('2409693949')).rejects.toMatchObject({
+    await expect(service.getFasteignir('061050-4429')).rejects.toMatchObject({
       code: 'NO_TOKEN',
     });
   });
@@ -153,11 +155,11 @@ describe('XroadFasteignirService (transport contract)', () => {
       json: async () => recordedResponse,
     }));
     const service = new XroadFasteignirService();
-    const result = await service.getFasteignir('2409693949');
+    const result = await service.getFasteignir('061050-4429');
     expect(result.fasteignir).toHaveLength(3);
     const [url, init] = fetchMock.mock.calls[0] as [string, RequestInit];
     expect(url).toContain(
-      '/business/fasteignir-xroad/api/v1/fasteignir?kennitala=2409693949',
+      '/business/fasteignir-xroad/api/v1/fasteignir?kennitala=061050-4429',
     );
     expect((init.headers as Record<string, string>).Authorization).toBe(
       'Bearer test-jwt',
@@ -172,7 +174,7 @@ describe('XroadFasteignirService (transport contract)', () => {
       text: async () => 'unauthorized',
     }));
     const service = new XroadFasteignirService();
-    await expect(service.getFasteignir('2409693949')).rejects.toMatchObject({
+    await expect(service.getFasteignir('061050-4429')).rejects.toMatchObject({
       code: 'HTTP',
       status: 401,
       detail: 'unauthorized',
@@ -185,7 +187,7 @@ describe('XroadFasteignirService (transport contract)', () => {
       throw new TypeError('fetch failed');
     });
     const service = new XroadFasteignirService();
-    await expect(service.getFasteignir('2409693949')).rejects.toMatchObject({
+    await expect(service.getFasteignir('061050-4429')).rejects.toMatchObject({
       code: 'UNREACHABLE',
     });
   });
@@ -198,7 +200,7 @@ describe('XroadFasteignirService (transport contract)', () => {
       json: async () => ({ fasteignir: 'not-an-array' }),
     }));
     const service = new XroadFasteignirService();
-    await expect(service.getFasteignir('2409693949')).rejects.toMatchObject({
+    await expect(service.getFasteignir('061050-4429')).rejects.toMatchObject({
       code: 'PARSE',
     });
   });

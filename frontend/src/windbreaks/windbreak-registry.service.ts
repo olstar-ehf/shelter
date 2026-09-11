@@ -113,9 +113,9 @@ export class PostgresWindbreakRegistryService extends WindbreakRegistryService {
 
 /**
  * Mock implementation for running the prototype without a database: returns
- * the same established windbreak the demo previously seeded - but only for
- * its own land (landeignarnumer 163368), so other demo farmers do not
- * inherit it.
+ * one established windbreak on the demo land (landeignarnumer 139555,
+ * Garpsdalur) - far from the e2e draw area so the crossing-test line is
+ * unambiguous.
  */
 @Injectable()
 export class MockWindbreakRegistryService extends WindbreakRegistryService {
@@ -123,7 +123,7 @@ export class MockWindbreakRegistryService extends WindbreakRegistryService {
     _landGeoJson: string,
     landeignarnumer: number[],
   ): Promise<WindbreakFeature[]> {
-    if (!landeignarnumer.includes(163368)) {
+    if (!landeignarnumer.includes(139555)) {
       return [];
     }
     return [
@@ -132,8 +132,8 @@ export class MockWindbreakRegistryService extends WindbreakRegistryService {
         geometry: {
           type: 'LineString',
           coordinates: [
-            [-18.57474, 63.479866],
-            [-18.568706, 63.480924],
+            [-21.772957672641947, 65.4824855310306],
+            [-21.763702885646996, 65.4824855310306],
           ],
         },
         properties: {

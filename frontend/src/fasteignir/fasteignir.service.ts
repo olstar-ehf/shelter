@@ -75,50 +75,13 @@ export function parseFasteignirResponse(body: unknown): FasteignSimpleWrapper {
 /**
  * Mock implementation for the prototype.
  *
- * Demo data: kennitala 2409693949 owns two registered properties (a house
- * and an outbuilding) that both sit on the same land,
- * landeignarnumer 163368. The two entries deliberately share the
- * landeignarnumer so the "unique landeignarnumer list" step is exercised.
- * 061050-4429 (Garpsdalur, landeignarnumer 139555) is also known.
+ * Demo data: the only demo user is Hafliði Viðar Ólafsson (kennitala
+ * 061050-4429), one registered property on landeignarnumer 139555
+ * (Garpsdalur).
  */
 @Injectable()
 export class MockFasteignirService extends FasteignirService {
   private readonly data: Record<string, FasteignSimpleWrapper> = {
-    '2409693949': {
-      fasteignir: [
-        {
-          fasteignanumer: 'F2620115',
-          sjalfgefidStadfang: {
-            stadfanganumer: 2341005,
-            landeignarnumer: 163368,
-            postnumer: 880,
-            sveitarfelagBirting: 'Skaftárhreppur',
-            birting: 'Jörð 163368, 880 Kirkjubæjarklaustur',
-            birtingStutt: 'Jörð 163368',
-          },
-        },
-        {
-          fasteignanumer: 'F2620116',
-          sjalfgefidStadfang: {
-            stadfanganumer: 2341006,
-            landeignarnumer: 163368,
-            postnumer: 880,
-            sveitarfelagBirting: 'Skaftárhreppur',
-            birting: 'Jörð 163368 - útihús, 880 Kirkjubæjarklaustur',
-            birtingStutt: 'Jörð 163368 - útihús',
-          },
-        },
-      ],
-      paging: {
-        page: 1,
-        pageSize: 25,
-        total: 2,
-        totalPages: 1,
-        offset: 0,
-        hasPreviousPage: false,
-        hasNextPage: false,
-      },
-    },
     '061050-4429': {
       fasteignir: [
         {

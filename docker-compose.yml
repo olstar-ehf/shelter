@@ -63,8 +63,8 @@ services:
       # Server-side URL of the pygeoapi backend (service name + internal port)
       PYGEOAPI_URL: http://backend:80
       # Assumed portal-session identity: name + kennitala only
-      DEMO_FULL_NAME: "${DEMO_FULL_NAME:-Guðmundur Jónsson}"
-      DEMO_KENNITALA: "${DEMO_KENNITALA:-2409693949}"
+      DEMO_FULL_NAME: "${DEMO_FULL_NAME:-Hafliði Viðar Ólafsson}"
+      DEMO_KENNITALA: "${DEMO_KENNITALA:-061050-4429}"
       # Real clients by default (Phase 2): the Fasteignir-Xroad lookup needs
       # FASTEIGNIR_TOKEN (island.is Bearer JWT); FASTEIGNIR_MOCK=true is the
       # escape hatch for running without one.

@@ -65,8 +65,8 @@ const windbreaks: WindbreakFeature[] = [
       ],
     },
     properties: {
-      line_id: 'WB-2026-0042-1',
-      application_id: 'WB-2026-0042',
+      line_id: 'WB-2025-0001-1',
+      application_id: 'WB-2025-0001',
       status: 'pending',
     },
   },
