@@ -470,6 +470,33 @@ docker-compose.prod.yml      # production stack
   Note: submissions create an in-memory Zendesk mock ticket
   (`ZENDESK_MOCK=true`) — no files or databases are written.
 
+## How this demo compares to island.is
+
+The prototype deliberately follows island.is's monorepo conventions where
+they pay off (Phase 1: the reusable map lib, Phase 2: the application
+template) and stops short of porting machinery that a demo does not need.
+
+| Concern | island.is | This demo |
+| --- | --- | --- |
+| Repo layout | Nx monorepo, `libs/**` packages, published to npm | `libs/` packages, npm `file:` dependencies (with the scoped-link quirk + its fixes) |
+| Web app | Next.js (`apps/web` + `@island.is/web`) | NestJS MVC + Handlebars shell, React client bundled with esbuild |
+| Design system | island-ui components | Plain CSS classes (`card`, `btn`, `chip`, …) |
+| Application system | Full stack: templates (zod `dataSchema` + state machine), `ui-shell` form renderer, `ui-fields` registry, `template-api-modules` actions, answer storage, delegation, payments | Same shape, small scale: `@island.is/windbreak-application` with zod schema, `draft → submitted` states, declarative form, a field registry (custom `windbreakLines` map field) and a lightweight `ApplicationFlow` renderer; answers are submitted once, not persisted |
+| Map | No first-party map lib (community packages) | `@island.is/map`: react-leaflet map + leaflet-draw control + turf validation hook, modeled as an island.is-style lib |
+| Localization | `libs/localization` namespace JSONs merged into a global store, react-intl everywhere | Same pattern: `map.*`/`validation.*`/`drawLocal.*`, `windbreak.*` and app catalogs merged server + client; `?lang`/cookie/Accept-Language; ICU parity tests |
+| API | NestJS GraphQL domains (codegen) + REST, X-Road clients in `libs/clients` | One NestJS server (no GraphQL), Fasteignir-Xroad client module with typed errors + mock fallback |
+| Authentication | island.is IDS login, nationalId from the session | Assumed portal session (name + kennitala from `DEMO_*`) |
+| Integrations | Service API modules post to X-Road services, email, attachments | X-Road (fasteignir), read-only PostGIS (skjólbelti registry), **Zendesk ticket with a GeoJSON attachment for submissions** (the DB is read-only) |
+| GIS backend | n/a | pygeoapi 0.21 OGC API facade over PostGIS/GeoJSON (read-only PostgreSQL provider) |
+| Validation | Zod schema + custom field validators, per-answer | Zod schema + shared turf geometry rules (lib), client + server |
+| Testing | Jest unit, Cypress e2e, Storybook | Jest unit + contract tests (incl. live PostGIS when configured), Playwright e2e, Storybook for both libs |
+
+Closest steps to converge, if the demo graduates into the monorepo: adopt Nx
+workspaces (kills the npm `file:`-link workarounds), render the template
+through island.is's `ui-shell`/`ui-fields` instead of `ApplicationFlow`,
+move the Zendesk submission behind a `template-api-module` action, and
+swap the assumed identity for real IDS authentication.
+
 ## Prototype assumptions & limitations
 
 * **Authentication is assumed to have happened** in the government portal,
