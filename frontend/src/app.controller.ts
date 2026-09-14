@@ -187,6 +187,64 @@ export class AppController {
     return this.appService.submitApplication(body.answers, locale);
   }
 
+  /**
+   * JSON endpoints for other hosts (the Next.js web app): the page context
+   * and the ticket readback, serialized instead of rendered as a shell.
+   */
+  @Get('api/context')
+  async apiContext(@Req() req: Request, @Res() res: Response) {
+    const i18n = resolveI18n(req, res);
+    const identity = {
+      fullName: this.appService.demoFullName,
+      kennitala: this.appService.demoKennitala,
+    };
+    try {
+      const context = await this.appService.getApplyContext(i18n.locale);
+      res.json({
+        locale: i18n.locale,
+        identity,
+        lookupSummary: context.lookupSummary,
+        parcels: context.parcels,
+        windbreaks: context.windbreaks,
+      });
+    } catch (err) {
+      res.json({
+        locale: i18n.locale,
+        identity,
+        error: err instanceof Error ? err.message : String(err),
+      });
+    }
+  }
+
+  @Get('api/ticket/:ticketId')
+  async apiTicket(
+    @Param('ticketId') ticketId: string,
+    @Req() req: Request,
+    @Res() res: Response,
+  ) {
+    const i18n = resolveI18n(req, res);
+    try {
+      const context = await this.appService.getSubmittedContext(
+        ticketId,
+        i18n.locale,
+      );
+      res.json({
+        locale: i18n.locale,
+        ticket: {
+          ticketId: context.ticketId,
+          ticketUrl: context.ticketUrl,
+          applicationId: context.applicationId,
+          submittedAt: context.submittedAt,
+        },
+      });
+    } catch (err) {
+      res.json({
+        locale: i18n.locale,
+        error: err instanceof Error ? err.message : String(err),
+      });
+    }
+  }
+
   /** Confirmation page: shows the Zendesk ticket the application became. */
   @Get('submitted/:ticketId')
   async submitted(

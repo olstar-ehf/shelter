@@ -1,23 +1,28 @@
 /**
  * Browser entry for every page: reads the page-data JSON embedded by the
  * NestJS shell, merges the three message catalogs (app chrome, map lib,
- * windbreak template) and mounts the matching React page inside the shared
- * Shell. Every visible element is React - the server only ships data.
+ * windbreak template) and mounts the matching shared React page inside the
+ * shared Shell. Every visible element is React - the server only ships
+ * data.
  */
 import { createRoot } from 'react-dom/client';
 import { IntlProvider } from 'react-intl';
-import { flattenMessages, messages as mapMessages } from '@island.is/map';
+import {
+  flattenMessages as flattenMap,
+  messages as mapMessages,
+} from '@island.is/map/server';
 import {
   flattenMessages as flattenTemplate,
   messages as templateMessages,
-} from '@island.is/windbreak-application';
+} from '@island.is/windbreak-application/server';
+import {
+  ApplyPage,
+  IndexPage,
+  Shell,
+  SubmittedPage,
+  messages as appMessages,
+} from '@island.is/application-ui-shell';
 import type { ParcelFeature, WindbreakFeature } from '@island.is/map';
-import { IndexPage } from './IndexPage';
-import { Shell } from './Shell';
-import { SubmittedPage } from './SubmittedPage';
-import { WindbreakApplyPage } from './WindbreakApplyPage';
-import { en as appEn } from '../src/messages/en';
-import { is as appIs } from '../src/messages/is';
 
 import 'leaflet/dist/leaflet.css';
 import 'leaflet-draw/dist/leaflet.draw.css';
@@ -54,8 +59,8 @@ const locale = pageData.locale === 'is' ? 'is' : 'en';
 // drawLocal namespaces + the template's windbreak.* namespace (the same
 // merge the server uses for its error messages).
 const catalog: Record<string, string> = {
-  ...(locale === 'is' ? appIs : appEn),
-  ...flattenMessages(mapMessages[locale]),
+  ...appMessages[locale],
+  ...flattenMap(mapMessages[locale]),
   ...flattenTemplate(templateMessages[locale]),
 };
 
@@ -74,7 +79,7 @@ function PageContent({ data }: { data: PageData }) {
         identity={data.identity}
         title={locale === 'is' ? 'Skjólbeltastyrkir' : 'Windbreak Grant Scheme'}
       >
-        <WindbreakApplyPage
+        <ApplyPage
           locale={locale}
           error={data.error}
           lookupSummary={data.lookupSummary}

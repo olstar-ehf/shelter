@@ -1,0 +1,64 @@
+{
+  "name": "@island.is/application-ui-shell",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Shared React page shell for the windbreak application (topbar/footer/stepper + the three pages) - the host-independent part both the NestJS demo and the Next.js web app import.",
+  "main": "dist/esm/index.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/esm/index.js"
+    },
+    "./server": {
+      "types": "./dist/server.d.ts",
+      "default": "./dist/server.js"
+    },
+    "./components/Shell": {
+      "types": "./dist/components/Shell.d.ts",
+      "default": "./dist/esm/components/Shell.js"
+    },
+    "./components/Stepper": {
+      "types": "./dist/components/Stepper.d.ts",
+      "default": "./dist/esm/components/Stepper.js"
+    },
+    "./components/IndexPage": {
+      "types": "./dist/components/IndexPage.d.ts",
+      "default": "./dist/esm/components/IndexPage.js"
+    },
+    "./components/SubmittedPage": {
+      "types": "./dist/components/SubmittedPage.d.ts",
+      "default": "./dist/esm/components/SubmittedPage.js"
+    },
+    "./components/ApplyPage": {
+      "types": "./dist/components/ApplyPage.d.ts",
+      "default": "./dist/esm/components/ApplyPage.js"
+    }
+  },
+  "scripts": {
+    "fix:link": "node scripts/fix-lib-links.cjs",
+    "prebuild": "node scripts/fix-lib-links.cjs",
+    "build": "tsc -p tsconfig.lib.json && tsc -p tsconfig.lib.esm.json",
+    "pretypecheck": "node scripts/fix-lib-links.cjs",
+    "typecheck": "tsc --noEmit -p tsconfig.json"
+  },
+  "peerDependencies": {
+    "react": "^18.3.0",
+    "react-dom": "^18.3.0",
+    "react-intl": "^6.8.0"
+  },
+  "dependencies": {
+    "@island.is/map": "file:../../map",
+    "@island.is/windbreak-application": "file:../templates/windbreak"
+  },
+  "devDependencies": {
+    "@types/geojson": "^7946.0.14",
+    "@types/react": "^18.3.3",
+    "@types/react-dom": "^18.3.0",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "react-intl": "^6.8.9",
+    "typescript": "^5.5.0"
+  },
+  "module": "dist/esm/index.js"
+}

@@ -3,20 +3,24 @@
   "version": "0.0.0",
   "private": true,
   "description": "Reusable Leaflet map + windbreak drawing component library (Phase 1 of the island.is monorepo migration).",
-  "main": "dist/index.js",
+  "main": "dist/esm/index.js",
   "types": "dist/index.d.ts",
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
-      "default": "./dist/index.js"
+      "default": "./dist/esm/index.js"
     },
     "./server": {
       "types": "./dist/server.d.ts",
       "default": "./dist/server.js"
+    },
+    "./components/Shell": {
+      "types": "./dist/components/Shell.d.ts",
+      "default": "./dist/esm/components/Shell.js"
     }
   },
   "scripts": {
-    "build": "tsc -p tsconfig.lib.json",
+    "build": "tsc -p tsconfig.lib.json && tsc -p tsconfig.lib.esm.json",
     "typecheck": "tsc --noEmit -p tsconfig.json",
     "test": "jest",
     "storybook": "storybook dev -p 6006",
@@ -60,5 +64,6 @@
     "ts-jest": "^29.2.0",
     "typescript": "^5.5.0",
     "vite": "^5.4.21"
-  }
+  },
+  "module": "dist/esm/index.js"
 }

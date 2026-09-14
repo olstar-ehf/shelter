@@ -14,7 +14,7 @@
  */
 const { chromium } = require('playwright-core');
 
-const APP_URL = 'http://localhost:8000/';
+const APP_URL = process.env.APP_URL || 'http://localhost:8000/';
 const SHOT_DIR = '/tmp';
 
 async function main() {

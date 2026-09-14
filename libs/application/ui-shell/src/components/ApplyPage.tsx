@@ -11,21 +11,24 @@ import {
 } from '@island.is/windbreak-application';
 import type { ParcelFeature, WindbreakFeature } from '@island.is/map';
 
-export interface WindbreakApplyPageProps {
+export interface ApplyPageProps {
   locale: string;
   error?: string;
   lookupSummary?: string;
   parcels: ParcelFeature[];
   windbreaks: WindbreakFeature[];
+  /** POST endpoint for the answers (default: the NestJS route). */
+  submitPath?: string;
 }
 
-export function WindbreakApplyPage({
+export function ApplyPage({
   locale,
   error,
   lookupSummary,
   parcels,
   windbreaks,
-}: WindbreakApplyPageProps) {
+  submitPath = '/apply',
+}: ApplyPageProps) {
   const intl = useIntl();
   const f = (id: string): string => intl.formatMessage({ id });
 
@@ -43,7 +46,7 @@ export function WindbreakApplyPage({
     });
     let res: Response;
     try {
-      res = await fetch(`/apply?lang=${encodeURIComponent(locale)}`, {
+      res = await fetch(`${submitPath}?lang=${encodeURIComponent(locale)}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

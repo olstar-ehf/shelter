@@ -3,12 +3,12 @@
   "version": "0.0.0",
   "private": true,
   "description": "Windbreak grant application template (Phase 2 of the island.is migration): zod data schema, application states, declarative form with the custom windbreak-lines map field, and the flow renderer.",
-  "main": "dist/index.js",
+  "main": "dist/esm/index.js",
   "types": "dist/index.d.ts",
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
-      "default": "./dist/index.js"
+      "default": "./dist/esm/index.js"
     },
     "./server": {
       "types": "./dist/server.d.ts",
@@ -18,7 +18,7 @@
   "scripts": {
     "fix:link": "node scripts/fix-lib-link.cjs",
     "prebuild": "node scripts/fix-lib-link.cjs",
-    "build": "tsc -p tsconfig.lib.json",
+    "build": "tsc -p tsconfig.lib.json && tsc -p tsconfig.lib.esm.json",
     "pretypecheck": "node scripts/fix-lib-link.cjs",
     "typecheck": "tsc --noEmit -p tsconfig.json",
     "pretest": "node scripts/fix-lib-link.cjs",
@@ -55,5 +55,6 @@
     "ts-jest": "^29.2.0",
     "typescript": "^5.5.0",
     "vite": "^5.4.21"
-  }
+  },
+  "module": "dist/esm/index.js"
 }

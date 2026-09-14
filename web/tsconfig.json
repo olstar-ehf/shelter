@@ -1,0 +1,31 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "lib": ["dom", "dom.iterable", "esnext"],
+    "allowJs": true,
+    "skipLibCheck": true,
+    "strict": true,
+    "noEmit": true,
+    "esModuleInterop": true,
+    "module": "esnext",
+    "moduleResolution": "bundler",
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "jsx": "preserve",
+    "incremental": true,
+    "types": ["node"]
+  },
+  "include": [
+    "next-env.d.ts",
+    "**/*.ts",
+    "**/*.tsx",
+    "../frontend/client/**/*.tsx",
+    "../frontend/src/i18n/**/*.ts",
+    "../frontend/src/messages/**/*.ts",
+    "../frontend/src/app.service.ts",
+    "../frontend/src/fasteignir/**/*.ts",
+    "../frontend/src/windbreaks/**/*.ts",
+    "../frontend/src/zendesk/**/*.ts"
+  ],
+  "exclude": ["node_modules"]
+}

@@ -16,8 +16,9 @@
     "db:migrate": "node db/migrate.cjs"
   },
   "dependencies": {
-    "@island.is/windbreak-application": "file:../../libs/application/templates/windbreak",
+    "@island.is/application-ui-shell": "file:../../libs/application/ui-shell",
     "@island.is/map": "file:../../libs/map",
+    "@island.is/windbreak-application": "file:../../libs/application/templates/windbreak",
     "@nestjs/common": "^11.0.0",
     "@nestjs/core": "^11.0.0",
     "@nestjs/platform-express": "^11.0.0",

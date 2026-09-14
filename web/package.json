@@ -1,0 +1,31 @@
+{
+  "name": "windbreak-web",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Next.js host for the windbreak grant application (island.is web-stack): the same React pages, server-rendered. The NestJS app remains the demo API/backbone.",
+  "scripts": {
+    "fix:links": "node scripts/fix-lib-links.cjs",
+    "predev": "npm run fix:links",
+    "dev": "next dev",
+    "prebuild": "npm run fix:links",
+    "build": "next build",
+    "start": "next start",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@island.is/map": "file:../../libs/map",
+    "@island.is/windbreak-application": "file:../../libs/application/templates/windbreak",
+    "leaflet": "^1.9.4",
+    "leaflet-draw": "^1.0.4",
+    "next": "^14.2.5",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "react-intl": "^6.8.9"
+  },
+  "devDependencies": {
+    "@types/node": "^20.14.0",
+    "@types/react": "^18.3.3",
+    "@types/react-dom": "^18.3.0",
+    "typescript": "^5.5.0"
+  }
+}

@@ -36,7 +36,14 @@ draws lines on a map of their own land and submits.
   minimal HTML shell with the page data embedded as JSON (no template
   engine), and `client/main.tsx` mounts the right React page (landing,
   apply, confirmation). The server itself performs the lookups, the schema
-  check and the application submissions. The interactive map is a **React client**
+  check and the application submissions.
+* There is also a **Next.js host** (`web/`, the island.is web stack): the
+  same shared pages (`libs/application/ui-shell`) are **server-rendered by
+  React** (SSR + hydration) and route like island.is (`/`, `/apply`,
+  `/submitted/[ticketId]`, `/api/apply`). It talks to the NestJS demo over
+  HTTP (`/api/context`, `/api/ticket`, `POST /apply`) - web/API separation
+  like island.is. The interactive map stays client-only (Leaflet cannot
+  SSR), so the apply page SSR-renders everything except the map section. The interactive map is a **React client**
   (`client/main.tsx`, compiled with esbuild) rendering the **application
   template** `@island.is/windbreak-application` (Phase 2), whose custom
   `windbreakLines` map field builds on the reusable `@island.is/map` lib
@@ -83,6 +90,7 @@ docker compose up --build
 ```
 
 * Frontend: <http://localhost:8000> (NestJS dev server with watch mode)
+* Next.js web app: <http://localhost:8009> (SSR React host, island.is-style)
 * Backend (OGC API): <http://localhost:5000>
 
 > The real clients are the default: without `WINDBREAK_DATABASE_URL` in
@@ -423,6 +431,15 @@ libs/map/                     # Phase 1: reusable React map lib (island.is style
     messages/en.ts + is.ts    # react-intl ICU message namespaces
   WindbreakMap.stories.tsx    # Storybook stories (drawable / read-only / Icelandic)
   test/                       # Jest: geometry, locale parity, component smoke
+libs/application/ui-shell/       # shared React pages + chrome (both hosts import them)
+  src/
+    components/             # Shell, Stepper, IndexPage, SubmittedPage, ApplyPage
+    messages/               # app chrome/confirmation/error catalogs (flat ids)
+    index.ts / server.ts    # React entry + React-free server entry (messages)
+web/                          # Next.js host (island.is web stack)
+  pages/                      # / , /apply, /submitted/[ticketId], /api/apply
+  lib/                        # locale resolution + NestJS API client
+  Dockerfile                  # develop / build / serve (monorepo context)
 libs/application/templates/windbreak/   # Phase 2: windbreak application template
   package.json                # @island.is/windbreak-application (file: dep of frontend)
   src/
@@ -503,9 +520,9 @@ foreign stack that would need rewriting.
 a rewrite: the components, schema, validation and copy carry over as-is.
 
 * **Web shell**: island.is renders through Next.js; here a NestJS +
-  island.is renders through Next.js; here every page is already React -
-  NestJS only ships a bare HTML shell with embedded JSON, so adopting the
-  island.is web stack means swapping the shell, not the pages.
+  island.is renders through Next.js - and so does the `web/` host: the same
+  shared React pages are server-rendered (SSR + hydration) with Next.js
+  routing. The NestJS demo remains as the API + the no-framework host.
 * **Authentication**: island.is uses IDS login and the nationalId from the
   session; here the portal session is assumed (name + kennitala) — the
   application itself never touches credentials.

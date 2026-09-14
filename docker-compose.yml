@@ -96,7 +96,36 @@ services:
     depends_on:
       - backend
 
+  web:
+    build:
+      context: .
+      dockerfile: web/Dockerfile
+      target: develop
+    image: windbreak-web
+    container_name: windbreak-web
+    ports:
+      - "8009:3000"
+    environment:
+      # Server-side URL of the NestJS demo API (service + port)
+      API_BASE: http://frontend:3000
+      DEMO_FULL_NAME: "${DEMO_FULL_NAME:-Hafliði Viðar Ólafsson}"
+      DEMO_KENNITALA: "${DEMO_KENNITALA:-061050-4429}"
+    volumes:
+      - ./web:/workspace/web
+      - ./libs/map:/workspace/libs/map
+      - ./libs/application:/workspace/libs/application
+      - web_node_modules:/workspace/web/node_modules
+      - web_map_node_modules:/workspace/libs/map/node_modules
+      - web_windbreak_node_modules:/workspace/libs/application/templates/windbreak/node_modules
+      - web_uishell_node_modules:/workspace/libs/application/ui-shell/node_modules
+    depends_on:
+      - frontend
+
 volumes:
   frontend_node_modules:
   map_node_modules:
   windbreak_node_modules:
+  web_node_modules:
+  web_map_node_modules:
+  web_windbreak_node_modules:
+  web_uishell_node_modules:

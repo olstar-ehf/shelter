@@ -11,7 +11,7 @@ ENV NODE_ENV=development
 
 # Both libs, in dependency order (the template depends on the map lib).
 # ENV (not ARG): the develop stage's runtime CMD also needs the list.
-ENV LIB_DEPS="libs/map libs/application/templates/windbreak"
+ENV LIB_DEPS="libs/map libs/application/templates/windbreak libs/application/ui-shell"
 
 # ---------- develop: NestJS dev server (sources bind-mounted by compose) ----------
 FROM base AS develop
@@ -20,6 +20,9 @@ COPY libs/map/package.json libs/map/package-lock.json ./libs/map/
 COPY libs/application/templates/windbreak/package.json \
      libs/application/templates/windbreak/package-lock.json \
      ./libs/application/templates/windbreak/
+COPY libs/application/ui-shell/package.json \
+     libs/application/ui-shell/package-lock.json \
+     ./libs/application/ui-shell/
 EXPOSE 3000
 # Dependencies are installed at container start into the node_modules
 # volumes (compose mounts ./frontend and ./libs over /workspace, so a
@@ -27,7 +30,7 @@ EXPOSE 3000
 # the frontend; the template's prebuild hook fixes its own @island.is/map
 # link, and the frontend links are replaced with explicit absolute symlinks
 # (npm can create scoped file: links with the wrong depth).
-CMD ["sh", "-c", "for d in $LIB_DEPS; do (cd /workspace/$d && npm ci --no-audit --no-fund) || exit 1; done && for d in $LIB_DEPS; do (cd /workspace/$d && npm run build) || exit 1; done && cd /workspace/frontend && npm ci --no-audit --no-fund && rm -rf node_modules/@island.is/map node_modules/@island.is/windbreak-application && ln -sfn /workspace/libs/map node_modules/@island.is/map && ln -sfn /workspace/libs/application/templates/windbreak node_modules/@island.is/windbreak-application && npm run start:dev"]
+CMD ["sh", "-c", "for d in $LIB_DEPS; do (cd /workspace/$d && npm ci --no-audit --no-fund) || exit 1; done && for d in $LIB_DEPS; do (cd /workspace/$d && npm run build) || exit 1; done && cd /workspace/frontend && npm ci --no-audit --no-fund && rm -rf node_modules/@island.is/map node_modules/@island.is/windbreak-application node_modules/@island.is/application-ui-shell && ln -sfn /workspace/libs/map node_modules/@island.is/map && ln -sfn /workspace/libs/application/templates/windbreak node_modules/@island.is/windbreak-application && ln -sfn /workspace/libs/application/ui-shell node_modules/@island.is/application-ui-shell && npm run start:dev"]
 
 # ---------- build: compile libs + server + client bundle ----------
 FROM base AS build
@@ -38,8 +41,11 @@ COPY libs/map/package.json libs/map/package-lock.json ./libs/map/
 COPY libs/application/templates/windbreak/package.json \
      libs/application/templates/windbreak/package-lock.json \
      ./libs/application/templates/windbreak/
+COPY libs/application/ui-shell/package.json \
+     libs/application/ui-shell/package-lock.json \
+     ./libs/application/ui-shell/
 # Each lib installs its own toolchain; the frontend install also links them.
-# The template's own @island.is/map link is fixed before its build.
+# The libs' own file: links are fixed by their prebuild hooks.
 RUN for d in $LIB_DEPS; do (cd /workspace/$d && npm ci --no-audit --no-fund) || exit 1; done
 RUN cd /workspace/frontend && npm ci --no-audit --no-fund
 COPY libs/map ./libs/map
@@ -47,10 +53,13 @@ COPY libs/application ./libs/application
 RUN for d in $LIB_DEPS; do (cd /workspace/$d && npm run build) || exit 1; done
 # Deterministic links to the built libs (replaces npm's file: symlinks).
 RUN rm -rf /workspace/frontend/node_modules/@island.is/map \
-           /workspace/frontend/node_modules/@island.is/windbreak-application && \
+           /workspace/frontend/node_modules/@island.is/windbreak-application \
+           /workspace/frontend/node_modules/@island.is/application-ui-shell && \
     ln -sfn /workspace/libs/map /workspace/frontend/node_modules/@island.is/map && \
     ln -sfn /workspace/libs/application/templates/windbreak \
-            /workspace/frontend/node_modules/@island.is/windbreak-application
+            /workspace/frontend/node_modules/@island.is/windbreak-application && \
+    ln -sfn /workspace/libs/application/ui-shell \
+            /workspace/frontend/node_modules/@island.is/application-ui-shell
 COPY frontend ./frontend
 RUN cd /workspace/frontend && npm run build
 
@@ -63,6 +72,9 @@ COPY libs/map/package.json libs/map/package-lock.json ./libs/map/
 COPY libs/application/templates/windbreak/package.json \
      libs/application/templates/windbreak/package-lock.json \
      ./libs/application/templates/windbreak/
+COPY libs/application/ui-shell/package.json \
+     libs/application/ui-shell/package-lock.json \
+     ./libs/application/ui-shell/
 # Runtime deps only. npm ci does NOT install the dependencies of file:
 # links, so each lib's own production deps (zod, @turf for server-side
 # validation) are installed here explicitly.
@@ -73,14 +85,20 @@ RUN cd /workspace/frontend && npm ci --omit=dev --no-audit --no-fund
 # relative to their realpath, so they must sit inside the frontend's own
 # node_modules tree.
 RUN rm -rf /workspace/frontend/node_modules/@island.is/map \
-           /workspace/frontend/node_modules/@island.is/windbreak-application && \
+           /workspace/frontend/node_modules/@island.is/windbreak-application \
+           /workspace/frontend/node_modules/@island.is/application-ui-shell && \
     cp -r /workspace/libs/map /workspace/frontend/node_modules/@island.is/map && \
     mkdir -p /workspace/frontend/node_modules/@island.is/windbreak-application && \
     cp -r /workspace/libs/application/templates/windbreak/* \
-          /workspace/frontend/node_modules/@island.is/windbreak-application/
+          /workspace/frontend/node_modules/@island.is/windbreak-application/ && \
+    mkdir -p /workspace/frontend/node_modules/@island.is/application-ui-shell && \
+    cp -r /workspace/libs/application/ui-shell/* \
+          /workspace/frontend/node_modules/@island.is/application-ui-shell/
 COPY --from=build /workspace/libs/map/dist ./frontend/node_modules/@island.is/map/dist
 COPY --from=build /workspace/libs/application/templates/windbreak/dist \
                   ./frontend/node_modules/@island.is/windbreak-application/dist
+COPY --from=build /workspace/libs/application/ui-shell/dist \
+                  ./frontend/node_modules/@island.is/application-ui-shell/dist
 COPY --from=build /workspace/frontend/dist ./frontend/dist
 COPY --from=build /workspace/frontend/public ./frontend/public
 # Migration runner kept for manual/local use (the deployed DB is read-only;
