@@ -113,6 +113,49 @@ const hasDb =
   !!process.env.PGDATABASE;
 const maybeDescribe = hasDb ? describe : describe.skip;
 
+describe('PostgresWindbreakApplicationsStore (unreachable database)', () => {
+  const prevUrl = process.env.WINDBREAK_DATABASE_URL;
+
+  afterEach(() => {
+    if (prevUrl === undefined) {
+      delete process.env.WINDBREAK_DATABASE_URL;
+    } else {
+      process.env.WINDBREAK_DATABASE_URL = prevUrl;
+    }
+  });
+
+  it('degrades to an empty list instead of throwing on connection refusal', async () => {
+    // Port 1 refuses connections immediately - pending lines are a
+    // best-effort overlay and must never block the draw page.
+    process.env.WINDBREAK_DATABASE_URL = 'postgres://u:p@127.0.0.1:1/db';
+    const store = new PostgresWindbreakApplicationsStore();
+    const warn = jest.spyOn(console, 'warn').mockImplementation(() => undefined);
+    try {
+      await expect(store.find({})).resolves.toEqual([]);
+      expect(warn).toHaveBeenCalledWith(
+        expect.stringContaining('ECONNREFUSED'),
+        expect.any(String),
+      );
+    } finally {
+      warn.mockRestore();
+      await (store as unknown as { pool: { end: () => Promise<void> } }).pool.end();
+    }
+  });
+
+  it('still throws on genuine query errors (syntax)', async () => {
+    process.env.WINDBREAK_DATABASE_URL = 'postgres://u:p@127.0.0.1:1/db';
+    const store = new PostgresWindbreakApplicationsStore();
+    const pool = (store as unknown as { pool: { query: unknown } }).pool;
+    const query = jest.spyOn(pool, 'query' as never).mockImplementation(() =>
+      Promise.reject(
+        Object.assign(new Error('syntax error'), { code: '42601' }),
+      ) as never,
+    );
+    await expect(store.find({})).rejects.toMatchObject({ code: '42601' });
+    query.mockRestore();
+  });
+});
+
 maybeDescribe('PostgresWindbreakApplicationsStore (live)', () => {
   const store = new PostgresWindbreakApplicationsStore();
   const applicationId = `TEST-${Date.now()}`;

@@ -77,6 +77,40 @@ function rowToFeature(row: ApplicationRow): WindbreakFeature {
 }
 
 /**
+ * Connection-level failures (unreachable database, server shutdown, ...)
+ * count as "not readable" for the applications read: pending lines are a
+ * best-effort overlay on the draw page, so they degrade to an empty list
+ * instead of failing the whole context request. Query/syntax errors still
+ * throw.
+ */
+function isConnectionError(err: unknown): boolean {
+  const code = (err as { code?: string }).code ?? '';
+  if (
+    [
+      'ECONNREFUSED',
+      'ENOTFOUND',
+      'ETIMEDOUT',
+      'EAI_AGAIN',
+      'ECONNRESET',
+      'EPIPE',
+      'EHOSTUNREACH',
+      'ENETUNREACH',
+    ].includes(code)
+  ) {
+    return true;
+  }
+  // PostgreSQL: connection exceptions (08xxx), admin shutdown / crash /
+  // cannot-connect-now (57P01/57P02/57P03), too many connections (53300).
+  return (
+    code.startsWith('08') ||
+    code === '57P01' ||
+    code === '57P02' ||
+    code === '57P03' ||
+    code === '53300'
+  );
+}
+
+/**
  * PostGIS-backed implementation (default). Geometry is stored in WGS84
  * (EPSG:4326); the db migrations own the schema. Connect with
  * WINDBREAK_DATABASE_URL or the standard PG* variables.
@@ -122,11 +156,14 @@ export class PostgresWindbreakApplicationsStore extends WindbreakApplicationsSto
       result = await this.pool.query(sql, params);
     } catch (err) {
       const code = (err as { code?: string }).code;
-      if (code === '42P01' || code === '42501') {
+      if (code === '42P01' || code === '42501' || isConnectionError(err)) {
         // Read-only deployments may not expose the applications table
         // (submissions now go to Zendesk) - degrade to "no pending lines".
+        // An unreachable database (connection refused, timeouts, server
+        // shutdown, ...) degrades the same way: pending lines are a
+        // best-effort overlay, never worth blocking the draw page.
         console.warn(
-          `windbreak_applications not readable (${code}); treating as empty:`,
+          `windbreak_applications not readable (${code || 'connection error'}); treating as empty:`,
           (err as Error).message,
         );
         return [];

@@ -100,7 +100,8 @@ draws lines on a map of their own land and submits.
   windbreaks keep coming from the read-only skógrækt registry
   (`skograekt.skjolbelti`, EPSG:3057); pending lines come from the
   `windbreak_applications` table when it is readable and degrade to an
-  empty list otherwise. The migrations in `frontend/db/migrations` remain
+  empty list otherwise (missing table, denied access, or an unreachable
+  database). The migrations in `frontend/db/migrations` remain
   for optional local development; the containers no longer run them.
 * All three services run in Docker via `docker-compose` (frontend :8000,
   web :8009, backend :5000).
@@ -130,7 +131,8 @@ docker compose up --build
 > boots without a database (the OpenAPI document is baked at build time,
 > the PostgreSQL provider stays lazy) and logs a clear warning instead.
 > The frontend still fails fast with a clear message when the registry is
-> real but no database is configured.
+> real but the database is unreachable; the submitted-applications read is
+> best-effort and degrades to "no pending lines" with a warning instead.
 
 Then, in the UI:
 
@@ -239,13 +241,16 @@ npm hooks.
   island.is Bearer JWT) and optionally `FASTEIGNIR_API_URL`.
 * `WINDBREAK_REGISTRY_MOCK` — **real by default**; `true` selects the mock
   existing-windbreak registry. The real registry reads `skograekt.skjolbelti`
-  from PostGIS.
+  from PostGIS. Note this flag only mocks the registry — the submitted-
+  applications read below has its own flag.
 * `WINDBREAK_APPLICATIONS_MOCK` — **real by default**; `true` selects the
   GeoJSON-file fallback for **reading** previously submitted (pending)
   applications. The real read store queries the `windbreak_applications`
   table and degrades to an empty list when the table is missing or not
-  readable (the deployed database is read-only). Submissions no longer
-  write here - they go to Zendesk.
+  readable, or when the database is unreachable (connection refused,
+  timeouts, server shutdown) — the deployed database is read-only and
+  pending lines are best-effort. Submissions no longer write here — they
+  go to Zendesk.
 * `WINDBREAK_DATABASE_URL` — the PostGIS DSN (or the standard `PGHOST`,
   `PGPORT`, `PGDATABASE`, `PGUSER`, `PGPASSWORD`). Used by the registry, the
   applications read store and the backend container, which splits it into
