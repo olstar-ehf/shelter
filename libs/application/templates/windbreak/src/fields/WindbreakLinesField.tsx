@@ -1,73 +1,30 @@
 /**
- * The custom map field of the windbreak template: renders the WindbreakMap
- * (libs/map) with the farmer's parcels and existing windbreaks, live
- * validation of each drawn line, and - in review mode - the review panel
- * with the submit actions.
+ * WindbreakLinesField - the registered component for the 'windbreakLines'
+ * field type (draw and review steps of the declarative form).
  *
- * The field is the single component registered for the 'windbreakLines'
- * field type; the draw and review steps are two sections of the declarative
- * form that render the same field with a different mode.
+ * Split for server-side rendering: this module renders the static field
+ * skeleton (map placeholder, legend, empty lines summary with the initial
+ * "no lines" state) both on the server and during the client's first render.
+ * The interactive map pane - Leaflet cannot run on the server - is loaded
+ * afterwards through React.lazy and replaces the skeleton in the browser.
+ *
+ * The server markup and the client's first render are identical, so React
+ * hydrates cleanly and the draw step is never blank while the map chunk
+ * downloads.
  */
+import { Suspense, lazy, useEffect, useState } from 'react';
 import { useIntl } from 'react-intl';
-import {
-  totalLengthM,
-  useWindbreakValidation,
-  WindbreakMap,
-  type ParcelFeature,
-  type WindbreakFeature,
-  type WindbreakLine,
-  type ValidatedLine,
-} from '@island.is/map';
 import type { WindbreakLinesFieldValueProps } from '../types';
 
-export function WindbreakLinesField({
-  field,
-  lines,
-  externalData,
-  onChange,
-  onReviewRequest,
-  onBackRequest,
-  onSubmitRequest,
-  isSubmitting,
-  submitError,
-}: WindbreakLinesFieldValueProps) {
+const WindbreakMapPane = lazy(() => import('./WindbreakMapPane'));
+
+/** Initial-state markup shared by the SSR render and the Suspense fallback. */
+function FieldSkeleton() {
   const intl = useIntl();
-  const f = (id: string, values?: Record<string, string | number>): string =>
-    intl.formatMessage({ id }, values);
-
-  const reviewing = field.mode === 'review';
-  const parcels = externalData.parcels as ParcelFeature[];
-  const windbreaks = externalData.existingWindbreaks as WindbreakFeature[];
-  const validated = useWindbreakValidation(lines, parcels, windbreaks);
-  const allValid =
-    lines.length > 0 &&
-    validated.every((entry) => entry.validation.status === 'ok');
-  const validLines = validated.filter(
-    (entry) => entry.validation.status === 'ok',
-  );
-
-  const parcelName = (parcelId: string | null): string => {
-    if (!parcelId) {
-      return f('map.spansSeveralParcels');
-    }
-    return (
-      parcels.find((p) => p.properties.parcel_id === parcelId)?.properties
-        .parcel_name ?? parcelId
-    );
-  };
-
+  const f = (id: string): string => intl.formatMessage({ id });
   return (
     <>
-      <div className="map-container">
-        <WindbreakMap
-          parcels={parcels}
-          existingWindbreaks={windbreaks}
-          readOnly={reviewing}
-          legend={false}
-          height="480px"
-          onLinesChange={onChange}
-        />
-      </div>
+      <div className="map-container map-container--loading" style={{ height: '480px' }} />
 
       <div className="map-legend" aria-hidden="true">
         <span>
@@ -85,16 +42,12 @@ export function WindbreakLinesField({
       <div className="lines-summary">
         <h3>
           {f('windbreak.lines.heading')} (
-          <span id="line-count">{lines.length}</span>)
+          <span id="line-count">0</span>)
         </h3>
-        <p className="muted" id="no-lines" hidden={lines.length > 0}>
+        <p className="muted" id="no-lines">
           {f('windbreak.lines.none')}
         </p>
-        <table
-          className="lines-table"
-          id="lines-table"
-          hidden={lines.length === 0}
-        >
+        <table className="lines-table" id="lines-table" hidden>
           <thead>
             <tr>
               <th>{f('windbreak.lines.colNumber')}</th>
@@ -103,116 +56,47 @@ export function WindbreakLinesField({
               <th>{f('windbreak.lines.colCheck')}</th>
             </tr>
           </thead>
-          <tbody id="lines-body">
-            {validated.map((entry: ValidatedLine, index: number) => {
-              const validation = entry.validation;
-              if (validation.status === 'error') {
-                const message = f(validation.messageId, validation.values);
-                return (
-                  <tr key={entry.line.clientId}>
-                    <td>{index + 1}</td>
-                    <td>{Math.round(entry.line.lengthM)} m</td>
-                    <td>—</td>
-                    <td>
-                      <span className="chip chip-error" title={message}>
-                        {message}
-                      </span>
-                    </td>
-                  </tr>
-                );
-              }
-              return (
-                <tr key={entry.line.clientId}>
-                  <td>{index + 1}</td>
-                  <td>{Math.round(entry.line.lengthM)} m</td>
-                  <td>{parcelName(validation.parcelId)}</td>
-                  <td>
-                    <span className="chip chip-ok">{f('map.insideLand')}</span>
-                  </td>
-                </tr>
-              );
-            })}
-          </tbody>
+          <tbody id="lines-body" />
         </table>
 
-        <div className="review-panel" id="review-panel" hidden={!reviewing}>
+        <div className="review-panel" id="review-panel" hidden>
           <h3>{f('windbreak.review.heading')}</h3>
           <p className="muted">{f('windbreak.review.note')}</p>
-          <table className="lines-table">
-            <thead>
-              <tr>
-                <th>{f('windbreak.lines.colNumber')}</th>
-                <th>{f('windbreak.lines.colLength')}</th>
-                <th>{f('windbreak.lines.colParcel')}</th>
-              </tr>
-            </thead>
-            <tbody id="review-body">
-              {validLines.map((entry, index) => (
-                <tr key={entry.line.clientId}>
-                  <td>{index + 1}</td>
-                  <td>{Math.round(entry.line.lengthM)} m</td>
-                  <td>
-                    {entry.validation.status === 'ok'
-                      ? parcelName(entry.validation.parcelId)
-                      : '—'}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-          <p className="muted">
-            {f('windbreak.lines.totalLength')}{' '}
-            <strong>
-              <span id="review-total">
-                {Math.round(totalLengthM(validLines.map((e) => e.line)))}
-              </span>{' '}
-              m
-            </strong>
-          </p>
-          <p className="error-text" id="submit-error" hidden={!submitError}>
-            {submitError}
-          </p>
-          <div className="step-actions">
-            <button
-              type="button"
-              className="btn btn-secondary"
-              id="back-btn"
-              onClick={onBackRequest}
-            >
-              {f('windbreak.actions.backToMap')}
-            </button>
-            <button
-              type="button"
-              className="btn btn-primary"
-              id="submit-btn"
-              onClick={() => void onSubmitRequest()}
-              disabled={isSubmitting}
-            >
-              {f('windbreak.actions.submit')}
-            </button>
-          </div>
         </div>
 
         <div className="step-actions">
           <span className="muted">
             {f('windbreak.lines.totalLength')}{' '}
             <strong>
-              <span id="total-length">{Math.round(totalLengthM(lines))}</span>{' '}
-              m
+              <span id="total-length">0</span> m
             </strong>
           </span>
           <button
             type="button"
             className="btn btn-primary"
             id="review-btn"
-            disabled={!allValid}
-            hidden={reviewing}
-            onClick={onReviewRequest}
+            disabled
           >
             {f('windbreak.actions.review')}
           </button>
         </div>
       </div>
     </>
+  );
+}
+
+export function WindbreakLinesField(props: WindbreakLinesFieldValueProps) {
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  if (!mounted) {
+    return <FieldSkeleton />;
+  }
+  return (
+    <Suspense fallback={<FieldSkeleton />}>
+      <WindbreakMapPane {...props} />
+    </Suspense>
   );
 }

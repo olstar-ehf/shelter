@@ -1,6 +1,6 @@
-import dynamic from 'next/dynamic';
 import type { GetServerSideProps } from 'next';
 import { Shell } from '@island.is/application-ui-shell/components/Shell';
+import { ApplyPage } from '@island.is/application-ui-shell/components/ApplyPage';
 import { fetchApplyContext } from '../lib/api';
 import { localeString } from '../lib/locale';
 
@@ -13,15 +13,10 @@ interface Props {
   windbreaks?: unknown[];
 }
 
-// The map field pulls in Leaflet (browser-only): the application flow is
-// client-rendered, everything else on this page is server-rendered React.
-const ApplyPage = dynamic(
-  () =>
-    import('@island.is/application-ui-shell/components/ApplyPage').then(
-      (m) => ({ default: m.ApplyPage }),
-    ),
-  { ssr: false },
-);
+// The whole flow is server-rendered now. The draw step renders its static
+// skeleton (help texts, legend, empty lines table, disabled review button)
+// during SSR; only the Leaflet map pane itself is client-only - the field
+// lazy-loads it after hydration (React.lazy in WindbreakLinesField).
 
 export const getServerSideProps: GetServerSideProps<Props> = async (ctx) => {
   const locale = localeString(ctx);
@@ -37,7 +32,7 @@ export const getServerSideProps: GetServerSideProps<Props> = async (ctx) => {
   return { props: { ...context, locale } };
 };
 
-export default function Apply(props: Props) {
+export default function ApplyRoute(props: Props) {
   const { locale, identity } = props;
   return (
     <Shell session="identity" identity={identity}>

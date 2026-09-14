@@ -43,7 +43,11 @@ draws lines on a map of their own land and submits.
   `/submitted/[ticketId]`, `/api/apply`). It talks to the NestJS demo over
   HTTP (`/api/context`, `/api/ticket`, `POST /apply`) - web/API separation
   like island.is. The interactive map stays client-only (Leaflet cannot
-  SSR), so the apply page SSR-renders everything except the map section. The interactive map is a **React client**
+  SSR): the draw step is split so the server renders the full static
+  skeleton (step title, help texts, legend, empty lines table, disabled
+  review button) and only the Leaflet map pane is lazy-loaded after
+  hydration (`React.lazy` inside `WindbreakLinesField`; the skeleton is
+  the Suspense fallback, so the page is never blank). The interactive map is a **React client**
   (`client/main.tsx`, compiled with esbuild) rendering the **application
   template** `@island.is/windbreak-application` (Phase 2), whose custom
   `windbreakLines` map field builds on the reusable `@island.is/map` lib
