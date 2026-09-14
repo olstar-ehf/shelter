@@ -15,28 +15,59 @@ draws lines on a map of their own land and submits.
 ## Architecture
 
 ```
-┌──────────────────────────┐        ┌──────────────────────────────┐
-│  frontend (Docker)       │  HTTP  │  backend (Docker)            │
-│  NestJS (TypeScript)     │───────▶│  pygeoapi 0.21 (OGC API)     │
-│  minimal HTML shell +    │  JSON  │  farm_parcels (GeoJSON)      │
-│  React client (esbuild)  │        │  windbreak_applications      │
-│  + React client (esbuild)│        │  windbreak_applications      │
-│  http://localhost:8000   │        │  (PostgreSQL provider, read) │
-└──────────┬───────────────┘        └──────────────┬───────────────┘
-           │ Fasteignir-Xroad (real by default)    │ PostGIS (shared):
-           │ kennitala -> properties -> unique     │  skjólbelti registry
-           │ landeignarnumer                       │  + windbreak_applications
-           ▼                                       ▼
-     https://api.fasteignaskra.is           PostgreSQL (EPSG:3057 + 4326)
-     (needs island.is Bearer token)         db migrations own the schema
+┌──────────────────────────────────────────────────────────────────────────────────────────┐
+│ Shared React UI (libs/, island.is-style)                                                 │
+│   @island.is/application-ui-shell   pages (landing / apply / submitted)                  │
+│   @island.is/windbreak-application  flow, zod schema, map field                          │
+│   @island.is/map                    Leaflet map (client-only)                            │
+└────────────────────────────────────────────┬─────────────────────────────────────────────┘
+                                             │ rendered by both hosts
+                                             ▼
+┌──────────────────────────────────────────────────────────────────────────────────────────┐
+│ web (Docker) — Next.js host (the island.is web stack)                                    │
+│ SSR + hydration of the same shared pages; the draw step renders its                      │
+│ static skeleton on the server, only the Leaflet pane mounts client-side                  │
+│ http://localhost:8009                                                                    │
+└────────────────────────────────────────────┬─────────────────────────────────────────────┘
+                                             │ HTTP (JSON): GET /api/context,
+                                             │ GET /api/ticket, POST /apply
+                                             ▼
+┌──────────────────────────────────────────────────────────────────────────────────────────┐
+│ frontend (Docker) — NestJS demo host + JSON API                                          │
+│ minimal HTML shell with page data as JSON (no template engine) +                         │
+│ React client (esbuild); runs the lookups, schema check, submissions                      │
+│ http://localhost:8000                                                                    │
+└───────────────┬───────────────────────────────┬────────────────────────────┬─────────────┘
+                │                               │                            │
+                │ kennitala lookup              │ parcels + existing/pending │ POST /apply
+                                                │ windbreaks (OGC API)
+                ▼                               ▼                            ▼
+ ┌──────────────────────────────┐ ┌────────────────────────────┐ ┌────────────────────────┐
+ │ Fasteignir-Xroad             │ │ backend (Docker)           │ │ Zendesk Support        │
+ │ api.fasteignaskra.is         │ │ pygeoapi 0.21              │ │ API (v2): ticket +     │
+ │ real by default (Bearer      │ │ http://localhost:5000      │ │ drawn lines as a       │
+ │ token); FASTEIGNIR_MOCK=true │ │ farm_parcels → GeoJSON     │ │ GeoJSON attachment     │
+ │ kennitala → landeignarnumer  │ │ skjólbelti + applications  │ │ (DB read-only → no     │
+ │                              │ │ → PostgreSQL (read-only)   │ │ PostGIS writes;        │
+ │                              │ │                            │ │ ZENDESK_MOCK=true)     │
+ └──────────────────────────────┘ └──────────────┬─────────────┘ └────────────────────────┘
+                                                │
+                                                ▼
+                                 PostgreSQL (EPSG:3057 + 4326)
+                                read at runtime; db/ migrations
+                                      optional local dev only
 ```
 
 * The **frontend** is a [NestJS](https://nestjs.com/) application written in
   TypeScript. **Every page is React**: the NestJS server returns only a
   minimal HTML shell with the page data embedded as JSON (no template
   engine), and `client/main.tsx` mounts the right React page (landing,
-  apply, confirmation). The server itself performs the lookups, the schema
-  check and the application submissions.
+  apply, confirmation). The client renders the **application template**
+  `@island.is/windbreak-application` (Phase 2), whose custom
+  `windbreakLines` map field builds on the reusable `@island.is/map` lib
+  (Phase 1); the template owns its zod `dataSchema`, states, declarative
+  form and messages (`windbreak.*`). The server itself performs the
+  lookups, the schema check and the application submissions.
 * There is also a **Next.js host** (`web/`, the island.is web stack): the
   same shared pages (`libs/application/ui-shell`) are **server-rendered by
   React** (SSR + hydration) and route like island.is (`/`, `/apply`,
@@ -47,12 +78,7 @@ draws lines on a map of their own land and submits.
   skeleton (step title, help texts, legend, empty lines table, disabled
   review button) and only the Leaflet map pane is lazy-loaded after
   hydration (`React.lazy` inside `WindbreakLinesField`; the skeleton is
-  the Suspense fallback, so the page is never blank). The interactive map is a **React client**
-  (`client/main.tsx`, compiled with esbuild) rendering the **application
-  template** `@island.is/windbreak-application` (Phase 2), whose custom
-  `windbreakLines` map field builds on the reusable `@island.is/map` lib
-  (Phase 1). The template owns its zod `dataSchema`, states, declarative
-  form and messages (`windbreak.*`).
+  the Suspense fallback, so the page is never blank).
 * The **Fasteignir-Xroad** property lookup (`src/fasteignir/`) uses the
   **real client by default** (X-Road gateway, island.is Bearer token via
   `FASTEIGNIR_TOKEN`). Failures surface as typed `PropertiesLookupError`
@@ -76,7 +102,8 @@ draws lines on a map of their own land and submits.
   `windbreak_applications` table when it is readable and degrade to an
   empty list otherwise. The migrations in `frontend/db/migrations` remain
   for optional local development; the containers no longer run them.
-* Both run in Docker via `docker-compose`.
+* All three services run in Docker via `docker-compose` (frontend :8000,
+  web :8009, backend :5000).
 
 ## Quick start (development)
 
