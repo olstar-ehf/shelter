@@ -1,26 +1,20 @@
 /**
- * Browser entry for the draw page: reads the GeoJSON (parcels + existing
- * windbreaks) and the locale embedded in the page by the NestJS server and
- * mounts the windbreak application template (Phase 2: the custom map field
- * and the flow renderer come from @island.is/windbreak-application, the map
- * itself from @island.is/map).
+ * Browser entry for every page: reads the page-data JSON embedded by the
+ * NestJS shell, merges the three message catalogs (app chrome, map lib,
+ * windbreak template) and mounts the matching React page inside the shared
+ * Shell. Every visible element is React - the server only ships data.
  */
 import { createRoot } from 'react-dom/client';
 import { IntlProvider } from 'react-intl';
 import { flattenMessages, messages as mapMessages } from '@island.is/map';
-import { flattenMessages as flattenTemplate, messages as templateMessages } from '@island.is/windbreak-application';
-import type {
-  FeatureCollection,
-  LineString,
-  MultiLineString,
-  Polygon,
-} from 'geojson';
-import type {
-  ParcelFeature,
-  ParcelProperties,
-  WindbreakFeature,
-  WindbreakProperties,
-} from '@island.is/map';
+import {
+  flattenMessages as flattenTemplate,
+  messages as templateMessages,
+} from '@island.is/windbreak-application';
+import type { ParcelFeature, WindbreakFeature } from '@island.is/map';
+import { IndexPage } from './IndexPage';
+import { Shell } from './Shell';
+import { SubmittedPage } from './SubmittedPage';
 import { WindbreakApplyPage } from './WindbreakApplyPage';
 import { en as appEn } from '../src/messages/en';
 import { is as appIs } from '../src/messages/is';
@@ -29,36 +23,77 @@ import 'leaflet/dist/leaflet.css';
 import 'leaflet-draw/dist/leaflet.draw.css';
 import '../public/styles.css';
 
-function readEmbeddedJson<T>(id: string): T {
-  const el = document.getElementById(id);
-  if (!el || !el.textContent) {
-    throw new Error(`Missing embedded data block: ${id}`);
-  }
-  return JSON.parse(el.textContent) as T;
+interface PageData {
+  page: 'index' | 'apply' | 'submitted';
+  locale: string;
+  identity?: { fullName: string; kennitala: string };
+  error?: string;
+  lookupSummary?: string;
+  parcels?: unknown[];
+  windbreaks?: unknown[];
+  ticket?: {
+    ticketId: string;
+    ticketUrl: string | null;
+    applicationId: string | null;
+    submittedAt: string;
+  };
 }
 
-// Locale chosen server side (query param / cookie / Accept-Language).
-const { locale } = readEmbeddedJson<{ locale: string }>('locale-data');
-const parcels = readEmbeddedJson<
-  FeatureCollection<Polygon, ParcelProperties>
->('parcels-data').features as ParcelFeature[];
-const windbreaks = readEmbeddedJson<
-  FeatureCollection<LineString | MultiLineString, WindbreakProperties>
->('windbreaks-data').features as WindbreakFeature[];
+function readPageData(): PageData {
+  const el = document.getElementById('page-data');
+  if (!el || !el.textContent) {
+    throw new Error('Missing embedded page data');
+  }
+  return JSON.parse(el.textContent) as PageData;
+}
+
+const pageData = readPageData();
+const locale = pageData.locale === 'is' ? 'is' : 'en';
 
 // One flat catalog per locale: app keys + the map lib's map/validation/
-// drawLocal namespaces + the template's windbreak.* namespace (same merge
-// the server does for locale parity).
-const mapLocale = locale === 'is' ? 'is' : 'en';
+// drawLocal namespaces + the template's windbreak.* namespace (the same
+// merge the server uses for its error messages).
 const catalog: Record<string, string> = {
-  ...(mapLocale === 'is' ? appIs : appEn),
-  ...flattenMessages(mapMessages[mapLocale]),
-  ...flattenTemplate(templateMessages[mapLocale]),
+  ...(locale === 'is' ? appIs : appEn),
+  ...flattenMessages(mapMessages[locale]),
+  ...flattenTemplate(templateMessages[locale]),
 };
+
+function PageContent({ data }: { data: PageData }) {
+  if (data.page === 'index') {
+    return (
+      <Shell session="portal">
+        <IndexPage identity={data.identity ?? { fullName: '', kennitala: '' }} />
+      </Shell>
+    );
+  }
+  if (data.page === 'apply') {
+    return (
+      <Shell
+        session="identity"
+        identity={data.identity}
+        title={locale === 'is' ? 'Skjólbeltastyrkir' : 'Windbreak Grant Scheme'}
+      >
+        <WindbreakApplyPage
+          locale={locale}
+          error={data.error}
+          lookupSummary={data.lookupSummary}
+          parcels={(data.parcels ?? []) as ParcelFeature[]}
+          windbreaks={(data.windbreaks ?? []) as WindbreakFeature[]}
+        />
+      </Shell>
+    );
+  }
+  return (
+    <Shell session="none">
+      <SubmittedPage error={data.error} ticket={data.ticket} />
+    </Shell>
+  );
+}
 
 const rootEl = document.getElementById('app-root');
 if (!rootEl) {
-  throw new Error('Draw page root (#app-root) not found');
+  throw new Error('Page root (#app-root) not found');
 }
 
 createRoot(rootEl).render(
@@ -71,6 +106,6 @@ createRoot(rootEl).render(
       // clean in the prototype.
     }}
   >
-    <WindbreakApplyPage locale={locale} parcels={parcels} windbreaks={windbreaks} />
+    <PageContent data={pageData} />
   </IntlProvider>,
 );

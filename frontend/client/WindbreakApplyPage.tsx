@@ -1,9 +1,8 @@
 /**
- * Apply-page host: reads the server-rendered context (locale + parcels +
- * windbreaks), merges the three message catalogs (app chrome, map lib,
- * windbreak template) and mounts the windbreak application template's flow
- * renderer. Submission goes to POST /apply with the template's answers;
- * success redirects to the server-rendered confirmation page.
+ * Apply-page (React): server-looked-up context (identity + parcels +
+ * windbreaks) is passed in; the application itself is the windbreak
+ * template's flow renderer. Submission goes to POST /apply with the
+ * template's answers; success redirects to the ticket confirmation page.
  */
 import { useIntl } from 'react-intl';
 import {
@@ -14,16 +13,29 @@ import type { ParcelFeature, WindbreakFeature } from '@island.is/map';
 
 export interface WindbreakApplyPageProps {
   locale: string;
+  error?: string;
+  lookupSummary?: string;
   parcels: ParcelFeature[];
   windbreaks: WindbreakFeature[];
 }
 
 export function WindbreakApplyPage({
   locale,
+  error,
+  lookupSummary,
   parcels,
   windbreaks,
 }: WindbreakApplyPageProps) {
   const intl = useIntl();
+  const f = (id: string): string => intl.formatMessage({ id });
+
+  if (error) {
+    return (
+      <div className="error-banner" role="alert">
+        <strong>{f('errorSomethingWrong')}</strong> {error}
+      </div>
+    );
+  }
 
   const submitApplication = async (answers: WindbreakAnswers) => {
     const fallback = intl.formatMessage({
@@ -60,10 +72,13 @@ export function WindbreakApplyPage({
   };
 
   return (
-    <WindbreakApplicationFlow
-      locale={locale}
-      externalData={{ parcels, existingWindbreaks: windbreaks }}
-      onSubmitApplication={submitApplication}
-    />
+    <>
+      {lookupSummary && <p className="muted lookup-info">{lookupSummary}</p>}
+      <WindbreakApplicationFlow
+        locale={locale}
+        externalData={{ parcels, existingWindbreaks: windbreaks }}
+        onSubmitApplication={submitApplication}
+      />
+    </>
   );
 }

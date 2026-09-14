@@ -46,8 +46,6 @@ export interface ApplyContext {
   lookupSummary: string;
   parcels: ParcelFeature[];
   windbreaks: WindbreakFeature[];
-  parcelsJson: string;
-  windbreaksJson: string;
 }
 
 export interface SubmittedContext {
@@ -285,14 +283,6 @@ export class AppService {
       lookupSummary,
       parcels,
       windbreaks,
-      parcelsJson: JSON.stringify({
-        type: 'FeatureCollection',
-        features: parcels,
-      }),
-      windbreaksJson: JSON.stringify({
-        type: 'FeatureCollection',
-        features: windbreaks,
-      }),
     };
   }
 

@@ -18,7 +18,8 @@ draws lines on a map of their own land and submits.
 ┌──────────────────────────┐        ┌──────────────────────────────┐
 │  frontend (Docker)       │  HTTP  │  backend (Docker)            │
 │  NestJS (TypeScript)     │───────▶│  pygeoapi 0.21 (OGC API)     │
-│  server-rendered views   │  JSON  │  farm_parcels (GeoJSON)      │
+│  minimal HTML shell +    │  JSON  │  farm_parcels (GeoJSON)      │
+│  React client (esbuild)  │        │  windbreak_applications      │
 │  + React client (esbuild)│        │  windbreak_applications      │
 │  http://localhost:8000   │        │  (PostgreSQL provider, read) │
 └──────────┬───────────────┘        └──────────────┬───────────────┘
@@ -31,9 +32,11 @@ draws lines on a map of their own land and submits.
 ```
 
 * The **frontend** is a [NestJS](https://nestjs.com/) application written in
-  TypeScript. Pages are **server-rendered** with Handlebars (Nest MVC), and
-  the Nest server performs the lookups, the schema check and the application
-  submissions itself. The interactive map is a **React client**
+  TypeScript. **Every page is React**: the NestJS server returns only a
+  minimal HTML shell with the page data embedded as JSON (no template
+  engine), and `client/main.tsx` mounts the right React page (landing,
+  apply, confirmation). The server itself performs the lookups, the schema
+  check and the application submissions. The interactive map is a **React client**
   (`client/main.tsx`, compiled with esbuild) rendering the **application
   template** `@island.is/windbreak-application` (Phase 2), whose custom
   `windbreakLines` map field builds on the reusable `@island.is/map` lib
@@ -239,10 +242,10 @@ including the shared `validation.*` ids.
 * The **locale** is resolved island.is-style: `?lang=is|en` query parameter
   → `lang` cookie → `Accept-Language` header → default Icelandic. The
   top-bar **Íslenska | English** switcher sets the cookie.
-* **Server side** (`src/i18n/`): views receive the raw catalog (`{{t.key}}`)
-  and pre-formatted ICU strings (lookup summary, plurals, validation
-  errors); `createTranslator(locale)` formats everything else. The server
-  imports the libs through the **React-free** entries
+* **Server side** (`src/i18n/`): `createTranslator(locale)` formats the
+  server's own strings - the Fasteignir lookup summary and error messages
+  (validation and integration failures are localized before they reach the
+  client). The server imports the libs through the **React-free** entries
   (`@island.is/map/server`, `@island.is/windbreak-application/server`), so
   the NestJS process never loads react-leaflet.
 * **Client side**: the apply page embeds the chosen locale; the application
@@ -373,11 +376,12 @@ frontend/
     migrations/*.sql         # PostGIS schema (windbreak_applications) + seed
     migrate.cjs              # SQL migration runner (npm run db:migrate)
   src/
-    main.ts                  # Nest bootstrap: static assets + hbs views
+    main.ts                  # Nest bootstrap: static assets only (no view engine)
     app.module.ts
     app.controller.ts        # GET / , GET /apply, POST /apply, GET /submitted/:id
+                             # renders the HTML shell + embedded page-data JSON
     app.service.ts           # kennitala -> landeignarnumer -> parcels -> windbreaks
-                             # schema check (zod) + submit via the applications store
+                             # schema check (zod) + Zendesk ticket submission
     fasteignir/
       fasteignir.types.ts    # types mirroring the Fasteignir-Xroad OpenAPI spec
       fasteignir.service.ts  # abstract service + mock + real X-Road client (default)
@@ -396,13 +400,13 @@ frontend/
                              # lib and template catalogs (map.*/windbreak.* etc.)
     messages/
       en.ts / is.ts          # app chrome/confirmation/error catalogs (island.is style)
-  views/
-    index.hbs                # landing page (server-rendered, stepper from template labels)
-    apply.hbs                # draw page shell + embedded parcels/windbreaks JSON
-    submitted.hbs            # confirmation page (shows the Zendesk ticket)
   client/
-    main.tsx                 # React bootstrap: IntlProvider + 3-way merged catalogs
-    WindbreakApplyPage.tsx   # host: mounts the template flow, submits POST /apply
+    main.tsx                 # React bootstrap for every page: IntlProvider + page-data
+    Shell.tsx                # topbar/footer/language switcher (shared chrome)
+    IndexPage.tsx            # landing page (React)
+    SubmittedPage.tsx        # confirmation page with the Zendesk ticket (React)
+    Stepper.tsx              # the 4-step stepper for index/submitted
+    WindbreakApplyPage.tsx   # apply page: template flow + submit via POST /apply
   public/
     styles.css / favicon.svg # static assets (app.js + app.css are built)
   test/                      # Jest: X-Road contract tests, stores (live PostGIS w/ env)
@@ -472,30 +476,54 @@ docker-compose.prod.yml      # production stack
 
 ## How this demo compares to island.is
 
-The prototype deliberately follows island.is's monorepo conventions where
-they pay off (Phase 1: the reusable map lib, Phase 2: the application
-template) and stops short of porting machinery that a demo does not need.
+This prototype is built **the island.is way on purpose**: it speaks the same
+language — TypeScript, React, OpenAPI, NestJS, react-intl, zod, X-Road,
+Storybook/Jest, Docker, open source — so that it reads as a working preview
+of the windbreak grant flow *as it would exist inside island.is*, not as a
+foreign stack that would need rewriting.
 
-| Concern | island.is | This demo |
-| --- | --- | --- |
-| Repo layout | Nx monorepo, `libs/**` packages, published to npm | `libs/` packages, npm `file:` dependencies (with the scoped-link quirk + its fixes) |
-| Web app | Next.js (`apps/web` + `@island.is/web`) | NestJS MVC + Handlebars shell, React client bundled with esbuild |
-| Design system | island-ui components | Plain CSS classes (`card`, `btn`, `chip`, …) |
-| Application system | Full stack: templates (zod `dataSchema` + state machine), `ui-shell` form renderer, `ui-fields` registry, `template-api-modules` actions, answer storage, delegation, payments | Same shape, small scale: `@island.is/windbreak-application` with zod schema, `draft → submitted` states, declarative form, a field registry (custom `windbreakLines` map field) and a lightweight `ApplicationFlow` renderer; answers are submitted once, not persisted |
-| Map | No first-party map lib (community packages) | `@island.is/map`: react-leaflet map + leaflet-draw control + turf validation hook, modeled as an island.is-style lib |
-| Localization | `libs/localization` namespace JSONs merged into a global store, react-intl everywhere | Same pattern: `map.*`/`validation.*`/`drawLocal.*`, `windbreak.*` and app catalogs merged server + client; `?lang`/cookie/Accept-Language; ICU parity tests |
-| API | NestJS GraphQL domains (codegen) + REST, X-Road clients in `libs/clients` | One NestJS server (no GraphQL), Fasteignir-Xroad client module with typed errors + mock fallback |
-| Authentication | island.is IDS login, nationalId from the session | Assumed portal session (name + kennitala from `DEMO_*`) |
-| Integrations | Service API modules post to X-Road services, email, attachments | X-Road (fasteignir), read-only PostGIS (skjólbelti registry), **Zendesk ticket with a GeoJSON attachment for submissions** (the DB is read-only) |
-| GIS backend | n/a | pygeoapi 0.21 OGC API facade over PostGIS/GeoJSON (read-only PostgreSQL provider) |
-| Validation | Zod schema + custom field validators, per-answer | Zod schema + shared turf geometry rules (lib), client + server |
-| Testing | Jest unit, Cypress e2e, Storybook | Jest unit + contract tests (incl. live PostGIS when configured), Playwright e2e, Storybook for both libs |
+**The parts that already exist, in island.is form:**
 
-Closest steps to converge, if the demo graduates into the monorepo: adopt Nx
-workspaces (kills the npm `file:`-link workarounds), render the template
-through island.is's `ui-shell`/`ui-fields` instead of `ApplicationFlow`,
-move the Zendesk submission behind a `template-api-module` action, and
-swap the assumed identity for real IDS authentication.
+| island.is building block | Already in this demo |
+| --- | --- |
+| TypeScript end to end (apps, libs, tests) | Server, both libs, client, tests — all TypeScript |
+| React + react-intl web apps | The draw page is a React app rendering an application template through react-intl |
+| Application templates: zod `dataSchema`, state machine, declarative form | `@island.is/windbreak-application`: the same three pieces, plus its own states (`draft → submitted`) |
+| `libs/ui-fields` registry + custom field components | A fields registry whose custom `windbreakLines` field renders the map (`@island.is/map`) |
+| Reusable `libs/` packages with stories + tests + clean entries | `libs/map` and the template lib: Storybook stories, Jest suites, React-free `/server` entries for the API |
+| NestJS modules with typed, real-by-default clients | Fasteignir-Xroad (Bearer token, typed error codes), windbreaks (PostGIS registry), Zendesk — each with an explicit mock escape hatch |
+| `libs/localization` namespaces merged into react-intl | `map.*`, `validation.*`, `drawLocal.*`, `windbreak.*` + app catalogs, ICU plurals, is/en parity tests, island.is-style locale resolution |
+| OpenAPI contracts | The X-Road spec (`Fasteignir-Xroad.json`) is pinned by contract tests; the OGC API backend publishes OpenAPI 3 |
+| X-Road integration | Property lookup through the X-Road gateway with an island.is Bearer JWT |
+| Storybook + Jest + browser e2e | Both libs have stories; unit/contract/locale suites; Playwright regression over the whole draw → review → submit flow |
+| Docker, multi-stage monorepo builds | Backend + frontend images, dependency-ordered lib builds, clean build contexts |
+| Open solution | Everything here is open — configuration via env, no black boxes |
+
+**Where the demo deliberately stops** — each of these is a *host swap*, not
+a rewrite: the components, schema, validation and copy carry over as-is.
+
+* **Web shell**: island.is renders through Next.js; here a NestJS +
+  island.is renders through Next.js; here every page is already React -
+  NestJS only ships a bare HTML shell with embedded JSON, so adopting the
+  island.is web stack means swapping the shell, not the pages.
+* **Authentication**: island.is uses IDS login and the nationalId from the
+  session; here the portal session is assumed (name + kennitala) — the
+  application itself never touches credentials.
+* **API surface**: island.is exposes GraphQL domains; here one NestJS
+  server suffices — the module services are shaped like `libs/api/domains`
+  already.
+* **Submission action**: island.is would run this through a
+  `template-api-module` action; the prototype performs it directly in the
+  server and logs a Zendesk ticket with the GeoJSON attachment (the grant
+  authority's database is read-only).
+* **Workspaces**: island.is builds with Nx; here npm `file:` dependencies
+  link the same `libs/` layout (with the documented scoped-link workaround).
+
+In short: the parts that make the grant flow work — the map field, the zod
+schema and state machine, the geometry validation, the localization, the
+client modules and the regression suite — are **already island.is-shaped**.
+Graduating into the monorepo is mostly a matter of hosting them in
+island.is's shell, not rebuilding them.
 
 ## Prototype assumptions & limitations
 

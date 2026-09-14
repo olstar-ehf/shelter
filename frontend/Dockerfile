@@ -83,7 +83,6 @@ COPY --from=build /workspace/libs/application/templates/windbreak/dist \
                   ./frontend/node_modules/@island.is/windbreak-application/dist
 COPY --from=build /workspace/frontend/dist ./frontend/dist
 COPY --from=build /workspace/frontend/public ./frontend/public
-COPY --from=build /workspace/frontend/views ./frontend/views
 # Migration runner kept for manual/local use (the deployed DB is read-only;
 # submissions go to Zendesk, see src/zendesk)
 COPY frontend/db ./frontend/db

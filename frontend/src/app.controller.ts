@@ -5,55 +5,54 @@ import {
   Get,
   Param,
   Post,
-  Render,
   Req,
   Res,
 } from '@nestjs/common';
 import type { Request, Response } from 'express';
 import { AppService } from './app.service';
-import {
-  createTranslator,
-  messages,
-  resolveLocale,
-  type Locale,
-} from './i18n';
+import { createTranslator, resolveLocale, type Locale } from './i18n';
 
 /** Body of POST /apply: the template's answers (see windbreakAnswersSchema). */
 export interface SubmitApplicationBody {
   answers?: unknown;
 }
 
-/** A per-request i18n helper shared by all routes. */
+/** Minimal per-request i18n state. */
 interface I18n {
   locale: Locale;
-  /** Raw catalog for the views (static keys via {{t.key}}). */
-  t: Record<string, string>;
-  isActive: boolean;
-  enActive: boolean;
 }
 
-/** Stepper view model: the 4 template steps, pre-formatted per locale. */
-export interface StepperStepViewModel {
-  no: number;
-  label: string;
-  active: boolean;
-}
-
-/** Steps 1..activeCount rendered as active (index: 1, submitted: 4). */
-function stepperSteps(locale: Locale, activeCount: number): StepperStepViewModel[] {
-  const t = createTranslator(locale);
-  const labels = [
-    'windbreak.step.yourDetails',
-    'windbreak.step.drawWindbreak',
-    'windbreak.step.review',
-    'windbreak.step.submitted',
-  ];
-  return labels.map((labelId, index) => ({
-    no: index + 1,
-    label: t(labelId),
-    active: index + 1 <= activeCount,
-  }));
-}
+/**
+ * The data every React page gets from the server, embedded as JSON in the
+ * HTML shell (client/main.tsx -> PageRoot). Everything visible is rendered
+ * by React; the server only localizes error messages.
+ */
+export type PageData =
+  | {
+      page: 'index';
+      locale: string;
+      identity: { fullName: string; kennitala: string };
+    }
+  | {
+      page: 'apply';
+      locale: string;
+      identity: { fullName: string; kennitala: string };
+      error?: string;
+      lookupSummary?: string;
+      parcels?: unknown[];
+      windbreaks?: unknown[];
+    }
+  | {
+      page: 'submitted';
+      locale: string;
+      error?: string;
+      ticket?: {
+        ticketId: string;
+        ticketUrl: string | null;
+        applicationId: string | null;
+        submittedAt: string;
+      };
+    };
 
 function parseCookies(req: Request): Record<string, string | undefined> {
   const header = req.headers.cookie;
@@ -85,12 +84,32 @@ function resolveI18n(req: Request, res: Response): I18n {
       httpOnly: false,
     });
   }
-  return {
-    locale,
-    t: messages[locale],
-    isActive: locale === 'is',
-    enActive: locale === 'en',
-  };
+  return { locale };
+}
+
+/** Serialize the page data into an HTML-script-safe JSON string. */
+function embedJson(data: PageData): string {
+  return JSON.stringify(data).replace(/</g, '\\u003c');
+}
+
+/** The HTML shell every page shares - no template engine, just JSON. */
+function renderShell(res: Response, data: PageData): void {
+  const html = `<!DOCTYPE html>
+<html lang="${data.locale}">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Windbreak Grant Scheme</title>
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+  <link rel="stylesheet" href="/app.css" />
+</head>
+<body>
+  <div id="app-root"></div>
+  <script id="page-data" type="application/json">${embedJson(data)}</script>
+  <script src="/app.js"></script>
+</body>
+</html>`;
+  res.type('html').send(html);
 }
 
 @Controller()
@@ -99,18 +118,16 @@ export class AppController {
 
   /** Landing page: the (assumed) portal session plus the start button. */
   @Get()
-  @Render('index')
-  index(@Req() req: Request, @Res({ passthrough: true }) res: Response) {
+  index(@Req() req: Request, @Res() res: Response) {
     const i18n = resolveI18n(req, res);
-    const t = createTranslator(i18n.locale);
-    return {
-      ...i18n,
-      stepperSteps: stepperSteps(i18n.locale, 1),
-      indexIdentity: t('indexIdentity', {
-        name: this.appService.demoFullName,
+    renderShell(res, {
+      page: 'index',
+      locale: i18n.locale,
+      identity: {
+        fullName: this.appService.demoFullName,
         kennitala: this.appService.demoKennitala,
-      }),
-    };
+      },
+    });
   }
 
   /**
@@ -120,28 +137,29 @@ export class AppController {
    * The page only asks where the windbreak should be.
    */
   @Get('apply')
-  @Render('apply')
-  async apply(
-    @Req() req: Request,
-    @Res({ passthrough: true }) res: Response,
-  ) {
+  async apply(@Req() req: Request, @Res() res: Response) {
     const i18n = resolveI18n(req, res);
+    const identity = {
+      fullName: this.appService.demoFullName,
+      kennitala: this.appService.demoKennitala,
+    };
     try {
-      return {
-        ...i18n,
-        ...(await this.appService.getApplyContext(i18n.locale)),
-        localeJson: JSON.stringify({ locale: i18n.locale }),
-      };
+      const context = await this.appService.getApplyContext(i18n.locale);
+      renderShell(res, {
+        page: 'apply',
+        locale: i18n.locale,
+        identity,
+        lookupSummary: context.lookupSummary,
+        parcels: context.parcels,
+        windbreaks: context.windbreaks,
+      });
     } catch (err) {
-      return {
-        ...i18n,
-        error:
-          err instanceof Error ? err.message : String(err),
-        identity: {
-          fullName: this.appService.demoFullName,
-          kennitala: this.appService.demoKennitala,
-        },
-      };
+      renderShell(res, {
+        page: 'apply',
+        locale: i18n.locale,
+        identity,
+        error: err instanceof Error ? err.message : String(err),
+      });
     }
   }
 
@@ -171,24 +189,33 @@ export class AppController {
 
   /** Confirmation page: shows the Zendesk ticket the application became. */
   @Get('submitted/:ticketId')
-  @Render('submitted')
   async submitted(
     @Param('ticketId') ticketId: string,
     @Req() req: Request,
-    @Res({ passthrough: true }) res: Response,
+    @Res() res: Response,
   ) {
     const i18n = resolveI18n(req, res);
     try {
-      return {
-        ...i18n,
-        stepperSteps: stepperSteps(i18n.locale, 4),
-        ...(await this.appService.getSubmittedContext(ticketId, i18n.locale)),
-      };
+      const context = await this.appService.getSubmittedContext(
+        ticketId,
+        i18n.locale,
+      );
+      renderShell(res, {
+        page: 'submitted',
+        locale: i18n.locale,
+        ticket: {
+          ticketId: context.ticketId,
+          ticketUrl: context.ticketUrl,
+          applicationId: context.applicationId,
+          submittedAt: context.submittedAt,
+        },
+      });
     } catch (err) {
-      return {
-        ...i18n,
+      renderShell(res, {
+        page: 'submitted',
+        locale: i18n.locale,
         error: err instanceof Error ? err.message : String(err),
-      };
+      });
     }
   }
 }
