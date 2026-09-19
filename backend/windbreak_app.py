@@ -20,16 +20,16 @@ This module wraps the stock pygeoapi Flask app with two small fixes:
 Used as the gunicorn WSGI_APP in the backend Docker image, e.g.
     WSGI_APP=windbreak_app:APP
 
-3. A basemap tile proxy: GET /tiles/basemap/{z}/{x}/{y}.png renders one
+3. A basemap tile proxy: GET /tiles/basemap/{z}/{x}/{y}.png serves one
    256px Web-Mercator tile from the national basemap WMS (Náttúrustofa
-   Íslands, ogc.gis.is) and caches it in memory. The browser therefore
-   never talks to a third party - every map pixel comes from our own OGC
-   API origin (attribution stays in the map). Tiles are rendered upstream
-   with a gutter (WINDBREAK_BASEMAP_BUFFER pixels) and cropped back to
-   256px, so place-name labels that straddle a tile edge are drawn whole
-   instead of being clipped at the boundary. Configure with
-   WINDBREAK_BASEMAP_WMS / WINDBREAK_BASEMAP_LAYERS /
-   WINDBREAK_BASEMAP_MAX_ZOOM / WINDBREAK_BASEMAP_BUFFER.
+   Íslands, ogc.gis.is), cached in memory. The browser therefore never
+   talks to a third party - every map pixel comes from our own OGC API
+   origin (attribution stays in the map). Tiles are rendered upstream as
+   3x3 metatiles with a margin and sliced here, so place-name labels that
+   straddle tile boundaries render whole instead of being clipped.
+   Configure with WINDBREAK_BASEMAP_WMS / WINDBREAK_BASEMAP_LAYERS /
+   WINDBREAK_BASEMAP_MAX_ZOOM / WINDBREAK_BASEMAP_METATILE /
+   WINDBREAK_BASEMAP_BUFFER.
 """
 
 import json
@@ -147,38 +147,65 @@ BASEMAP_LAYERS = os.environ.get(
     "nytt_grunnkort_samsett_naer_fjaer,LMI_vektor:kort_ornefni_3857",
 )
 BASEMAP_MAX_ZOOM = int(os.environ.get("WINDBREAK_BASEMAP_MAX_ZOOM", "16"))
-BASEMAP_TIMEOUT = float(os.environ.get("WINDBREAK_BASEMAP_TIMEOUT", "10"))
+# Public upstreams can be slow on label-dense metatiles; give them room and
+# one retry before falling back to a transparent tile.
+BASEMAP_TIMEOUT = float(os.environ.get("WINDBREAK_BASEMAP_TIMEOUT", "30"))
 BASEMAP_TILE_SIZE = 256
-# Gutter around each tile so labels are not clipped at tile edges (the
-# upstream renders with this many extra pixels on every side; we crop the
-# centre back to 256px). GeoServer draws text that straddles the bbox
-# boundary in the gutter region, which is exactly how its GeoWebCache
-# renders seamless label tiles.
-BASEMAP_BUFFER = int(os.environ.get("WINDBREAK_BASEMAP_BUFFER", "64"))
+# Metatile rendering, mirroring GeoWebCache: the upstream renders a whole
+# MTxMT-tile window in one request, so a place-name label anchored anywhere
+# inside the window is drawn once and complete - text that crosses tile
+# boundaries is never clipped. Each 256px tile is sliced out of the cached
+# metatile image (WINDBREAK_BASEMAP_METATILE).
+BASEMAP_METATILE = int(os.environ.get("WINDBREAK_BASEMAP_METATILE", "3"))
+# Extra margin around the metatile window: labels anchored just outside the
+# metatile edge still render there, keeping neighbouring metatiles seamless
+# (WINDBREAK_BASEMAP_BUFFER).
+BASEMAP_BUFFER = int(os.environ.get("WINDBREAK_BASEMAP_BUFFER", "128"))
 
-# One pooled session for the upstream WMS; the lru_cache keeps hot tiles in
-# memory (~512 x 40KB) so a zoom/pan never hits the upstream twice.
+# One pooled session for the upstream WMS (one retry on transient server
+# errors); the lru_cache keeps hot metatiles in memory (~48 x 1280px PNG)
+# so a zoom/pan never hits the upstream twice.
 _session = requests.Session()
-_adapter = requests.adapters.HTTPAdapter(pool_connections=4, pool_maxsize=8)
+_adapter = requests.adapters.HTTPAdapter(
+    pool_connections=4, pool_maxsize=8, max_retries=requests.adapters.Retry(
+        total=1,
+        status_forcelist=[500, 502, 503, 504],
+        backoff_factor=0.5,
+        allowed_methods=["GET"],
+    )
+)
 _session.mount("https://", _adapter)
 _session.mount("http://", _adapter)
 
 
-def _basemap_bbox(z: int, x: int, y: int):
-    """WGS84 bbox of a Web-Mercator slippy tile (minx, miny, maxx, maxy)."""
-    n = 2.0 ** z
-    lon0 = x / n * 360.0 - 180.0
-    lon1 = (x + 1) / n * 360.0 - 180.0
-    lat1 = math.degrees(math.atan(math.sinh(math.pi * (1 - 2 * y / n))))
-    lat0 = math.degrees(math.atan(math.sinh(math.pi * (1 - 2 * (y + 1) / n))))
-    return lon0, lat0, lon1, lat1
+def _tile_lon(z: int, tx: float) -> float:
+    return tx / (1 << z) * 360.0 - 180.0
 
 
-def _basemap_params(z: int, x: int, y: int) -> dict:
-    bbox = _basemap_bbox(z, x, y)
-    size = BASEMAP_TILE_SIZE + 2 * BASEMAP_BUFFER
-    dx = (bbox[2] - bbox[0]) * BASEMAP_BUFFER / BASEMAP_TILE_SIZE
-    dy = (bbox[3] - bbox[1]) * BASEMAP_BUFFER / BASEMAP_TILE_SIZE
+def _tile_lat(z: int, ty: float) -> float:
+    return math.degrees(math.atan(math.sinh(math.pi * (1 - 2 * ty / (1 << z)))))
+
+
+def _basemap_metatile(z: int, x: int, y: int):
+    """The metatile window containing tile (z,x,y) and its offset in it."""
+    n = 1 << z
+    mt = min(BASEMAP_METATILE, n)
+    ox = min((x // mt) * mt, n - mt)
+    oy = min((y // mt) * mt, n - mt)
+    return ox, oy, mt, x - ox, y - oy
+
+
+def _basemap_params(z: int, ox: int, oy: int, mt: int) -> dict:
+    """GetMap request for one metatile window (WGS84 bbox + margin)."""
+    bbox = (
+        _tile_lon(z, ox),
+        _tile_lat(z, oy + mt),
+        _tile_lon(z, ox + mt),
+        _tile_lat(z, oy),
+    )
+    size = mt * BASEMAP_TILE_SIZE + 2 * BASEMAP_BUFFER
+    dx = (bbox[2] - bbox[0]) * BASEMAP_BUFFER / (mt * BASEMAP_TILE_SIZE)
+    dy = (bbox[3] - bbox[1]) * BASEMAP_BUFFER / (mt * BASEMAP_TILE_SIZE)
     return {
         "service": "WMS",
         "version": "1.1.1",
@@ -197,27 +224,35 @@ def _basemap_params(z: int, x: int, y: int) -> dict:
     }
 
 
-@lru_cache(maxsize=512)
-def _fetch_basemap_tile(z: int, x: int, y: int) -> bytes:
+@lru_cache(maxsize=48)
+def _fetch_basemap_metatile(z: int, ox: int, oy: int, mt: int) -> bytes:
     resp = _session.get(
-        BASEMAP_WMS, params=_basemap_params(z, x, y), timeout=BASEMAP_TIMEOUT
+        BASEMAP_WMS, params=_basemap_params(z, ox, oy, mt), timeout=BASEMAP_TIMEOUT
     )
     resp.raise_for_status()
-    if BASEMAP_BUFFER <= 0:
-        return resp.content
-    # Crop the centre tile out of the buffered render.
-    with Image.open(BytesIO(resp.content)) as img:
-        cropped = img.crop(
-            (
-                BASEMAP_BUFFER,
-                BASEMAP_BUFFER,
-                BASEMAP_BUFFER + BASEMAP_TILE_SIZE,
-                BASEMAP_BUFFER + BASEMAP_TILE_SIZE,
-            )
+    return resp.content
+
+
+def _slice_tile(metatile: bytes, mt: int, dx: int, dy: int) -> bytes:
+    left = BASEMAP_BUFFER + dx * BASEMAP_TILE_SIZE
+    top = BASEMAP_BUFFER + dy * BASEMAP_TILE_SIZE
+    with Image.open(BytesIO(metatile)) as img:
+        tile = img.crop(
+            (left, top, left + BASEMAP_TILE_SIZE, top + BASEMAP_TILE_SIZE)
         )
         out = BytesIO()
-        cropped.save(out, format="PNG")
+        tile.save(out, format="PNG")
         return out.getvalue()
+
+
+@lru_cache(maxsize=1)
+def _blank_tile() -> bytes:
+    """One transparent 256px PNG served while the upstream is unreachable."""
+    out = BytesIO()
+    Image.new("RGBA", (BASEMAP_TILE_SIZE, BASEMAP_TILE_SIZE), (0, 0, 0, 0)).save(
+        out, format="PNG"
+    )
+    return out.getvalue()
 
 
 def _basemap_tile(z: int, x: int, y: int):
@@ -229,17 +264,24 @@ def _basemap_tile(z: int, x: int, y: int):
             400,
             {"Cache-Control": "no-store"},
         )
+    ox, oy, mt, dx, dy = _basemap_metatile(z, x, y)
     try:
-        body = _fetch_basemap_tile(z, x, y)
-    except requests.RequestException as exc:
-        return (
-            f"basemap upstream error: {exc}",
-            502,
-            {"Cache-Control": "no-store"},
-        )
+        metatile = _fetch_basemap_metatile(z, ox, oy, mt)
+        body = _slice_tile(metatile, mt, dx, dy)
+    except Exception as exc:  # upstream errors and malformed renders alike
+        # A missing basemap patch is better than a broken draw page: serve a
+        # transparent tile (not cached) and let the next request retry.
+        print(f"WARNING windbreak_app basemap {z}/{x}/{y}: {exc}", flush=True)
+        return _blank_tile(), 200, {
+            "Content-Type": "image/png",
+            "Cache-Control": "no-store",
+            "X-Basemap-Proxy": f"metatile-{mt}x{mt} buffer-{BASEMAP_BUFFER} error-fallback",
+        }
     return body, 200, {
         "Content-Type": "image/png",
         "Cache-Control": "public, max-age=86400",
+        # Lets operators confirm the deployed image runs the metatile proxy.
+        "X-Basemap-Proxy": f"metatile-{mt}x{mt} buffer-{BASEMAP_BUFFER}",
     }
 
 

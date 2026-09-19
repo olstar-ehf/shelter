@@ -34,7 +34,8 @@ services:
       WINDBREAK_BASEMAP_WMS: "${WINDBREAK_BASEMAP_WMS:-https://ogc.gis.is/geoserver/ows}"
       WINDBREAK_BASEMAP_LAYERS: "${WINDBREAK_BASEMAP_LAYERS:-nytt_grunnkort_samsett_naer_fjaer,LMI_vektor:kort_ornefni_3857}"
       WINDBREAK_BASEMAP_MAX_ZOOM: "${WINDBREAK_BASEMAP_MAX_ZOOM:-16}"
-      WINDBREAK_BASEMAP_BUFFER: "${WINDBREAK_BASEMAP_BUFFER:-64}"
+      WINDBREAK_BASEMAP_METATILE: "${WINDBREAK_BASEMAP_METATILE:-3}"
+      WINDBREAK_BASEMAP_BUFFER: "${WINDBREAK_BASEMAP_BUFFER:-128}"
     volumes:
       - ./backend/pygeoapi.config.yml:/pygeoapi/local.config.yml:ro
       # Read-write: file-backed mock fallback for submitted lines
