@@ -46,6 +46,8 @@ export interface ApplyContext {
   lookupSummary: string;
   parcels: ParcelFeature[];
   windbreaks: WindbreakFeature[];
+  /** Basemap tile source handed to the browser (proxied through our OGC API). */
+  basemap: { tileUrl: string; attribution: string; maxZoom?: number };
 }
 
 export interface SubmittedContext {
@@ -277,12 +279,27 @@ export class AppService {
       list: landeignarnumer.join(', '),
     });
 
+    // Basemap: the browser-facing tile URL proxies through our own OGC API
+    // backend (/tiles/basemap on the pygeoapi service), so the client never
+    // talks to the national map service directly. WINDBREAK_BASEMAP_TILE_URL
+    // overrides (e.g. plain OSM tiles for offline development).
+    const basemap = {
+      tileUrl:
+        process.env.WINDBREAK_BASEMAP_TILE_URL ??
+        `${this.pygeoapiUrl}/tiles/basemap/{z}/{x}/{y}.png`,
+      attribution:
+        process.env.WINDBREAK_BASEMAP_ATTRIBUTION ??
+        'Kortagögn: Náttúrustofa Íslands',
+      maxZoom: Number(process.env.WINDBREAK_BASEMAP_MAX_ZOOM ?? 16),
+    };
+
     return {
       identity: { fullName: this.demoFullName, kennitala: this.demoKennitala },
       landeignarnumer,
       lookupSummary,
       parcels,
       windbreaks,
+      basemap,
     };
   }
 

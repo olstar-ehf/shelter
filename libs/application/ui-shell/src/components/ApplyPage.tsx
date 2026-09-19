@@ -9,7 +9,7 @@ import {
   WindbreakApplicationFlow,
   type WindbreakAnswers,
 } from '@island.is/windbreak-application';
-import type { ParcelFeature, WindbreakFeature } from '@island.is/map';
+import type { ParcelFeature, WindbreakBasemap, WindbreakFeature } from '@island.is/map';
 
 export interface ApplyPageProps {
   locale: string;
@@ -17,6 +17,8 @@ export interface ApplyPageProps {
   lookupSummary?: string;
   parcels: ParcelFeature[];
   windbreaks: WindbreakFeature[];
+  /** Basemap tile source (proxied through our OGC API). */
+  basemap?: WindbreakBasemap;
   /** POST endpoint for the answers (default: the NestJS route). */
   submitPath?: string;
 }
@@ -27,6 +29,7 @@ export function ApplyPage({
   lookupSummary,
   parcels,
   windbreaks,
+  basemap,
   submitPath = '/apply',
 }: ApplyPageProps) {
   const intl = useIntl();
@@ -79,7 +82,7 @@ export function ApplyPage({
       {lookupSummary && <p className="muted lookup-info">{lookupSummary}</p>}
       <WindbreakApplicationFlow
         locale={locale}
-        externalData={{ parcels, existingWindbreaks: windbreaks }}
+        externalData={{ parcels, existingWindbreaks: windbreaks, basemap }}
         onSubmitApplication={submitApplication}
       />
     </>

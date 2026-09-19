@@ -20,6 +20,7 @@ export type {
   ParcelProperties,
   ValidatedLine,
   Validation,
+  WindbreakBasemap,
   WindbreakFeature,
   WindbreakLine,
   WindbreakProperties,

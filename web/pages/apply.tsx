@@ -11,6 +11,7 @@ interface Props {
   lookupSummary?: string;
   parcels?: unknown[];
   windbreaks?: unknown[];
+  basemap?: { tileUrl: string; attribution: string; maxZoom?: number };
 }
 
 // The whole flow is server-rendered now. The draw step renders its static
@@ -42,6 +43,7 @@ export default function ApplyRoute(props: Props) {
         lookupSummary={props.lookupSummary}
         parcels={(props.parcels ?? []) as never[]}
         windbreaks={(props.windbreaks ?? []) as never[]}
+        basemap={props.basemap}
         submitPath="/api/apply"
       />
     </Shell>

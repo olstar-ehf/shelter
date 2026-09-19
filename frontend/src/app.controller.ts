@@ -41,6 +41,7 @@ export type PageData =
       lookupSummary?: string;
       parcels?: unknown[];
       windbreaks?: unknown[];
+      basemap?: { tileUrl: string; attribution: string; maxZoom?: number };
     }
   | {
       page: 'submitted';
@@ -152,6 +153,7 @@ export class AppController {
         lookupSummary: context.lookupSummary,
         parcels: context.parcels,
         windbreaks: context.windbreaks,
+        basemap: context.basemap,
       });
     } catch (err) {
       renderShell(res, {
@@ -206,6 +208,7 @@ export class AppController {
         lookupSummary: context.lookupSummary,
         parcels: context.parcels,
         windbreaks: context.windbreaks,
+        basemap: context.basemap,
       });
     } catch (err) {
       res.json({

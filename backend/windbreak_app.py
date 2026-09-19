@@ -19,13 +19,24 @@ This module wraps the stock pygeoapi Flask app with two small fixes:
 
 Used as the gunicorn WSGI_APP in the backend Docker image, e.g.
     WSGI_APP=windbreak_app:APP
+
+3. A basemap tile proxy: GET /tiles/basemap/{z}/{x}/{y}.png renders one
+   256px Web-Mercator tile from the national basemap WMS (Náttúrustofa
+   Íslands, ogc.gis.is) and caches it in memory. The browser therefore
+   never talks to a third party - every map pixel comes from our own OGC
+   API origin (attribution stays in the map). Configure with
+   WINDBREAK_BASEMAP_WMS / WINDBREAK_BASEMAP_LAYERS / WINDBREAK_BASEMAP_MAX_ZOOM.
 """
 
 import json
+import math
 import os
 import re
 import tempfile
+from functools import lru_cache
 from urllib.parse import unquote, urlsplit
+
+import requests
 
 _ENV_PATTERN = re.compile(r"\$\{([A-Za-z_][A-Za-z0-9_]*)(?::-([^}]*))?\}")
 
@@ -116,3 +127,94 @@ APIRequest.from_flask = from_flask
 
 # Import only after patching, so the Flask app and its blueprints use it.
 from pygeoapi.flask_app import APP  # noqa: E402,F401
+
+# ---- Basemap tile proxy ------------------------------------------------------
+# The national basemap (Náttúrustofa Íslands / former Landmælingar Íslands)
+# is served from ogc.gis.is. The app maps through this OGC API service so
+# the browser only ever contacts our own origin.
+
+BASEMAP_WMS = os.environ.get(
+    "WINDBREAK_BASEMAP_WMS", "https://ogc.gis.is/geoserver/ows"
+)
+BASEMAP_LAYERS = os.environ.get(
+    "WINDBREAK_BASEMAP_LAYERS",
+    "nytt_grunnkort_samsett_naer_fjaer,LMI_vektor:kort_ornefni_3857",
+)
+BASEMAP_MAX_ZOOM = int(os.environ.get("WINDBREAK_BASEMAP_MAX_ZOOM", "16"))
+BASEMAP_TIMEOUT = float(os.environ.get("WINDBREAK_BASEMAP_TIMEOUT", "10"))
+BASEMAP_TILE_SIZE = 256
+
+# One pooled session for the upstream WMS; the lru_cache keeps hot tiles in
+# memory (~512 x 40KB) so a zoom/pan never hits the upstream twice.
+_session = requests.Session()
+_adapter = requests.adapters.HTTPAdapter(pool_connections=4, pool_maxsize=8)
+_session.mount("https://", _adapter)
+_session.mount("http://", _adapter)
+
+
+def _basemap_bbox(z: int, x: int, y: int):
+    """WGS84 bbox of a Web-Mercator slippy tile (minx, miny, maxx, maxy)."""
+    n = 2.0 ** z
+    lon0 = x / n * 360.0 - 180.0
+    lon1 = (x + 1) / n * 360.0 - 180.0
+    lat1 = math.degrees(math.atan(math.sinh(math.pi * (1 - 2 * y / n))))
+    lat0 = math.degrees(math.atan(math.sinh(math.pi * (1 - 2 * (y + 1) / n))))
+    return lon0, lat0, lon1, lat1
+
+
+def _basemap_params(z: int, x: int, y: int) -> dict:
+    bbox = _basemap_bbox(z, x, y)
+    return {
+        "service": "WMS",
+        "version": "1.1.1",
+        "request": "GetMap",
+        "layers": BASEMAP_LAYERS,
+        "styles": "",
+        "srs": "EPSG:4326",
+        "bbox": ",".join(f"{v:.7f}" for v in bbox),
+        "width": BASEMAP_TILE_SIZE,
+        "height": BASEMAP_TILE_SIZE,
+        "format": "image/png",
+        "transparent": "true",
+        "tiled": "true",  # hint for the upstream GeoWebCache integration
+    }
+
+
+@lru_cache(maxsize=512)
+def _fetch_basemap_tile(z: int, x: int, y: int) -> bytes:
+    resp = _session.get(
+        BASEMAP_WMS, params=_basemap_params(z, x, y), timeout=BASEMAP_TIMEOUT
+    )
+    resp.raise_for_status()
+    return resp.content
+
+
+def _basemap_tile(z: int, x: int, y: int):
+    """GET /tiles/basemap/{z}/{x}/{y}.png - one 256px basemap tile."""
+    size = 1 << z
+    if not (0 <= z <= BASEMAP_MAX_ZOOM and 0 <= x < size and 0 <= y < size):
+        return (
+            f"tile {z}/{x}/{y} out of range (0..{BASEMAP_MAX_ZOOM})",
+            400,
+            {"Cache-Control": "no-store"},
+        )
+    try:
+        body = _fetch_basemap_tile(z, x, y)
+    except requests.RequestException as exc:
+        return (
+            f"basemap upstream error: {exc}",
+            502,
+            {"Cache-Control": "no-store"},
+        )
+    return body, 200, {
+        "Content-Type": "image/png",
+        "Cache-Control": "public, max-age=86400",
+    }
+
+
+APP.add_url_rule(
+    "/tiles/basemap/<int:z>/<int:x>/<int:y>.png",
+    "windbreak_basemap_proxy",
+    _basemap_tile,
+    methods=["GET"],
+)

@@ -22,7 +22,7 @@ import {
   SubmittedPage,
   messages as appMessages,
 } from '@island.is/application-ui-shell';
-import type { ParcelFeature, WindbreakFeature } from '@island.is/map';
+import type { ParcelFeature, WindbreakBasemap, WindbreakFeature } from '@island.is/map';
 
 import 'leaflet/dist/leaflet.css';
 import 'leaflet-draw/dist/leaflet.draw.css';
@@ -36,6 +36,7 @@ interface PageData {
   lookupSummary?: string;
   parcels?: unknown[];
   windbreaks?: unknown[];
+  basemap?: WindbreakBasemap;
   ticket?: {
     ticketId: string;
     ticketUrl: string | null;
@@ -85,6 +86,7 @@ function PageContent({ data }: { data: PageData }) {
           lookupSummary={data.lookupSummary}
           parcels={(data.parcels ?? []) as ParcelFeature[]}
           windbreaks={(data.windbreaks ?? []) as WindbreakFeature[]}
+          basemap={data.basemap}
         />
       </Shell>
     );

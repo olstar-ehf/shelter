@@ -90,6 +90,18 @@ draws lines on a map of their own land and submits.
   come from GeoJSON files, and the `windbreak_applications` collection is
   served **from PostGIS** (pygeoapi's PostgreSQL provider is read-only, so
   the OGC API is the agency-facing read interface for submitted lines).
+* **Basemap**: the map draws over the **national basemap** (Náttúrustofa
+  Íslands, the merged Landmælingar Íslands - the `nytt_grunnkort_samsett`
+  composite + IS 50V place names), but the browser never talks to the
+  national service: the backend proxies it. `GET /tiles/basemap/{z}/{x}/{y}.png`
+  on the pygeoapi service renders one 256px Web-Mercator tile from the
+  upstream WMS (`WINDBREAK_BASEMAP_WMS` / `WINDBREAK_BASEMAP_LAYERS`,
+  in-memory cached, upstream failures return 502) and the apply context
+  hands the browser `{z}/{x}/{y}.png`-style URL. The frontend can override
+  the tile URL and attribution (`WINDBREAK_BASEMAP_TILE_URL` /
+  `WINDBREAK_BASEMAP_ATTRIBUTION`, e.g. plain OSM tiles for offline
+  development). The production upgrade path for the same endpoint is an
+  nginx `proxy_cache` in front of the backend (see README discussion).
 * **Read-only database + Zendesk submissions**: the grant authority only
   has read access to the database, so submitted applications are NOT
   written to PostGIS. Submitting creates a **Zendesk ticket** (Support API
@@ -257,6 +269,17 @@ npm hooks.
   the per-part connection variables the pygeoapi PostgreSQL provider config
   expands (`windbreak_app.py` also expands `${VAR}` placeholders in the
   pygeoapi config, so no credentials live in the committed YAML).
+* `WINDBREAK_BASEMAP_WMS` / `WINDBREAK_BASEMAP_LAYERS` /
+  `WINDBREAK_BASEMAP_MAX_ZOOM` — the basemap tile proxy on the backend:
+  upstream WMS base URL (default `https://ogc.gis.is/geoserver/ows`), the
+  layers it composites per tile (default the Náttúrustofa composite +
+  place names), and the highest zoom served (default 16).
+* `WINDBREAK_BASEMAP_TILE_URL` / `WINDBREAK_BASEMAP_ATTRIBUTION` /
+  `WINDBREAK_BASEMAP_MAX_ZOOM` — the basemap the apply context hands to the
+  browser. Defaults to our own proxy (`{PYGEOAPI_URL}/tiles/basemap/{z}/{x}/{y}.png`,
+  or the published `http://localhost:5000/...` in compose) with attribution
+  `Kortagögn: Náttúrustofa Íslands`. Override with e.g. plain OSM tiles for
+  fully-offline development.
 * `ZENDESK_MOCK` — **real by default**; `true` selects the in-memory mock
   (tickets live for the server lifetime). The real client needs
   `ZENDESK_SUBDOMAIN` (e.g. `myagency` → `https://myagency.zendesk.com`),

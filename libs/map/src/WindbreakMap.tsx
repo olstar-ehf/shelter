@@ -7,15 +7,24 @@ import { WindbreakDrawControl } from './WindbreakDrawControl';
 import { WindbreakLegend } from './WindbreakLegend';
 import type {
   ParcelFeature,
+  WindbreakBasemap,
   WindbreakFeature,
   WindbreakLine,
 } from './types';
+
+export type { WindbreakBasemap } from './types';
 
 export interface WindbreakMapProps {
   /** The farmer's registered parcels. */
   parcels: ParcelFeature[];
   /** Windbreaks already on the land (established or pending). */
   existingWindbreaks: WindbreakFeature[];
+  /**
+   * Basemap tile source. When omitted, the map falls back to OpenStreetMap
+   * tiles (offline development). The demo supplies the national basemap
+   * proxied through our own OGC API service.
+   */
+  basemap?: WindbreakBasemap;
   /**
    * Lines already drawn in this application. Render them read-only when the
    * draw control is not mounted (e.g. the review step), so the map keeps
@@ -87,6 +96,7 @@ function DrawnLinesLayer({ layer }: { layer: L.FeatureGroup }) {
 export function WindbreakMap({
   parcels,
   existingWindbreaks,
+  basemap,
   drawnLines,
   readOnly = false,
   fitToData = true,
@@ -142,10 +152,18 @@ export function WindbreakMap({
         // Finishing a line with a double-click must not also zoom the map.
         doubleClickZoom={false}
       >
-        <TileLayer
-          attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-          url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-        />
+        {basemap ? (
+          <TileLayer
+            url={basemap.tileUrl}
+            attribution={basemap.attribution}
+            maxZoom={basemap.maxZoom ?? 16}
+          />
+        ) : (
+          <TileLayer
+            attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+            url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+          />
+        )}
         <GeoJSON
           data={parcelsCollection}
           style={{

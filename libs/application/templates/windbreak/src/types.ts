@@ -1,4 +1,8 @@
-import type { WindbreakFeature, WindbreakLine } from '@island.is/map/server';
+import type {
+  WindbreakBasemap,
+  WindbreakFeature,
+  WindbreakLine,
+} from '@island.is/map/server';
 import type { WindbreakAnswers } from './dataSchema';
 
 /**
@@ -39,6 +43,12 @@ export interface WindbreakApplication {
 export interface WindbreakExternalData {
   parcels: WindbreakParcelFeature[];
   existingWindbreaks: WindbreakFeature[];
+  /**
+   * Basemap tile source for the map (the demo proxies the national basemap
+   * through its own OGC API service). Optional - the map falls back to
+   * OpenStreetMap tiles.
+   */
+  basemap?: WindbreakBasemap;
 }
 
 // Keep the template free of @island.is/map in its public types would be

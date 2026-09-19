@@ -60,6 +60,7 @@ export default function WindbreakMapPane({
         <WindbreakMap
           parcels={parcels}
           existingWindbreaks={windbreaks}
+          basemap={externalData.basemap}
           readOnly={reviewing}
           legend={false}
           height="480px"

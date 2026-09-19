@@ -1,5 +1,15 @@
 import type { Feature, LineString, MultiLineString, Polygon } from 'geojson';
 
+/** Basemap tile source of the map (slippy-map XYZ tile template). */
+export interface WindbreakBasemap {
+  /** Tile URL template with {z}/{x}/{y} placeholders. */
+  tileUrl: string;
+  /** Attribution HTML rendered on the map. */
+  attribution: string;
+  /** Highest zoom the tile source serves (default 16). */
+  maxZoom?: number;
+}
+
 /** Attributes of a land parcel. */
 export interface ParcelProperties {
   parcel_id: string;
