@@ -273,12 +273,23 @@ npm hooks.
   `WINDBREAK_BASEMAP_MAX_ZOOM` / `WINDBREAK_BASEMAP_METATILE` /
   `WINDBREAK_BASEMAP_BUFFER` — the basemap tile proxy on the backend:
   upstream WMS base URL (default `https://ogc.gis.is/geoserver/ows`), the
-  layers it composites per tile (default the Náttúrustofa composite + place
-  names), the highest zoom served (default 16), the metatile grid rendered
-  per upstream request (default 3×3 — labels are drawn once per metatile
-  window, so place names are never clipped at tile edges), and the margin
-  around the metatile (default 128px). Served tiles carry an
+  layers it composites per tile (default: terrain hillshade +
+  `LMI_vektor:kort_ornefni_3857` + `byggdastofnun:is50v_ornefni_flakar3857`
+  — the two vector place-name layers, which render per request and are
+  therefore seamless), the highest zoom served (default 16), the metatile
+  grid rendered per upstream request (default 3×3 — labels are drawn once
+  per metatile window, so place names are never clipped at tile edges), and
+  the margin around the metatile (default 512px). Served tiles carry an
   `X-Basemap-Proxy` header naming the running configuration.
+  Note: the national composite `nytt_grunnkort_samsett_naer_fjaer` was the
+  original default but its labels are baked into pre-rendered rasters by
+  the national service with seams at its own tile grid (verified: single
+  large renders and stitched per-tile renders are pixel-identical, so the
+  seams are in the data and cannot be buffered away) — set
+  `WINDBREAK_BASEMAP_LAYERS` to it explicitly if the full national look is
+  preferred over seamless labels. The relief stack is blank white at very
+  low zooms (whole-country view); the app fits to the parcel immediately,
+  so this is only visible when zoomed far out.
 * `WINDBREAK_BASEMAP_TILE_URL` / `WINDBREAK_BASEMAP_ATTRIBUTION` /
   `WINDBREAK_BASEMAP_MAX_ZOOM` — the basemap the apply context hands to the
   browser. Defaults to our own proxy (`{PYGEOAPI_URL}/tiles/basemap/{z}/{x}/{y}.png`,

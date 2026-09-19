@@ -142,14 +142,23 @@ from pygeoapi.flask_app import APP  # noqa: E402,F401
 BASEMAP_WMS = os.environ.get(
     "WINDBREAK_BASEMAP_WMS", "https://ogc.gis.is/geoserver/ows"
 )
+# Default stack: terrain hillshade + the two vector place-name layers.
+# Deliberately NOT the national composite (nytt_grunnkort_samsett_naer_fjaer):
+# its labels are baked into pre-rendered rasters by the national service
+# with seams at its own tile grid (verified: a single large render and
+# stitched per-tile renders are pixel-identical), so no amount of buffering
+# can fix them. The vector layers render per request, so the metatile
+# window below draws their labels complete and seamless.
 BASEMAP_LAYERS = os.environ.get(
     "WINDBREAK_BASEMAP_LAYERS",
-    "nytt_grunnkort_samsett_naer_fjaer,LMI_vektor:kort_ornefni_3857",
+    "LMI_raster:islandsdem_hillshade_10m,"
+    "LMI_vektor:kort_ornefni_3857,"
+    "byggdastofnun:is50v_ornefni_flakar3857",
 )
 BASEMAP_MAX_ZOOM = int(os.environ.get("WINDBREAK_BASEMAP_MAX_ZOOM", "16"))
 # Public upstreams can be slow on label-dense metatiles; give them room and
 # one retry before falling back to a transparent tile.
-BASEMAP_TIMEOUT = float(os.environ.get("WINDBREAK_BASEMAP_TIMEOUT", "30"))
+BASEMAP_TIMEOUT = float(os.environ.get("WINDBREAK_BASEMAP_TIMEOUT", "60"))
 BASEMAP_TILE_SIZE = 256
 # Metatile rendering, mirroring GeoWebCache: the upstream renders a whole
 # MTxMT-tile window in one request, so a place-name label anchored anywhere
@@ -159,8 +168,8 @@ BASEMAP_TILE_SIZE = 256
 BASEMAP_METATILE = int(os.environ.get("WINDBREAK_BASEMAP_METATILE", "3"))
 # Extra margin around the metatile window: labels anchored just outside the
 # metatile edge still render there, keeping neighbouring metatiles seamless
-# (WINDBREAK_BASEMAP_BUFFER).
-BASEMAP_BUFFER = int(os.environ.get("WINDBREAK_BASEMAP_BUFFER", "128"))
+# (WINDBREAK_BASEMAP_BUFFER). 512px covers labels up to ~1024px wide.
+BASEMAP_BUFFER = int(os.environ.get("WINDBREAK_BASEMAP_BUFFER", "512"))
 
 # One pooled session for the upstream WMS (one retry on transient server
 # errors); the lru_cache keeps hot metatiles in memory (~48 x 1280px PNG)
@@ -224,7 +233,7 @@ def _basemap_params(z: int, ox: int, oy: int, mt: int) -> dict:
     }
 
 
-@lru_cache(maxsize=48)
+@lru_cache(maxsize=16)
 def _fetch_basemap_metatile(z: int, ox: int, oy: int, mt: int) -> bytes:
     resp = _session.get(
         BASEMAP_WMS, params=_basemap_params(z, ox, oy, mt), timeout=BASEMAP_TIMEOUT
