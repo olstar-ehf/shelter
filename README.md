@@ -270,10 +270,13 @@ npm hooks.
   expands (`windbreak_app.py` also expands `${VAR}` placeholders in the
   pygeoapi config, so no credentials live in the committed YAML).
 * `WINDBREAK_BASEMAP_WMS` / `WINDBREAK_BASEMAP_LAYERS` /
-  `WINDBREAK_BASEMAP_MAX_ZOOM` — the basemap tile proxy on the backend:
-  upstream WMS base URL (default `https://ogc.gis.is/geoserver/ows`), the
-  layers it composites per tile (default the Náttúrustofa composite +
-  place names), and the highest zoom served (default 16).
+  `WINDBREAK_BASEMAP_MAX_ZOOM` / `WINDBREAK_BASEMAP_BUFFER` — the basemap
+  tile proxy on the backend: upstream WMS base URL (default
+  `https://ogc.gis.is/geoserver/ows`), the layers it composites per tile
+  (default the Náttúrustofa composite + place names), the highest zoom
+  served (default 16), and the gutter rendered around each tile so place
+  names are not clipped at tile edges (default 64px, cropped back before
+  serving).
 * `WINDBREAK_BASEMAP_TILE_URL` / `WINDBREAK_BASEMAP_ATTRIBUTION` /
   `WINDBREAK_BASEMAP_MAX_ZOOM` — the basemap the apply context hands to the
   browser. Defaults to our own proxy (`{PYGEOAPI_URL}/tiles/basemap/{z}/{x}/{y}.png`,

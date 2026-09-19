@@ -24,8 +24,12 @@ Used as the gunicorn WSGI_APP in the backend Docker image, e.g.
    256px Web-Mercator tile from the national basemap WMS (Náttúrustofa
    Íslands, ogc.gis.is) and caches it in memory. The browser therefore
    never talks to a third party - every map pixel comes from our own OGC
-   API origin (attribution stays in the map). Configure with
-   WINDBREAK_BASEMAP_WMS / WINDBREAK_BASEMAP_LAYERS / WINDBREAK_BASEMAP_MAX_ZOOM.
+   API origin (attribution stays in the map). Tiles are rendered upstream
+   with a gutter (WINDBREAK_BASEMAP_BUFFER pixels) and cropped back to
+   256px, so place-name labels that straddle a tile edge are drawn whole
+   instead of being clipped at the boundary. Configure with
+   WINDBREAK_BASEMAP_WMS / WINDBREAK_BASEMAP_LAYERS /
+   WINDBREAK_BASEMAP_MAX_ZOOM / WINDBREAK_BASEMAP_BUFFER.
 """
 
 import json
@@ -34,9 +38,11 @@ import os
 import re
 import tempfile
 from functools import lru_cache
+from io import BytesIO
 from urllib.parse import unquote, urlsplit
 
 import requests
+from PIL import Image
 
 _ENV_PATTERN = re.compile(r"\$\{([A-Za-z_][A-Za-z0-9_]*)(?::-([^}]*))?\}")
 
@@ -143,6 +149,12 @@ BASEMAP_LAYERS = os.environ.get(
 BASEMAP_MAX_ZOOM = int(os.environ.get("WINDBREAK_BASEMAP_MAX_ZOOM", "16"))
 BASEMAP_TIMEOUT = float(os.environ.get("WINDBREAK_BASEMAP_TIMEOUT", "10"))
 BASEMAP_TILE_SIZE = 256
+# Gutter around each tile so labels are not clipped at tile edges (the
+# upstream renders with this many extra pixels on every side; we crop the
+# centre back to 256px). GeoServer draws text that straddles the bbox
+# boundary in the gutter region, which is exactly how its GeoWebCache
+# renders seamless label tiles.
+BASEMAP_BUFFER = int(os.environ.get("WINDBREAK_BASEMAP_BUFFER", "64"))
 
 # One pooled session for the upstream WMS; the lru_cache keeps hot tiles in
 # memory (~512 x 40KB) so a zoom/pan never hits the upstream twice.
@@ -164,6 +176,9 @@ def _basemap_bbox(z: int, x: int, y: int):
 
 def _basemap_params(z: int, x: int, y: int) -> dict:
     bbox = _basemap_bbox(z, x, y)
+    size = BASEMAP_TILE_SIZE + 2 * BASEMAP_BUFFER
+    dx = (bbox[2] - bbox[0]) * BASEMAP_BUFFER / BASEMAP_TILE_SIZE
+    dy = (bbox[3] - bbox[1]) * BASEMAP_BUFFER / BASEMAP_TILE_SIZE
     return {
         "service": "WMS",
         "version": "1.1.1",
@@ -171,9 +186,11 @@ def _basemap_params(z: int, x: int, y: int) -> dict:
         "layers": BASEMAP_LAYERS,
         "styles": "",
         "srs": "EPSG:4326",
-        "bbox": ",".join(f"{v:.7f}" for v in bbox),
-        "width": BASEMAP_TILE_SIZE,
-        "height": BASEMAP_TILE_SIZE,
+        "bbox": ",".join(
+            f"{v:.7f}" for v in (bbox[0] - dx, bbox[1] - dy, bbox[2] + dx, bbox[3] + dy)
+        ),
+        "width": size,
+        "height": size,
         "format": "image/png",
         "transparent": "true",
         "tiled": "true",  # hint for the upstream GeoWebCache integration
@@ -186,7 +203,21 @@ def _fetch_basemap_tile(z: int, x: int, y: int) -> bytes:
         BASEMAP_WMS, params=_basemap_params(z, x, y), timeout=BASEMAP_TIMEOUT
     )
     resp.raise_for_status()
-    return resp.content
+    if BASEMAP_BUFFER <= 0:
+        return resp.content
+    # Crop the centre tile out of the buffered render.
+    with Image.open(BytesIO(resp.content)) as img:
+        cropped = img.crop(
+            (
+                BASEMAP_BUFFER,
+                BASEMAP_BUFFER,
+                BASEMAP_BUFFER + BASEMAP_TILE_SIZE,
+                BASEMAP_BUFFER + BASEMAP_TILE_SIZE,
+            )
+        )
+        out = BytesIO()
+        cropped.save(out, format="PNG")
+        return out.getvalue()
 
 
 def _basemap_tile(z: int, x: int, y: int):

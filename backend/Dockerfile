@@ -16,7 +16,7 @@
 #     docgen variant (no database needed); the DB provider stays lazy.
 FROM geopython/pygeoapi:0.21.0
 
-RUN python3 -m pip install --no-cache-dir flask-cors psycopg2-binary geoalchemy2
+RUN python3 -m pip install --no-cache-dir flask-cors psycopg2-binary geoalchemy2 Pillow
 
 COPY windbreak_app.py pygeoapi.config.yml docgen-config.py entrypoint.sh \
      /pygeoapi/
