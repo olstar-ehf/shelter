@@ -90,13 +90,15 @@ draws lines on a map of their own land and submits.
   come from GeoJSON files, and the `windbreak_applications` collection is
   served **from PostGIS** (pygeoapi's PostgreSQL provider is read-only, so
   the OGC API is the agency-facing read interface for submitted lines).
-* **Basemap**: the map draws over the **national basemap** (Náttúrustofa
-  Íslands, the merged Landmælingar Íslands - the `nytt_grunnkort_samsett`
-  composite + IS 50V place names), but the browser never talks to the
-  national service: the backend proxies it. `GET /tiles/basemap/{z}/{x}/{y}.png`
-  on the pygeoapi service renders one 256px Web-Mercator tile from the
-  upstream WMS (`WINDBREAK_BASEMAP_WMS` / `WINDBREAK_BASEMAP_LAYERS`,
-  in-memory cached, upstream failures return 502) and the apply context
+* **Basemap**: the map draws over the **national basemap** - the same
+  sources the national Örnefnasjá viewer uses: pre-rendered `grunnkort`
+  tiles from the Náttúrustofa MapCache tile service, composited with the
+  `Ornefni` place-name layer rendered as seamless metatiles. The browser
+  never talks to the national service: the backend proxies it.
+  `GET /tiles/basemap/{z}/{x}/{y}.png` on the pygeoapi service assembles
+  one 256px Web-Mercator tile (`WINDBREAK_BASEMAP_TILE_WMS` /
+  `WINDBREAK_BASEMAP_TILE_LAYERS` / `WINDBREAK_BASEMAP_WMS` /
+  `WINDBREAK_BASEMAP_LAYERS`, in-memory cached) and the apply context
   hands the browser `{z}/{x}/{y}.png`-style URL. The frontend can override
   the tile URL and attribution (`WINDBREAK_BASEMAP_TILE_URL` /
   `WINDBREAK_BASEMAP_ATTRIBUTION`, e.g. plain OSM tiles for offline
@@ -269,27 +271,22 @@ npm hooks.
   the per-part connection variables the pygeoapi PostgreSQL provider config
   expands (`windbreak_app.py` also expands `${VAR}` placeholders in the
   pygeoapi config, so no credentials live in the committed YAML).
-* `WINDBREAK_BASEMAP_WMS` / `WINDBREAK_BASEMAP_LAYERS` /
+* `WINDBREAK_BASEMAP_TILE_WMS` / `WINDBREAK_BASEMAP_TILE_LAYERS` /
+  `WINDBREAK_BASEMAP_WMS` / `WINDBREAK_BASEMAP_LAYERS` /
   `WINDBREAK_BASEMAP_MAX_ZOOM` / `WINDBREAK_BASEMAP_METATILE` /
-  `WINDBREAK_BASEMAP_BUFFER` — the basemap tile proxy on the backend:
-  upstream WMS base URL (default `https://ogc.gis.is/geoserver/ows`), the
-  layers it composites per tile (default: terrain hillshade +
-  `LMI_vektor:kort_ornefni_3857` + `byggdastofnun:is50v_ornefni_flakar3857`
-  — the two vector place-name layers, which render per request and are
-  therefore seamless), the highest zoom served (default 16), the metatile
-  grid rendered per upstream request (default 3×3 — labels are drawn once
-  per metatile window, so place names are never clipped at tile edges), and
-  the margin around the metatile (default 512px). Served tiles carry an
-  `X-Basemap-Proxy` header naming the running configuration.
-  Note: the national composite `nytt_grunnkort_samsett_naer_fjaer` was the
-  original default but its labels are baked into pre-rendered rasters by
-  the national service with seams at its own tile grid (verified: single
-  large renders and stitched per-tile renders are pixel-identical, so the
-  seams are in the data and cannot be buffered away) — set
-  `WINDBREAK_BASEMAP_LAYERS` to it explicitly if the full national look is
-  preferred over seamless labels. The relief stack is blank white at very
-  low zooms (whole-country view); the app fits to the parcel immediately,
-  so this is only visible when zoomed far out.
+  `WINDBREAK_BASEMAP_BUFFER` — the basemap tile proxy on the backend,
+  assembled from the same sources the national Örnefnasjá viewer uses:
+  pre-rendered `grunnkort` tiles from the MapCache tile service
+  (`https://gis.natt.is/mapcache/web-mercator/wms`, seam-free by the
+  national tile pipeline) composited with the `Ornefni` place-name layer
+  from `https://gis.natt.is/geoserver/wms`, which the proxy renders as
+  3×3 metatiles with a 512px margin so labels are never clipped at tile
+  edges. Served tiles carry an `X-Basemap-Proxy` header naming the
+  running configuration. Earlier iterations discovered the national
+  composite `nytt_grunnkort_samsett_naer_fjaer` has its labels baked into
+  pre-rendered rasters with seams at its own tile grid (single large
+  renders and stitched per-tile renders are pixel-identical, so the seams
+  are in the data) — that is why the composite is not the default.
 * `WINDBREAK_BASEMAP_TILE_URL` / `WINDBREAK_BASEMAP_ATTRIBUTION` /
   `WINDBREAK_BASEMAP_MAX_ZOOM` — the basemap the apply context hands to the
   browser. Defaults to our own proxy (`{PYGEOAPI_URL}/tiles/basemap/{z}/{x}/{y}.png`,

@@ -21,13 +21,14 @@ Used as the gunicorn WSGI_APP in the backend Docker image, e.g.
     WSGI_APP=windbreak_app:APP
 
 3. A basemap tile proxy: GET /tiles/basemap/{z}/{x}/{y}.png serves one
-   256px Web-Mercator tile from the national basemap WMS (Náttúrustofa
-   Íslands, ogc.gis.is), cached in memory. The browser therefore never
-   talks to a third party - every map pixel comes from our own OGC API
-   origin (attribution stays in the map). Tiles are rendered upstream as
-   3x3 metatiles with a margin and sliced here, so place-name labels that
-   straddle tile boundaries render whole instead of being clipped.
-   Configure with WINDBREAK_BASEMAP_WMS / WINDBREAK_BASEMAP_LAYERS /
+   256px Web-Mercator tile assembled from the national basemap (the same
+   sources the Örnefnasjá viewer uses: `grunnkort` tiles from the MapCache
+   tile service + the `Ornefni` place-name layer rendered as 3x3 metatiles
+   with a margin so labels are never clipped at tile edges). The browser
+   therefore never talks to a third party - every map pixel comes from our
+   own OGC API origin (attribution stays in the map). Configure with
+   WINDBREAK_BASEMAP_TILE_WMS / WINDBREAK_BASEMAP_TILE_LAYERS /
+   WINDBREAK_BASEMAP_WMS / WINDBREAK_BASEMAP_LAYERS /
    WINDBREAK_BASEMAP_MAX_ZOOM / WINDBREAK_BASEMAP_METATILE /
    WINDBREAK_BASEMAP_BUFFER.
 """
@@ -139,32 +140,30 @@ from pygeoapi.flask_app import APP  # noqa: E402,F401
 # is served from ogc.gis.is. The app maps through this OGC API service so
 # the browser only ever contacts our own origin.
 
+# Basemap source, matching the national Örnefnasjá viewer
+# (https://ornefnasja.gis.is): the pre-rendered `grunnkort` tiles come from
+# the MapCache tile service (which renders them seam-free with its own
+# meta-tiling), and the `Ornefni` place-name layer is rendered per request
+# by the GeoServer WMS - the metatile window below draws it complete, so
+# labels are never clipped at tile boundaries.
+BASEMAP_TILE_WMS = os.environ.get(
+    "WINDBREAK_BASEMAP_TILE_WMS", "https://gis.natt.is/mapcache/web-mercator/wms"
+)
+BASEMAP_TILE_LAYERS = os.environ.get("WINDBREAK_BASEMAP_TILE_LAYERS", "grunnkort")
 BASEMAP_WMS = os.environ.get(
-    "WINDBREAK_BASEMAP_WMS", "https://ogc.gis.is/geoserver/ows"
+    "WINDBREAK_BASEMAP_WMS", "https://gis.natt.is/geoserver/wms"
 )
-# Default stack: terrain hillshade + the two vector place-name layers.
-# Deliberately NOT the national composite (nytt_grunnkort_samsett_naer_fjaer):
-# its labels are baked into pre-rendered rasters by the national service
-# with seams at its own tile grid (verified: a single large render and
-# stitched per-tile renders are pixel-identical), so no amount of buffering
-# can fix them. The vector layers render per request, so the metatile
-# window below draws their labels complete and seamless.
-BASEMAP_LAYERS = os.environ.get(
-    "WINDBREAK_BASEMAP_LAYERS",
-    "LMI_raster:islandsdem_hillshade_10m,"
-    "LMI_vektor:kort_ornefni_3857,"
-    "byggdastofnun:is50v_ornefni_flakar3857",
-)
+BASEMAP_LAYERS = os.environ.get("WINDBREAK_BASEMAP_LAYERS", "Ornefni")
 BASEMAP_MAX_ZOOM = int(os.environ.get("WINDBREAK_BASEMAP_MAX_ZOOM", "16"))
 # Public upstreams can be slow on label-dense metatiles; give them room and
 # one retry before falling back to a transparent tile.
 BASEMAP_TIMEOUT = float(os.environ.get("WINDBREAK_BASEMAP_TIMEOUT", "60"))
 BASEMAP_TILE_SIZE = 256
-# Metatile rendering, mirroring GeoWebCache: the upstream renders a whole
-# MTxMT-tile window in one request, so a place-name label anchored anywhere
-# inside the window is drawn once and complete - text that crosses tile
-# boundaries is never clipped. Each 256px tile is sliced out of the cached
-# metatile image (WINDBREAK_BASEMAP_METATILE).
+# Metatile rendering of the label layer, mirroring GeoWebCache: the upstream
+# renders a whole MTxMT-tile window in one request, so a place-name label
+# anchored anywhere inside the window is drawn once and complete - text that
+# crosses tile boundaries is never clipped. Each 256px slice is composited
+# over the cached base tile (WINDBREAK_BASEMAP_METATILE).
 BASEMAP_METATILE = int(os.environ.get("WINDBREAK_BASEMAP_METATILE", "3"))
 # Extra margin around the metatile window: labels anchored just outside the
 # metatile edge still render there, keeping neighbouring metatiles seamless
@@ -264,6 +263,36 @@ def _blank_tile() -> bytes:
     return out.getvalue()
 
 
+@lru_cache(maxsize=512)
+def _fetch_basemap_base(z: int, x: int, y: int) -> bytes:
+    """One 256px base tile from the MapCache tile service (grunnkort)."""
+    n = 1 << z
+    res = 2 * math.pi * 6378137.0 / (BASEMAP_TILE_SIZE * n)
+    x0 = -math.pi * 6378137.0 + x * BASEMAP_TILE_SIZE * res
+    y0 = math.pi * 6378137.0 - (y + 1) * BASEMAP_TILE_SIZE * res
+    params = {
+        "REQUEST": "GetMap",
+        "SERVICE": "WMS",
+        "VERSION": "1.3.0",
+        "FORMAT": "image/png",
+        "STYLES": "",
+        "TRANSPARENT": "TRUE",
+        "LAYERS": BASEMAP_TILE_LAYERS,
+        "TILED": "true",
+        "WIDTH": BASEMAP_TILE_SIZE,
+        "HEIGHT": BASEMAP_TILE_SIZE,
+        "CRS": "EPSG:3857",
+        "BBOX": ",".join(
+            (f"{x0:.6f}", f"{y0:.6f}", f"{x0 + 256 * res:.6f}", f"{y0 + 256 * res:.6f}")
+        ),
+    }
+    resp = _session.get(
+        BASEMAP_TILE_WMS, params=params, timeout=BASEMAP_TIMEOUT
+    )
+    resp.raise_for_status()
+    return resp.content
+
+
 def _basemap_tile(z: int, x: int, y: int):
     """GET /tiles/basemap/{z}/{x}/{y}.png - one 256px basemap tile."""
     size = 1 << z
@@ -273,24 +302,42 @@ def _basemap_tile(z: int, x: int, y: int):
             400,
             {"Cache-Control": "no-store"},
         )
-    ox, oy, mt, dx, dy = _basemap_metatile(z, x, y)
+    header = (
+        f"grunnkort-tiles + metatile-{BASEMAP_METATILE}x{BASEMAP_METATILE} "
+        f"buffer-{BASEMAP_BUFFER} labels-{BASEMAP_LAYERS}"
+    )
     try:
-        metatile = _fetch_basemap_metatile(z, ox, oy, mt)
-        body = _slice_tile(metatile, mt, dx, dy)
+        base = _fetch_basemap_base(z, x, y)
     except Exception as exc:  # upstream errors and malformed renders alike
         # A missing basemap patch is better than a broken draw page: serve a
         # transparent tile (not cached) and let the next request retry.
-        print(f"WARNING windbreak_app basemap {z}/{x}/{y}: {exc}", flush=True)
+        print(f"WARNING windbreak_app basemap base {z}/{x}/{y}: {exc}", flush=True)
         return _blank_tile(), 200, {
             "Content-Type": "image/png",
             "Cache-Control": "no-store",
-            "X-Basemap-Proxy": f"metatile-{mt}x{mt} buffer-{BASEMAP_BUFFER} error-fallback",
+            "X-Basemap-Proxy": f"{header} error-fallback",
         }
+    try:
+        ox, oy, mt, dx, dy = _basemap_metatile(z, x, y)
+        metatile = _fetch_basemap_metatile(z, ox, oy, mt)
+        labels = _slice_tile(metatile, mt, dx, dy)
+        with Image.open(BytesIO(base)) as bimg, Image.open(BytesIO(labels)) as limg:
+            composed = Image.alpha_composite(
+                bimg.convert("RGBA"), limg.convert("RGBA")
+            )
+            out = BytesIO()
+            composed.save(out, format="PNG")
+            body = out.getvalue()
+    except Exception as exc:
+        # Labels are best-effort: if the label layer fails, serve the base
+        # tile alone instead of breaking the whole patch.
+        print(f"WARNING windbreak_app basemap labels {z}/{x}/{y}: {exc}", flush=True)
+        body = base
     return body, 200, {
         "Content-Type": "image/png",
         "Cache-Control": "public, max-age=86400",
-        # Lets operators confirm the deployed image runs the metatile proxy.
-        "X-Basemap-Proxy": f"metatile-{mt}x{mt} buffer-{BASEMAP_BUFFER}",
+        # Lets operators confirm the deployed image runs the tile proxy.
+        "X-Basemap-Proxy": header,
     }
 
 
