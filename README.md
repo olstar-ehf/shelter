@@ -301,6 +301,30 @@ npm hooks.
 * `PORT` — server port (default `3000`; the compose files publish it as
   8000/8080).
 
+## Security headers (island.is parity)
+
+Both hosts send the same security headers island.is sends in production,
+**enforced by default** — there is no opt-out flag, because the browser only
+ever talks to our own origins (the e2e run asserts this with an origin
+guard) and the policy is small enough to lock from day one:
+
+* `Content-Security-Policy`: `default-src 'self'`; `script-src 'self'`
+  (Next dev adds `'unsafe-eval'` for HMR automatically); `style-src 'self'
+  'unsafe-inline'` (Leaflet/React inline styles — island.is does the same);
+  `img-src 'self' data: blob:` + the basemap tile origin (derived from the
+  context on the Nest host; `CSP_IMG_ORIGIN` on the Next host, baked into
+  the production build, empty when the basemap is same-origin);
+  `connect-src 'self'`; `object-src 'none'`; `frame-ancestors 'self'`; …
+* A `Content-Security-Policy-Report-Only` copy with `report-uri` is added
+  when `CSP_REPORT_URI` is configured — island.is reports violations to
+  Datadog the same way; telemetry is optional, enforcement is not.
+* `X-Content-Type-Options: nosniff`, `Referrer-Policy: same-origin`,
+  `Permissions-Policy: interest-cohort=()`, and
+  `Strict-Transport-Security` (browsers ignore it on plain-HTTP dev).
+
+The e2e asserts the CSP header is present on every page (alongside the
+origin guard), so both guarantees regress loudly.
+
 ## Internationalisation (is + en)
 
 The app follows the island.is pattern: one flat **message catalog per

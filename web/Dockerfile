@@ -24,6 +24,13 @@ CMD ["sh", "-c", "for d in $LIB_DEPS; do (cd /workspace/$d && npm ci --no-audit 
 FROM node:20-slim AS build
 WORKDIR /workspace
 ENV NODE_ENV=production
+# The CSP (next.config.js headers()) is baked into the build, so the tile
+# origin the policy allows must be present at build time. In production the
+# basemap is same-origin and this can stay empty.
+ARG CSP_IMG_ORIGIN=http://localhost:5000
+ARG CSP_REPORT_URI=""
+ENV CSP_IMG_ORIGIN=$CSP_IMG_ORIGIN
+ENV CSP_REPORT_URI=$CSP_REPORT_URI
 COPY web/package.json web/package-lock.json ./web/
 COPY libs/map/package.json libs/map/package-lock.json ./libs/map/
 COPY libs/application/templates/windbreak/package.json \

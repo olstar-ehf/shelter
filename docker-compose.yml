@@ -100,6 +100,8 @@ services:
       ZENDESK_SUBDOMAIN: "${ZENDESK_SUBDOMAIN:-}"
       ZENDESK_EMAIL: "${ZENDESK_EMAIL:-}"
       ZENDESK_API_TOKEN: "${ZENDESK_API_TOKEN:-}"   # or the PG* variables
+      # Optional CSP violation sink (report-only header, island.is pattern)
+      CSP_REPORT_URI: "${CSP_REPORT_URI:-}"
       PORT: "3000"
     volumes:
       - ./frontend:/workspace/frontend
@@ -116,6 +118,10 @@ services:
       context: .
       dockerfile: web/Dockerfile
       target: develop
+      args:
+        # Baked into the production Next build's CSP (img-src)
+        CSP_IMG_ORIGIN: "${CSP_IMG_ORIGIN:-http://localhost:5000}"
+        CSP_REPORT_URI: "${CSP_REPORT_URI:-}"
     image: windbreak-web
     container_name: windbreak-web
     ports:
@@ -125,6 +131,10 @@ services:
       API_BASE: http://frontend:3000
       DEMO_FULL_NAME: "${DEMO_FULL_NAME:-Hafliði Viðar Ólafsson}"
       DEMO_KENNITALA: "${DEMO_KENNITALA:-061050-4429}"
+      # Basemap tile origin the enforced CSP allows in img-src (the browser
+      # fetches tiles from our own backend's published port in the demo)
+      CSP_IMG_ORIGIN: "${CSP_IMG_ORIGIN:-http://localhost:5000}"
+      CSP_REPORT_URI: "${CSP_REPORT_URI:-}"
     volumes:
       - ./web:/workspace/web
       - ./libs/map:/workspace/libs/map

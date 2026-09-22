@@ -21,6 +21,46 @@ async function main() {
   const browser = await chromium.launch({ headless: true, args: ['--no-sandbox'] });
   const page = await browser.newPage({ viewport: { width: 1280, height: 900 } });
 
+  // Origin guard: the browser may only ever talk to our own origins - the
+  // app host and the basemap tile proxy the server configured. Any other
+  // request (a stray CDN, a leaked third-party URL) fails the whole run.
+  const allowedOrigins = new Set([new URL(APP_URL).origin]);
+  const externalRequests = [];
+  {
+    const html = await fetch(new URL('/apply?lang=en', APP_URL).href).then(
+      (r) => r.text(),
+    );
+    const tile = html.match(/"tileUrl":"([^"]+)"/);
+    if (tile) {
+      allowedOrigins.add(
+        new URL(tile[1].replace('{z}/{x}/{y}', '0/0/0')).origin,
+      );
+    }
+  }
+  // CSP guard: the island.is-style Content-Security-Policy must be present
+  // and enforced by default (no opt-out flag) on every page.
+  const cspHeader =
+    (await fetch(new URL('/', APP_URL).href).then((r) =>
+      r.headers.get('content-security-policy'),
+    )) ?? '';
+  const cspOk = cspHeader.includes("default-src 'self'");
+  page.on('request', (request) => {
+    const url = request.url();
+    if (url.startsWith('data:') || url.startsWith('blob:')) {
+      return;
+    }
+    let origin;
+    try {
+      origin = new URL(url).origin;
+    } catch {
+      externalRequests.push(url);
+      return;
+    }
+    if (!allowedOrigins.has(origin)) {
+      externalRequests.push(url);
+    }
+  });
+
   // Popups on the windbreak/parcel layers can cover the next click point
   // while drawing; suppress them for the test (Leaflet opens popups on the
   // layer prototype, so patching it after the app loads is enough).
@@ -260,10 +300,23 @@ async function main() {
 
   console.log('pageerrors:', pageErrors.length ? pageErrors : 'none');
   console.log('console errors:', consoleErrors.length ? consoleErrors.slice(0, 5) : 'none');
+  console.log(
+    cspOk
+      ? "csp header: PASS (enforced Content-Security-Policy present)"
+      : `csp header: FAIL (missing or weak - got "${cspHeader.slice(0, 60)}")`,
+  );
+
+  const leaked = [...new Set(externalRequests)];
+  const originsOk = leaked.length === 0;
+  console.log(
+    originsOk
+      ? 'origin guard: PASS (browser only talked to our own origins)'
+      : `origin guard: FAIL - external requests: ${leaked.join(', ')}`,
+  );
 
   const pass =
     isLanding.cta && isLanding.title &&
-    session1Ok && session2Ok && pageErrors.length === 0;
+    session1Ok && session2Ok && pageErrors.length === 0 && originsOk && cspOk;
   console.log(pass ? 'E2E RESULT: PASS' : 'E2E RESULT: FAIL');
   await browser.close();
   process.exit(pass ? 0 : 1);

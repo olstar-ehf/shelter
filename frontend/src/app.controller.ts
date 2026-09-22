@@ -93,8 +93,58 @@ function embedJson(data: PageData): string {
   return JSON.stringify(data).replace(/</g, '\\u003c');
 }
 
+/**
+ * island.is-style security headers (mirrors island.is's production CSP):
+ * enforced by default - the browser only ever talks to our own origins,
+ * plus the basemap tile origin our server configured. No opt-out flag: the
+ * e2e origin guard proves nothing else is contacted, so the policy can be
+ * locked from day one. A report-only copy with a violation sink is added
+ * when CSP_REPORT_URI is configured (island.is reports to Datadog the same
+ * way). Leaflet/React need inline styles, hence style-src 'unsafe-inline'.
+ */
+function securityHeaders(res: Response, data: PageData): void {
+  let tileOrigin = '';
+  if (data.page === 'apply' && data.basemap) {
+    try {
+      tileOrigin = new URL(
+        data.basemap.tileUrl.replace('{z}/{x}/{y}', '0/0/0'),
+      ).origin;
+    } catch {
+      tileOrigin = '';
+    }
+  }
+  const policy = [
+    "default-src 'self'",
+    "script-src 'self'",
+    "style-src 'self' 'unsafe-inline'",
+    `img-src 'self' data: blob:${tileOrigin ? ` ${tileOrigin}` : ''}`,
+    "connect-src 'self'",
+    "font-src 'self' data:",
+    "object-src 'none'",
+    "base-uri 'self'",
+    "form-action 'self'",
+    "frame-ancestors 'self'",
+  ].join('; ');
+  res.setHeader('Content-Security-Policy', policy);
+  const reportUri = process.env.CSP_REPORT_URI;
+  if (reportUri) {
+    res.setHeader(
+      'Content-Security-Policy-Report-Only',
+      `${policy}; report-uri ${reportUri}`,
+    );
+  }
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  res.setHeader('Referrer-Policy', 'same-origin');
+  res.setHeader('Permissions-Policy', 'interest-cohort=()');
+  res.setHeader(
+    'Strict-Transport-Security',
+    'max-age=63072000; includeSubdomains; preload',
+  );
+}
+
 /** The HTML shell every page shares - no template engine, just JSON. */
 function renderShell(res: Response, data: PageData): void {
+  securityHeaders(res, data);
   const html = `<!DOCTYPE html>
 <html lang="${data.locale}">
 <head>
