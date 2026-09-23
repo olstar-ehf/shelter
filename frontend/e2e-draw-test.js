@@ -223,10 +223,19 @@ async function main() {
   console.log('STEP 1c state:', JSON.stringify(s3));
   await page.screenshot({ path: `${SHOT_DIR}/nest-e2e-validation.png`, fullPage: true });
 
+  // Invalid lines must render red on the map (line 2 is outside the land,
+  // line 3 crosses the established windbreak); the valid line stays green.
+  const mapColors = await page.evaluate(() => ({
+    red: document.querySelectorAll('.leaflet-overlay-pane path[stroke="#b3261e"]').length,
+    green: document.querySelectorAll('.leaflet-overlay-pane path[stroke="#2e7d32"]').length,
+  }));
+  console.log('MAP COLOURS:', JSON.stringify(mapColors));
+
   const session1Ok =
     !s1.startPageVisible && s1.okChips >= 1 && s1.reviewEnabled === true &&
     !s2.startPageVisible && s2.errorChips >= 1 &&
-    !s3.startPageVisible && s3.summaryText.includes('Crosses or touches');
+    !s3.startPageVisible && s3.summaryText.includes('Crosses or touches') &&
+    mapColors.red >= 2 && mapColors.green >= 1;
   console.log(session1Ok ? 'SESSION 1: PASS' : 'SESSION 1: FAIL');
 
   // ================= Session 2: submission =================

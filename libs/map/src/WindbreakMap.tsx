@@ -31,6 +31,13 @@ export interface WindbreakMapProps {
    * showing what was drawn.
    */
   drawnLines?: WindbreakLine[];
+  /**
+   * Validation status per drawn line (by clientId). Lines with status
+   * 'error' (outside the land, or crossing/touching an existing windbreak)
+   * are drawn red on the map so good and bad lines are distinguishable at
+   * a glance; everything else keeps the green drawn-line colour.
+   */
+  lineStatuses?: Record<string, 'ok' | 'error'>;
   /** Read-only mode hides the draw/edit controls (e.g. review step). */
   readOnly?: boolean;
   /** Fit the view to the parcels once the map is ready (default true). */
@@ -98,6 +105,7 @@ export function WindbreakMap({
   existingWindbreaks,
   basemap,
   drawnLines,
+  lineStatuses,
   readOnly = false,
   fitToData = true,
   legend = true,
@@ -137,11 +145,56 @@ export function WindbreakMap({
     () => ({
       type: 'FeatureCollection',
       features: (drawnLines ?? []).map(
-        (line) => line.feature as unknown as Feature,
+        (line) =>
+          ({
+            ...line.feature,
+            // Carry the clientId into the rendered feature so the style
+            // function can look the line's validation status up.
+            properties: {
+              ...(line.feature.properties ?? {}),
+              clientId: line.clientId,
+            },
+          }) as unknown as Feature,
       ),
     }),
     [drawnLines],
   );
+
+  // Valid lines keep the green drawn-line colour; invalid lines (outside
+  // the land, or crossing/touching an existing windbreak) render red.
+  const drawnStyle = (feature?: Feature) => {
+    const clientId = (feature?.properties as { clientId?: string } | undefined)
+      ?.clientId;
+    if (clientId && lineStatuses?.[clientId] === 'error') {
+      return { color: '#b3261e', weight: 4, opacity: 0.9 };
+    }
+    return { color: '#2e7d32', weight: 4, opacity: 0.9 };
+  };
+
+  // The live drawn lines are the leaflet-draw feature group's layers
+  // (clientId = `line-<leaflet id>`): recolour them as validation statuses
+  // change, so invalid lines turn red the moment the check runs.
+  useEffect(() => {
+    const group = drawnItemsRef.current;
+    if (!group) {
+      return;
+    }
+    group.eachLayer((layer) => {
+      const anyLayer = layer as unknown as {
+        _leaflet_id?: number;
+        setStyle?: (style: { color: string; weight: number; opacity: number }) => unknown;
+      };
+      if (typeof anyLayer.setStyle !== 'function') {
+        return;
+      }
+      const clientId = `line-${anyLayer._leaflet_id}`;
+      anyLayer.setStyle(
+        lineStatuses?.[clientId] === 'error'
+          ? { color: '#b3261e', weight: 4, opacity: 0.9 }
+          : { color: '#2e7d32', weight: 4, opacity: 0.9 },
+      );
+    });
+  }, [lineStatuses, drawnLines]);
 
   return (
     <div className="windbreak-map">
@@ -217,8 +270,15 @@ export function WindbreakMap({
         />
         {drawnCollection.features.length > 0 && (
           <GeoJSON
+            // Re-key when validation statuses change so the layer is
+            // restyled immediately (red = invalid line, green = valid).
+            key={(drawnLines ?? [])
+              .map(
+                (line) => `${line.clientId}:${lineStatuses?.[line.clientId] ?? 'ok'}`,
+              )
+              .join('|')}
             data={drawnCollection}
-            style={{ color: '#2e7d32', weight: 4, opacity: 0.9 }}
+            style={drawnStyle}
           />
         )}
         <DrawnLinesLayer layer={drawnItemsRef.current} />

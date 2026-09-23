@@ -43,6 +43,12 @@ export default function WindbreakMapPane({
   const validLines = validated.filter(
     (entry) => entry.validation.status === 'ok',
   );
+  // Per-line validation status for the map: invalid lines (outside the
+  // land, or crossing/touching an existing windbreak) render red.
+  const lineStatuses: Record<string, 'ok' | 'error'> = {};
+  for (const entry of validated) {
+    lineStatuses[entry.line.clientId] = entry.validation.status;
+  }
 
   const parcelName = (parcelId: string | null): string => {
     if (!parcelId) {
@@ -64,6 +70,7 @@ export default function WindbreakMapPane({
           readOnly={reviewing}
           legend={false}
           height="100%"
+          lineStatuses={lineStatuses}
           onLinesChange={onChange}
         />
       </div>
