@@ -24,7 +24,7 @@ function FieldSkeleton() {
   const f = (id: string): string => intl.formatMessage({ id });
   return (
     <>
-      <div className="map-container map-container--loading" style={{ height: '480px' }} />
+      <div className="map-container map-container--loading" />
 
       <div className="map-legend" aria-hidden="true">
         <span>

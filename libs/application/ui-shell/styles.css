@@ -245,6 +245,14 @@ code {
   z-index: 0;
 }
 
+/* The Leaflet map fills its responsive container instead of a fixed
+   height, so the narrow-screen container height (media query below) is
+   what governs - a fixed-height map would overflow the container and
+   cover the legend underneath it. */
+.windbreak-map {
+  height: 100%;
+}
+
 /* ---- map legend ---- */
 .map-legend {
   display: flex;

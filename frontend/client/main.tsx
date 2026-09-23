@@ -26,7 +26,9 @@ import type { ParcelFeature, WindbreakBasemap, WindbreakFeature } from '@island.
 
 import 'leaflet/dist/leaflet.css';
 import 'leaflet-draw/dist/leaflet.draw.css';
-import '../public/styles.css';
+// App stylesheet lives in the shared ui-shell lib so both hosts (Nest
+// esbuild bundle and the Next.js app) style the same classes identically.
+import '@island.is/application-ui-shell/styles.css';
 
 interface PageData {
   page: 'index' | 'apply' | 'submitted';

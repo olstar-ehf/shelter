@@ -18,6 +18,9 @@ import type { AppLocale } from '@island.is/application-ui-shell';
  */
 import 'leaflet/dist/leaflet.css';
 import 'leaflet-draw/dist/leaflet.draw.css';
+// Shared app stylesheet from the ui-shell lib (same source the Nest host's
+// esbuild bundle uses) - keeps both hosts pixel-identical.
+import '@island.is/application-ui-shell/styles.css';
 
 export default function MyApp({ Component, pageProps }: AppProps) {
   const locale: AppLocale =

@@ -63,7 +63,7 @@ export default function WindbreakMapPane({
           basemap={externalData.basemap}
           readOnly={reviewing}
           legend={false}
-          height="480px"
+          height="100%"
           onLinesChange={onChange}
         />
       </div>
