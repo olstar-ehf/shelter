@@ -276,9 +276,14 @@ code {
   border-radius: 2px;
 }
 
+/* Parcels are polygons, so their swatch is a filled square; windbreaks are
+   lines, so theirs stay thin bars. */
 .legend-parcel {
   background: #81c784;
   border: 1px solid #1b5e20;
+  width: 12px;
+  height: 12px;
+  border-radius: 2px;
 }
 
 .legend-established {
