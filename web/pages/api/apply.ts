@@ -1,10 +1,11 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
-import { API_BASE } from '../../lib/api';
+import { submitApplication } from '../../lib/api';
 import { resolveLocaleFrom } from '../../lib/locale';
 
 /**
- * POST /api/apply: proxies the template answers to the NestJS API
- * (server-to-server), which validates them and creates the Zendesk ticket.
+ * POST /api/apply: submits the template answers to the NestJS GraphQL
+ * domain (server-to-server), which validates them and creates the Zendesk
+ * ticket. GraphQL resolver errors carry the localized message.
  */
 export default async function handler(
   req: NextApiRequest,
@@ -19,17 +20,15 @@ export default async function handler(
     res,
     query: req.query,
   } as never);
-  const upstream = await fetch(
-    `${API_BASE}/apply?lang=${encodeURIComponent(locale)}`,
-    {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Accept: 'application/json',
-      },
-      body: JSON.stringify({ answers: (req.body ?? {}).answers ?? null }),
-    },
-  );
-  const body: unknown = await upstream.json().catch(() => null);
-  res.status(upstream.status).json(body ?? {});
+  try {
+    const result = await submitApplication(
+      (req.body ?? {}).answers ?? null,
+      locale,
+    );
+    res.status(200).json(result);
+  } catch (err) {
+    res.status(400).json({
+      message: err instanceof Error ? err.message : String(err),
+    });
+  }
 }

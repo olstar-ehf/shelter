@@ -29,8 +29,8 @@ draws lines on a map of their own land and submits.
 │ static skeleton on the server, only the Leaflet pane mounts client-side                  │
 │ http://localhost:8009                                                                    │
 └────────────────────────────────────────────┬─────────────────────────────────────────────┘
-                                             │ HTTP (JSON): GET /api/context,
-                                             │ GET /api/ticket, POST /apply
+                                             │ HTTP: GraphQL /graphql (context,
+                                             │ submit, ticket) for the web host
                                              ▼
 ┌──────────────────────────────────────────────────────────────────────────────────────────┐
 │ frontend (Docker) — NestJS demo host + JSON API                                          │
@@ -72,8 +72,11 @@ draws lines on a map of their own land and submits.
   same shared pages (`libs/application/ui-shell`) are **server-rendered by
   React** (SSR + hydration) and route like island.is (`/`, `/apply`,
   `/submitted/[ticketId]`, `/api/apply`). It talks to the NestJS demo over
-  HTTP (`/api/context`, `/api/ticket`, `POST /apply`) - web/API separation
-  like island.is. The interactive map stays client-only (Leaflet cannot
+  **GraphQL** (`/graphql` — `windbreakApplicationContext`,
+  `windbreakSubmittedApplication`, `submitWindbreakApplication`) - web/API
+  separation like island.is; the JSON endpoints (`/api/context`,
+  `/api/ticket`, `POST /apply`) stay for the no-framework demo host and
+  curl access. The interactive map stays client-only (Leaflet cannot
   SSR): the draw step is split so the server renders the full static
   skeleton (step title, help texts, legend, empty lines table, disabled
   review button) and only the Leaflet map pane is lazy-loaded after
@@ -600,31 +603,38 @@ foreign stack that would need rewriting.
 | island.is building block | Already in this demo |
 | --- | --- |
 | TypeScript end to end (apps, libs, tests) | Server, both libs, client, tests — all TypeScript |
-| React + react-intl web apps | The draw page is a React app rendering an application template through react-intl |
+| React + react-intl web apps | The pages are React apps rendering an application template through react-intl; the Next.js host server-renders them (static draw-step skeleton + client-only Leaflet pane) |
 | Application templates: zod `dataSchema`, state machine, declarative form | `@island.is/windbreak-application`: the same three pieces, plus its own states (`draft → submitted`) |
 | `libs/ui-fields` registry + custom field components | A fields registry whose custom `windbreakLines` field renders the map (`@island.is/map`) |
 | Reusable `libs/` packages with stories + tests + clean entries | `libs/map` and the template lib: Storybook stories, Jest suites, React-free `/server` entries for the API |
 | NestJS modules with typed, real-by-default clients | Fasteignir-Xroad (Bearer token, typed error codes), windbreaks (PostGIS registry), Zendesk — each with an explicit mock escape hatch |
 | `libs/localization` namespaces merged into react-intl | `map.*`, `validation.*`, `drawLocal.*`, `windbreak.*` + app catalogs, ICU plurals, is/en parity tests, island.is-style locale resolution |
 | OpenAPI contracts | The X-Road spec (`Fasteignir-Xroad.json`) is pinned by contract tests; the OGC API backend publishes OpenAPI 3 |
+| GraphQL domain consumed by the web host | Code-first Nest GraphQL domain at `/graphql` (context query, ticket query, submit mutation) — the Next.js host runs entirely on it |
 | X-Road integration | Property lookup through the X-Road gateway with an island.is Bearer JWT |
-| Storybook + Jest + browser e2e | Both libs have stories; unit/contract/locale suites; Playwright regression over the whole draw → review → submit flow |
-| Docker, multi-stage monorepo builds | Backend + frontend images, dependency-ordered lib builds, clean build contexts |
+| Security headers (CSP + companions) | Enforced `Content-Security-Policy` plus `X-Content-Type-Options`, `Referrer-Policy` and HSTS on both hosts, mirroring island.is's production headers — with a report-only copy when a `CSP_REPORT_URI` is configured |
+| National basemap behind an own tile proxy | The map uses the national basemap (Náttúrustofa `grunnkort` tiles + `Ornefni` place names — the same sources the Örnefnasjá viewer uses), proxied through our backend so the browser only ever talks to our own origins |
+| Storybook + Jest + browser e2e | Both libs have stories; unit/contract/locale suites; Playwright regression over the whole draw → review → submit flow, asserting the enforced CSP and that the browser never contacts an outside origin |
+| Docker, multi-stage monorepo builds | Backend + frontend + web images, dependency-ordered lib builds, clean build contexts |
 | Open solution | Everything here is open — configuration via env, no black boxes |
 
 **Where the demo deliberately stops** — each of these is a *host swap*, not
 a rewrite: the components, schema, validation and copy carry over as-is.
 
-* **Web shell**: island.is renders through Next.js; here a NestJS +
-  island.is renders through Next.js - and so does the `web/` host: the same
-  shared React pages are server-rendered (SSR + hydration) with Next.js
-  routing. The NestJS demo remains as the API + the no-framework host.
+* **Web shell**: the demo already ships a Next.js host (`web/`) that
+  server-renders the same shared pages (SSR + hydration, island.is-style
+  routing) — hosting them inside island.is's Next app is a move, not a
+  rewrite. The NestJS demo remains as the JSON API + the no-framework
+  host.
 * **Authentication**: island.is uses IDS login and the nationalId from the
   session; here the portal session is assumed (name + kennitala) — the
   application itself never touches credentials.
-* **API surface**: island.is exposes GraphQL domains; here one NestJS
-  server suffices — the module services are shaped like `libs/api/domains`
-  already.
+* **API surface**: island.is exposes GraphQL domains; the demo now does
+  too — a code-first Nest domain at `/graphql` (`windbreakApplicationContext`,
+  `windbreakSubmittedApplication`, `submitWindbreakApplication`) that the
+  Next.js host consumes. The JSON REST routes remain for the no-framework
+  demo host and curl access; the module services are shaped like
+  `libs/api/domains` already.
 * **Submission action**: island.is would run this through a
   `template-api-module` action; the prototype performs it directly in the
   server and logs a Zendesk ticket with the GeoJSON attachment (the grant
@@ -656,7 +666,8 @@ island.is's shell, not rebuilding them.
   default** (`src/windbreaks/`). The registry reads `skograekt.skjolbelti`
   from PostGIS (geometry in ISN93, transformed to WGS84); the applications
   store reads the `windbreak_applications` table and degrades to an empty
-  list when the table is missing or not readable. Neither writes to the
+  list when the table is missing, not readable, or the database is
+  unreachable (pending lines are best-effort). Neither writes to the
   database: **submissions create a Zendesk ticket** (`src/zendesk/`) with
   the drawn lines attached as GeoJSON, and the confirmation page reads the
   ticket back. `WINDBREAK_REGISTRY_MOCK=true` /
@@ -665,17 +676,21 @@ island.is's shell, not rebuilding them.
 * **pygeoapi 0.21's PostgreSQL provider is read-only**; the OGC API serves
   the `windbreak_applications` rows for agency/curl access when the table
   exists. In the file-backed mock mode the GeoJSON seed at
-  `backend/data/windbreak_applications.json` is the pending-lines source.
+  `backend/data/windbreak_applications.json` is the pending-lines source —
+  a read-only seed, since submissions go to Zendesk and are never written
+  back into it.
 * **Validation runs twice**: in the browser (immediate feedback) and again
   in the NestJS server before storage. A line must be ≥ 10 m, lie entirely
   inside the farmer's registered parcels, and not cross or touch any other
   windbreak. Containment is checked by sampling line vertices and segment
   midpoints against the parcel union with `@turf/boolean-point-in-polygon`
   — `@turf/boolean-contains` cannot handle MultiPolygon containers (it
-  throws), which disjoint parcels always produce.
-* The backend stores everything in **plain GeoJSON files** (bind-mounted
-  `backend/data/`). Delete rows from
-  `backend/data/windbreak_applications.json` to reset submitted data.
+  throws), which disjoint parcels always produce. Invalid lines also render
+  red on the map, so good and bad lines are distinguishable at a glance.
+* The backend's parcel/farmer layers come from **plain GeoJSON files**
+  (bind-mounted `backend/data/`); submitted applications live in the
+  Zendesk mock (in memory — restart the server to reset) and, in a real
+  deployment, as Zendesk tickets with GeoJSON attachments.
 * **pygeoapi 0.21.0 transaction patch**: the stock Flask adapter passes raw
   request bytes to `provider.create()`, which breaks GeoJSON transactions.
   `backend/windbreak_app.py` patches `APIRequest.from_flask` to decode JSON
@@ -688,8 +703,13 @@ island.is's shell, not rebuilding them.
   so the backend also works when called directly.
 * **`WSGI_WORKERS=1`**: the GeoJSON provider does no write locking and
   documents a single-process assumption.
-* The OpenStreetMap basemap needs internet access. The farm/parcel data
-  itself comes from pygeoapi.
+* The basemap is the **national basemap** — Náttúrustofa Íslands'
+  pre-rendered `grunnkort` tiles plus the `Ornefni` place-name layer (the
+  same sources the Örnefnasjá viewer uses) — proxied through our own
+  backend (`/tiles/basemap/{z}/{x}/{y}.png`), so the **backend** needs
+  internet access to `gis.natt.is` while the browser only ever talks to
+  our own origins. OpenStreetMap tiles remain only as the client-side
+  fallback when the server sends no basemap configuration.
 * Demo data: the only demo user is farmer `farmer-007`, **Hafliði Viðar
   Ólafsson** of Garpsdalur (Reykhólahreppur, kennitala `061050-4429`). His
   land (`IS-139555`, ~2,990 ha, landeignarnumer 139555) is the geometry of
