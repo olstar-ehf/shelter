@@ -1,6 +1,12 @@
 import { useEffect, useMemo, useRef } from 'react';
 import { useIntl } from 'react-intl';
-import { GeoJSON, MapContainer, TileLayer, useMap } from 'react-leaflet';
+import {
+  AttributionControl,
+  GeoJSON,
+  MapContainer,
+  TileLayer,
+  useMap,
+} from 'react-leaflet';
 import type { Feature, FeatureCollection } from 'geojson';
 import L from 'leaflet';
 import { WindbreakDrawControl } from './WindbreakDrawControl';
@@ -204,7 +210,13 @@ export function WindbreakMap({
         style={{ height, width: '100%' }}
         // Finishing a line with a double-click must not also zoom the map.
         doubleClickZoom={false}
+        // Leaflet's default attribution control adds its own "Leaflet" +
+        // flag prefix. The BSD license does not require it in the UI (the
+        // copyright notice stays in the bundled source), so the control
+        // below shows only the map-data attribution.
+        attributionControl={false}
       >
+        <AttributionControl position="bottomright" prefix={false} />
         {basemap ? (
           <TileLayer
             url={basemap.tileUrl}
