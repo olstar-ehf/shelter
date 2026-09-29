@@ -4,6 +4,7 @@ import {
   AttributionControl,
   GeoJSON,
   MapContainer,
+  ScaleControl,
   TileLayer,
   useMap,
 } from 'react-leaflet';
@@ -217,6 +218,8 @@ export function WindbreakMap({
         attributionControl={false}
       >
         <AttributionControl position="bottomright" prefix={false} />
+        {/* Scale bar (metric only - the grant is measured in metres). */}
+        <ScaleControl position="bottomleft" metric imperial={false} maxWidth={120} />
         {basemap ? (
           <TileLayer
             url={basemap.tileUrl}
