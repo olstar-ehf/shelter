@@ -97,16 +97,20 @@ draws lines on a map of their own land and submits.
   sources the national Örnefnasjá viewer uses: pre-rendered `grunnkort`
   tiles from the Náttúrustofa MapCache tile service, composited with the
   `Ornefni` place-name layer rendered as seamless metatiles. The browser
-  never talks to the national service: the backend proxies it.
-  `GET /tiles/basemap/{z}/{x}/{y}.png` on the pygeoapi service assembles
-  one 256px Web-Mercator tile (`WINDBREAK_BASEMAP_TILE_WMS` /
+  never talks to the national service: the backend assembles each 256px
+  Web-Mercator tile (`WINDBREAK_BASEMAP_TILE_WMS` /
   `WINDBREAK_BASEMAP_TILE_LAYERS` / `WINDBREAK_BASEMAP_WMS` /
-  `WINDBREAK_BASEMAP_LAYERS`, in-memory cached) and the apply context
-  hands the browser `{z}/{x}/{y}.png`-style URL. The frontend can override
-  the tile URL and attribution (`WINDBREAK_BASEMAP_TILE_URL` /
-  `WINDBREAK_BASEMAP_ATTRIBUTION`, e.g. plain OSM tiles for offline
-  development). The production upgrade path for the same endpoint is an
-  nginx `proxy_cache` in front of the backend (see README discussion).
+  `WINDBREAK_BASEMAP_LAYERS`, in-memory cached) and exposes it through the
+  standard **OGC API - Tiles** surface - a `basemap` tileset at
+  `GET /collections/basemap/tiles/WebMercatorQuad/{z}/{y}/{x}.png` with a
+  WebMercatorQuad TileMatrixSet definition (`/tileMatrixSets/...`),
+  conformance classes and OpenAPI paths (a plain `/tiles/basemap/...` route
+  remains as an alias). The apply context hands the browser that standard
+  URL. The frontend can override the tile URL and attribution
+  (`WINDBREAK_BASEMAP_TILE_URL` / `WINDBREAK_BASEMAP_ATTRIBUTION`, e.g.
+  plain OSM tiles for offline development). The production upgrade path
+  for the same endpoint is an nginx `proxy_cache` in front of the backend
+  (see README discussion).
 * **Read-only database + Zendesk submissions**: the grant authority only
   has read access to the database, so submitted applications are NOT
   written to PostGIS. Submitting creates a **Zendesk ticket** (Support API
@@ -292,7 +296,8 @@ npm hooks.
   are in the data) — that is why the composite is not the default.
 * `WINDBREAK_BASEMAP_TILE_URL` / `WINDBREAK_BASEMAP_ATTRIBUTION` /
   `WINDBREAK_BASEMAP_MAX_ZOOM` — the basemap the apply context hands to the
-  browser. Defaults to our own proxy (`{PYGEOAPI_URL}/tiles/basemap/{z}/{x}/{y}.png`,
+  browser. Defaults to our own OGC API - Tiles tileset
+  (`{PYGEOAPI_URL}/collections/basemap/tiles/WebMercatorQuad/{z}/{y}/{x}.png`,
   or the published `http://localhost:5000/...` in compose) with attribution
   `Kortagögn: Náttúrustofa Íslands`. Override with e.g. plain OSM tiles for
   fully-offline development.
@@ -613,7 +618,7 @@ foreign stack that would need rewriting.
 | GraphQL domain consumed by the web host | Code-first Nest GraphQL domain at `/graphql` (context query, ticket query, submit mutation) — the Next.js host runs entirely on it |
 | X-Road integration | Property lookup through the X-Road gateway with an island.is Bearer JWT |
 | Security headers (CSP + companions) | Enforced `Content-Security-Policy` plus `X-Content-Type-Options`, `Referrer-Policy` and HSTS on both hosts, mirroring island.is's production headers — with a report-only copy when a `CSP_REPORT_URI` is configured |
-| National basemap behind an own tile proxy | The map uses the national basemap (Náttúrustofa `grunnkort` tiles + `Ornefni` place names — the same sources the Örnefnasjá viewer uses), proxied through our backend so the browser only ever talks to our own origins |
+| National basemap behind an own OGC API - Tiles tileset | The backend exposes a standard **OGC API - Tiles** `basemap` tileset: `/collections/basemap/tiles` (tilesets), `/collections/basemap/tiles/WebMercatorQuad/{z}/{y}/{x}` (the 256px tiles), a WebMercatorQuad TileMatrixSet definition at `/tileMatrixSets/WebMercatorQuad`, the tiles conformance classes, and the OpenAPI paths — assembling each tile from Náttúrustofa's pre-rendered `grunnkort` tiles + the `Ornefni` place-name layer (seamless metatiles) so the browser only ever talks to our own origins. |
 | Storybook + Jest + browser e2e | Both libs have stories; unit/contract/locale suites; Playwright regression over the whole draw → review → submit flow, asserting the enforced CSP and that the browser never contacts an outside origin |
 | Docker, multi-stage monorepo builds | Backend + frontend + web images, dependency-ordered lib builds, clean build contexts |
 | Open solution | Everything here is open — configuration via env, no black boxes |
@@ -705,11 +710,13 @@ island.is's shell, not rebuilding them.
   documents a single-process assumption.
 * The basemap is the **national basemap** — Náttúrustofa Íslands'
   pre-rendered `grunnkort` tiles plus the `Ornefni` place-name layer (the
-  same sources the Örnefnasjá viewer uses) — proxied through our own
-  backend (`/tiles/basemap/{z}/{x}/{y}.png`), so the **backend** needs
-  internet access to `gis.natt.is` while the browser only ever talks to
-  our own origins. OpenStreetMap tiles remain only as the client-side
-  fallback when the server sends no basemap configuration.
+  same sources the Örnefnasjá viewer uses) — assembled by our own backend
+  and exposed as a standard OGC API - Tiles tileset
+  (`/collections/basemap/tiles/WebMercatorQuad/{z}/{y}/{x}.png`), so the
+  **backend** needs internet access to `gis.natt.is` while the browser
+  only ever talks to our own origins. OpenStreetMap tiles remain only as
+  the client-side fallback when the server sends no basemap
+  configuration.
 * Demo data: the only demo user is farmer `farmer-007`, **Hafliði Viðar
   Ólafsson** of Garpsdalur (Reykhólahreppur, kennitala `061050-4429`). His
   land (`IS-139555`, ~2,990 ha, landeignarnumer 139555) is the geometry of

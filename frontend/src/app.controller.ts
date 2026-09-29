@@ -107,7 +107,7 @@ function securityHeaders(res: Response, data: PageData): void {
   if (data.page === 'apply' && data.basemap) {
     try {
       tileOrigin = new URL(
-        data.basemap.tileUrl.replace('{z}/{x}/{y}', '0/0/0'),
+        data.basemap.tileUrl.replace(/\{[xyz]\}/g, '0'),
       ).origin;
     } catch {
       tileOrigin = '';

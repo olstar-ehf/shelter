@@ -33,7 +33,7 @@ async function main() {
     const tile = html.match(/"tileUrl":"([^"]+)"/);
     if (tile) {
       allowedOrigins.add(
-        new URL(tile[1].replace('{z}/{x}/{y}', '0/0/0')).origin,
+        new URL(tile[1].replace(/\{[xyz]\}/g, '0')).origin,
       );
     }
   }

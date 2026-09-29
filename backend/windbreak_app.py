@@ -347,3 +347,319 @@ APP.add_url_rule(
     _basemap_tile,
     methods=["GET"],
 )
+
+# ---- OGC API - Tiles (standard-conformant basemap) --------------------------
+# The same assembled tiles are exposed through the OGC API - Tiles building
+# block (OGC 20-057): a `basemap` tileset under /collections, a
+# WebMercatorQuad TileMatrixSet definition, and the tiles themselves at the
+# standard {tileMatrix}/{tileRow}/{tileCol} path. The conformance classes
+# and the OpenAPI paths are registered below so the standard surface is
+# discoverable end to end. The plain /tiles/basemap/... route above remains
+# as a backward-compatible alias.
+from flask import jsonify, request  # noqa: E402
+
+TILE_MATRIX_SET_ID = "WebMercatorQuad"
+TILESET_COLLECTION = "basemap"
+# Well-known WebMercatorQuad constants (OGC 2DTMS / GoogleMapsCompatible).
+_WM_ORIGIN = -20037508.342789244
+_WM_SCALE_DENOMINATOR = 559082264.0287178
+_WM_CELL_SIZE = 156543.03392804097
+
+TILES_CONFORMANCE = [
+    "http://www.opengis.net/spec/ogcapi-tiles-1/1.0/conf/core",
+    "http://www.opengis.net/spec/ogcapi-tiles-1/1.0/conf/tileset",
+    "http://www.opengis.net/spec/2dtms/1.0/conf/core",
+]
+
+
+def _tiles_url(path: str = "") -> str:
+    """Absolute URL of the tiles surface on this server."""
+    return f"{request.url_root.rstrip('/')}{path}"
+
+
+def _tile_matrices() -> list:
+    matrices = []
+    for z in range(0, BASEMAP_MAX_ZOOM + 1):
+        matrices.append(
+            {
+                "id": str(z),
+                "scaleDenominator": _WM_SCALE_DENOMINATOR / (2 ** z),
+                "cellSize": _WM_CELL_SIZE / (2 ** z),
+                "cornerOfOrigin": "topLeft",
+                "pointOfOrigin": [_WM_ORIGIN, -_WM_ORIGIN],
+                "tileWidth": BASEMAP_TILE_SIZE,
+                "tileHeight": BASEMAP_TILE_SIZE,
+                "matrixWidth": 2 ** z,
+                "matrixHeight": 2 ** z,
+            }
+        )
+    return matrices
+
+
+def _tileset_list():
+    """GET /collections/basemap/tiles - the available tilesets."""
+    tileset_url = _tiles_url(f"/collections/{TILESET_COLLECTION}/tiles/{TILE_MATRIX_SET_ID}")
+    tms_url = _tiles_url(f"/tileMatrixSets/{TILE_MATRIX_SET_ID}")
+    return jsonify(
+        {
+            "links": [
+                {
+                    "rel": "self",
+                    "type": "application/json",
+                    "title": "Tilesets of the windbreak basemap",
+                    "href": _tiles_url(f"/collections/{TILESET_COLLECTION}/tiles"),
+                }
+            ],
+            "tilesets": [
+                {
+                    "title": "Windbreak basemap",
+                    "dataType": "map",
+                    "crs": "http://www.opengis.net/def/crs/EPSG/0/3857",
+                    "tileMatrixSetURI": (
+                        "http://www.opengis.net/def/tilematrixset/OGC/1.0/"
+                        f"{TILE_MATRIX_SET_ID}"
+                    ),
+                    "links": [
+                        {
+                            "rel": "self",
+                            "type": "application/json",
+                            "href": tileset_url,
+                        },
+                        {
+                            "rel": "http://www.opengis.net/def/rel/ogc/1.0/tiling-scheme",
+                            "type": "application/json",
+                            "href": tms_url,
+                        },
+                    ],
+                }
+            ],
+        }
+    )
+
+
+def _tileset_metadata():
+    """GET /collections/basemap/tiles/WebMercatorQuad - tileset metadata."""
+    return jsonify(
+        {
+            "title": "Windbreak basemap",
+            "description": (
+                "The national basemap assembled by the windbreak backend: "
+                "Náttúrustofa grunnkort tiles composited with the Ornefni "
+                "place-name layer, rendered as seamless metatiles."
+            ),
+            "crs": "http://www.opengis.net/def/crs/EPSG/0/3857",
+            "tileMatrixSetURI": (
+                "http://www.opengis.net/def/tilematrixset/OGC/1.0/"
+                f"{TILE_MATRIX_SET_ID}"
+            ),
+            "itemType": "image/png",
+            "links": [
+                {
+                    "rel": "self",
+                    "type": "application/json",
+                    "title": "This document",
+                    "href": _tiles_url(
+                        f"/collections/{TILESET_COLLECTION}/tiles/{TILE_MATRIX_SET_ID}"
+                    ),
+                },
+                {
+                    "rel": "http://www.opengis.net/def/rel/ogc/1.0/tiling-scheme",
+                    "type": "application/json",
+                    "title": "TileMatrixSet definition",
+                    "href": _tiles_url(f"/tileMatrixSets/{TILE_MATRIX_SET_ID}"),
+                },
+                {
+                    "rel": "item",
+                    "type": "image/png",
+                    "templated": True,
+                    "title": "Windbreak basemap tiles",
+                    "href": _tiles_url(
+                        f"/collections/{TILESET_COLLECTION}/tiles/{TILE_MATRIX_SET_ID}"
+                        "/{tileMatrix}/{tileRow}/{tileCol}?f=png"
+                    ),
+                },
+            ],
+        }
+    )
+
+
+def _tile_matrix_set_definition():
+    """GET /tileMatrixSets/WebMercatorQuad - the OGC 2DTMS definition."""
+    return jsonify(
+        {
+            "title": TILE_MATRIX_SET_ID,
+            "id": TILE_MATRIX_SET_ID,
+            "uri": (
+                "http://www.opengis.net/def/tilematrixset/OGC/1.0/"
+                f"{TILE_MATRIX_SET_ID}"
+            ),
+            "crs": "http://www.opengis.net/def/crs/EPSG/0/3857",
+            "orderedAxes": ["X", "Y"],
+            "wellKnownScaleSet": (
+                "http://www.opengis.net/def/wkss/OGC/1.0/GoogleMapsCompatible"
+            ),
+            "tileMatrices": _tile_matrices(),
+        }
+    )
+
+
+def _ogc_tiles_tile(tileMatrix: int, tileRow: int, tileCol: int):
+    """GET /collections/basemap/tiles/WebMercatorQuad/{z}/{y}/{x} - the tile."""
+    # OGC API - Tiles order is tileMatrix/tileRow/tileCol = z/y/x; the
+    # assembler speaks z/x/y (slippy order), so map the arguments over.
+    return _basemap_tile(tileMatrix, tileCol, tileRow)
+
+
+APP.add_url_rule(
+    f"/collections/{TILESET_COLLECTION}/tiles",
+    "windbreak_tilesets",
+    _tileset_list,
+    methods=["GET"],
+)
+APP.add_url_rule(
+    f"/collections/{TILESET_COLLECTION}/tiles/{TILE_MATRIX_SET_ID}",
+    "windbreak_tileset_metadata",
+    _tileset_metadata,
+    methods=["GET"],
+)
+APP.add_url_rule(
+    f"/collections/{TILESET_COLLECTION}/tiles/{TILE_MATRIX_SET_ID}/<int:tileMatrix>/<int:tileRow>/<int:tileCol>",
+    "windbreak_tileset_tile",
+    _ogc_tiles_tile,
+    methods=["GET"],
+)
+APP.add_url_rule(
+    f"/collections/{TILESET_COLLECTION}/tiles/{TILE_MATRIX_SET_ID}/<int:tileMatrix>/<int:tileRow>/<int:tileCol>.png",
+    "windbreak_tileset_tile_png",
+    _ogc_tiles_tile,
+    methods=["GET"],
+)
+APP.add_url_rule(
+    f"/tileMatrixSets/{TILE_MATRIX_SET_ID}",
+    "windbreak_tilematrixset",
+    _tile_matrix_set_definition,
+    methods=["GET"],
+)
+
+# ---- Register the tiles surface in conformance + OpenAPI --------------------
+import pygeoapi.flask_app as _pygeoapi_flask  # noqa: E402
+
+_orig_conformance = APP.view_functions["pygeoapi.conformance"]
+
+
+def _conformance_with_tiles(*args, **kwargs):
+    resp = _orig_conformance(*args, **kwargs)
+    # pygeoapi replaces the response headers wholesale, which breaks
+    # Flask's mimetype detection - parse the raw body instead of get_json().
+    raw = resp.get_data()
+    try:
+        data = json.loads(raw if isinstance(raw, str) else raw.decode("utf-8"))
+    except (ValueError, UnicodeDecodeError):
+        return resp
+    if isinstance(data, dict) and isinstance(data.get("conformsTo"), list):
+        changed = False
+        for uri in TILES_CONFORMANCE:
+            if uri not in data["conformsTo"]:
+                data["conformsTo"].append(uri)
+                changed = True
+        if changed:
+            body = json.dumps(data).encode("utf-8")
+            resp.set_data(body)
+            resp.headers["Content-Length"] = str(len(body))
+    return resp
+
+
+APP.view_functions["pygeoapi.conformance"] = _conformance_with_tiles
+
+
+def _register_openapi_paths():
+    """Add the OGC API - Tiles paths to the served OpenAPI 3 document."""
+    doc = getattr(_pygeoapi_flask, "OPENAPI", None)
+    if not isinstance(doc, dict):
+        return
+    base = f"/collections/{TILESET_COLLECTION}/tiles"
+    paths = {
+        base: {
+            "get": {
+                "summary": "List the windbreak basemap tilesets",
+                "operationId": "getWindbreakTilesets",
+                "tags": ["tiles"],
+                "responses": {
+                    "200": {
+                        "description": "The available tilesets",
+                        "content": {"application/json": {"schema": {"type": "object"}}},
+                    }
+                },
+            }
+        },
+        f"{base}/{TILE_MATRIX_SET_ID}": {
+            "get": {
+                "summary": "Windbreak basemap tileset metadata",
+                "operationId": "getWindbreakTileset",
+                "tags": ["tiles"],
+                "responses": {
+                    "200": {
+                        "description": "Tileset metadata",
+                        "content": {"application/json": {"schema": {"type": "object"}}},
+                    }
+                },
+            }
+        },
+        f"{base}/{TILE_MATRIX_SET_ID}/{{tileMatrix}}/{{tileRow}}/{{tileCol}}": {
+            "get": {
+                "summary": "One windbreak basemap tile",
+                "operationId": "getWindbreakTile",
+                "tags": ["tiles"],
+                "parameters": [
+                    {
+                        "name": "tileMatrix",
+                        "in": "path",
+                        "required": True,
+                        "schema": {"type": "integer", "minimum": 0},
+                    },
+                    {
+                        "name": "tileRow",
+                        "in": "path",
+                        "required": True,
+                        "schema": {"type": "integer", "minimum": 0},
+                    },
+                    {
+                        "name": "tileCol",
+                        "in": "path",
+                        "required": True,
+                        "schema": {"type": "integer", "minimum": 0},
+                    },
+                ],
+                "responses": {
+                    "200": {
+                        "description": "A 256px PNG basemap tile",
+                        "content": {
+                            "image/png": {
+                                "schema": {"type": "string", "format": "binary"}
+                            }
+                        },
+                    },
+                    "400": {"description": "Tile out of range"},
+                },
+            }
+        },
+        f"/tileMatrixSets/{TILE_MATRIX_SET_ID}": {
+            "get": {
+                "summary": "WebMercatorQuad TileMatrixSet definition",
+                "operationId": "getWindbreakTileMatrixSet",
+                "tags": ["tiles"],
+                "responses": {
+                    "200": {
+                        "description": "The OGC 2DTMS definition",
+                        "content": {"application/json": {"schema": {"type": "object"}}},
+                    }
+                },
+            }
+        },
+    }
+    doc.setdefault("paths", {})
+    for path, spec in paths.items():
+        doc["paths"].setdefault(path, spec)
+
+
+_register_openapi_paths()

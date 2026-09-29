@@ -279,14 +279,16 @@ export class AppService {
       list: landeignarnumer.join(', '),
     });
 
-    // Basemap: the browser-facing tile URL proxies through our own OGC API
-    // backend (/tiles/basemap on the pygeoapi service), so the client never
+    // Basemap: the browser-facing tile URL goes through the standard
+    // OGC API - Tiles surface of our backend
+    // (/collections/basemap/tiles/WebMercatorQuad/{z}/{y}/{x} - the
+    // standard tileMatrix/tileRow/tileCol order), so the client never
     // talks to the national map service directly. WINDBREAK_BASEMAP_TILE_URL
     // overrides (e.g. plain OSM tiles for offline development).
     const basemap = {
       tileUrl:
         process.env.WINDBREAK_BASEMAP_TILE_URL ??
-        `${this.pygeoapiUrl}/tiles/basemap/{z}/{x}/{y}.png`,
+        `${this.pygeoapiUrl}/collections/basemap/tiles/WebMercatorQuad/{z}/{y}/{x}.png`,
       attribution:
         process.env.WINDBREAK_BASEMAP_ATTRIBUTION ??
         'Kortagögn: Náttúrustofa Íslands',
