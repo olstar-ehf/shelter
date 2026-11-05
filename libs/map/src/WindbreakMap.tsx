@@ -58,6 +58,22 @@ export interface WindbreakMapProps {
   onLinesChange?: (lines: WindbreakLine[]) => void;
 }
 
+/**
+ * Sets the accessible name/role on the Leaflet container after mount (the
+ * MapContainer typings do not expose DOM attributes). The container is
+ * already focusable (Leaflet keyboard support), so without this screen
+ * readers land on an unnamed focusable region.
+ */
+function MapRegionLabel({ label }: { label: string }) {
+  const map = useMap();
+  useEffect(() => {
+    const container = map.getContainer();
+    container.setAttribute('role', 'region');
+    container.setAttribute('aria-label', label);
+  }, [map, label]);
+  return null;
+}
+
 /** Fits the map view to the farmer's parcels, like the prototype did. */
 function FitBoundsToData({ parcels }: { parcels: ParcelFeature[] }) {
   const map = useMap();
@@ -217,6 +233,7 @@ export function WindbreakMap({
         // below shows only the map-data attribution.
         attributionControl={false}
       >
+        <MapRegionLabel label={intl.formatMessage({ id: 'map.ariaLabel' })} />
         <AttributionControl position="bottomright" prefix={false} />
         {/* Scale bar (metric only - the grant is measured in metres). */}
         <ScaleControl position="bottomleft" metric imperial={false} maxWidth={120} />

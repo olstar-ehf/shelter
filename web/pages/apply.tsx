@@ -3,6 +3,9 @@ import { Shell } from '@island.is/application-ui-shell/components/Shell';
 import { ApplyPage } from '@island.is/application-ui-shell/components/ApplyPage';
 import { fetchApplyContext } from '../lib/api';
 import { localeString } from '../lib/locale';
+import Head from 'next/head';
+import { messages as appMessages } from '@island.is/application-ui-shell/server';
+import type { AppLocale } from '@island.is/application-ui-shell';
 
 interface Props {
   locale: string;
@@ -36,7 +39,11 @@ export const getServerSideProps: GetServerSideProps<Props> = async (ctx) => {
 export default function ApplyRoute(props: Props) {
   const { locale, identity } = props;
   return (
-    <Shell session="identity" identity={identity}>
+    <>
+      <Head>
+        <title>{appMessages[locale as AppLocale].pageTitleApply}</title>
+      </Head>
+      <Shell session="identity" identity={identity} titleId="pageTitleApply">
       <ApplyPage
         locale={locale}
         error={props.error}
@@ -46,6 +53,7 @@ export default function ApplyRoute(props: Props) {
         basemap={props.basemap}
         submitPath="/api/apply"
       />
-    </Shell>
+      </Shell>
+    </>
   );
 }

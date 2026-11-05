@@ -203,7 +203,8 @@ code {
   display: flex;
   align-items: center;
   gap: 8px;
-  color: var(--muted);
+  /* 6.02:1 on the chip background (WCAG AA needs 4.5:1). */
+  color: #4c5a66;
   font-size: 0.9rem;
   padding: 6px 12px 6px 6px;
   background: #e8edf1;

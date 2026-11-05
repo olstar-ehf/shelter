@@ -14,7 +14,7 @@ const STEP_LABELS = [
 export function Stepper({ activeCount }: { activeCount: number }) {
   const intl = useIntl();
   return (
-    <ol className="stepper" aria-label="Application steps">
+    <ol className="stepper" aria-label={intl.formatMessage({ id: 'windbreak.step.label' })}>
       {STEP_LABELS.map((labelId, index) => (
         <li
           key={labelId}

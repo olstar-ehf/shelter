@@ -2,6 +2,9 @@ import type { GetServerSideProps } from 'next';
 import { IndexPage } from '@island.is/application-ui-shell/components/IndexPage';
 import { Shell } from '@island.is/application-ui-shell/components/Shell';
 import { localeString } from '../lib/locale';
+import Head from 'next/head';
+import { messages as appMessages } from '@island.is/application-ui-shell/server';
+import type { AppLocale } from '@island.is/application-ui-shell';
 
 interface Props {
   locale: string;
@@ -24,8 +27,13 @@ export const getServerSideProps: GetServerSideProps<Props> = async (ctx) => {
 
 export default function Index({ locale, identity }: Props) {
   return (
-    <Shell session="portal" title={locale === 'is' ? 'Skjólbeltastyrkir' : 'Windbreak Grant Scheme'}>
-      <IndexPage identity={identity} />
-    </Shell>
+    <>
+      <Head>
+        <title>{appMessages[locale as AppLocale].pageTitleIndex}</title>
+      </Head>
+      <Shell session="portal" titleId="pageTitleIndex">
+        <IndexPage identity={identity} />
+      </Shell>
+    </>
   );
 }

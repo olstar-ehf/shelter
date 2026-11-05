@@ -145,12 +145,20 @@ function securityHeaders(res: Response, data: PageData): void {
 /** The HTML shell every page shares - no template engine, just JSON. */
 function renderShell(res: Response, data: PageData): void {
   securityHeaders(res, data);
+  // Per-page, localized browser tab title (WCAG 2.4.2).
+  const t = createTranslator(data.locale as Locale);
+  const titleId =
+    data.page === 'apply'
+      ? 'pageTitleApply'
+      : data.page === 'submitted'
+        ? 'pageTitleSubmitted'
+        : 'pageTitleIndex';
   const html = `<!DOCTYPE html>
 <html lang="${data.locale}">
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Windbreak Grant Scheme</title>
+  <title>${t(titleId)}</title>
   <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
   <link rel="stylesheet" href="/app.css" />
 </head>

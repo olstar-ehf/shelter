@@ -26,7 +26,7 @@ function FieldSkeleton() {
     <>
       <div className="map-container map-container--loading" />
 
-      <div className="map-legend" aria-hidden="true">
+      <div className="map-legend">
         <span>
           <i className="legend-swatch legend-parcel" /> {f('map.legendParcels')}
         </span>
@@ -39,7 +39,7 @@ function FieldSkeleton() {
         </span>
       </div>
 
-      <div className="lines-summary">
+      <div className="lines-summary" aria-live="polite">
         <h3>
           {f('windbreak.lines.heading')} (
           <span id="line-count">0</span>)

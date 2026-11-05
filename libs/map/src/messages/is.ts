@@ -6,6 +6,8 @@ import type { MapMessages } from './en';
 
 export const is: MapMessages = {
   map: {
+    ariaLabel:
+      'Kort af landi þínu til að teikna skjólbeltalínur. Notaðu teiknitakka til að bæta við línu.',
     legendParcels: 'Land þitt',
     legendEstablished: 'Skjólbelti (eldri)',
     legendPending: 'Í bið (ekki samþykkt)',

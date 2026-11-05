@@ -75,7 +75,7 @@ export default function WindbreakMapPane({
         />
       </div>
 
-      <div className="map-legend" aria-hidden="true">
+      <div className="map-legend">
         <span>
           <i className="legend-swatch legend-parcel" /> {f('map.legendParcels')}
         </span>
@@ -88,7 +88,7 @@ export default function WindbreakMapPane({
         </span>
       </div>
 
-      <div className="lines-summary">
+      <div className="lines-summary" aria-live="polite">
         <h3>
           {f('windbreak.lines.heading')} (
           <span id="line-count">{lines.length}</span>)
@@ -175,7 +175,7 @@ export default function WindbreakMapPane({
               m
             </strong>
           </p>
-          <p className="error-text" id="submit-error" hidden={!submitError}>
+          <p className="error-text" id="submit-error" role="alert" hidden={!submitError}>
             {submitError}
           </p>
           <div className="step-actions">

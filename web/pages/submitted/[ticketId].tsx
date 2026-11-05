@@ -3,6 +3,9 @@ import { SubmittedPage } from '@island.is/application-ui-shell/components/Submit
 import { Shell } from '@island.is/application-ui-shell/components/Shell';
 import { fetchTicket } from '../../lib/api';
 import { localeString } from '../../lib/locale';
+import Head from 'next/head';
+import { messages as appMessages } from '@island.is/application-ui-shell/server';
+import type { AppLocale } from '@island.is/application-ui-shell';
 
 interface Props {
   locale: string;
@@ -27,8 +30,13 @@ export const getServerSideProps: GetServerSideProps<Props> = async (ctx) => {
 
 export default function Submitted(props: Props) {
   return (
-    <Shell session="none">
-      <SubmittedPage error={props.error} ticket={props.ticket} />
-    </Shell>
+    <>
+      <Head>
+        <title>{appMessages[props.locale as AppLocale].pageTitleSubmitted}</title>
+      </Head>
+      <Shell session="none" titleId="pageTitleSubmitted">
+        <SubmittedPage error={props.error} ticket={props.ticket} />
+      </Shell>
+    </>
   );
 }

@@ -1,13 +1,13 @@
 import { FormattedMessage } from 'react-intl';
 
 /**
- * Map legend: what the three layer styles mean.
- * (In the island.is monorepo this would be built from island-ui's
- * Box/Text/Tag components; here it is plain semantic markup.)
+ * Map legend: what the three layer styles mean. The legend text is the
+ * map's text alternative, so it must stay visible to assistive tech (the
+ * colour swatches themselves are decorative).
  */
 export function WindbreakLegend() {
   return (
-    <div className="windbreak-legend" aria-hidden="true">
+    <div className="windbreak-legend">
       <span>
         <i className="windbreak-swatch windbreak-swatch-parcel" />
         <FormattedMessage id="map.legendParcels" />

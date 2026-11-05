@@ -85,7 +85,11 @@ export function WindbreakApplicationFlow({
 
   return (
     <>
-      <ol className="stepper" id="stepper" aria-label="Application steps">
+      <ol
+        className="stepper"
+        id="stepper"
+        aria-label={intl.formatMessage({ id: 'windbreak.step.label' })}
+      >
         {windbreakTemplate.steps.map((step, index) => (
           <li
             key={step.id}

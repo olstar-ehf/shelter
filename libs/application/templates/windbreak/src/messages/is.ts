@@ -9,6 +9,7 @@ export const windbreakIs: WindbreakTemplateMessages = {
     name: 'Skjólbeltastyrkur',
   },
   step: {
+    label: 'Skref umsóknar',
     yourDetails: 'Þínar upplýsingar',
     drawWindbreak: 'Teikna skjólbelti',
     review: 'Yfirfara',

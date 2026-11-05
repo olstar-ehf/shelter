@@ -8,6 +8,10 @@ export const is: Record<string, string> = {
   schemeName: 'Skjólbeltastyrkir',
   portalSession: 'Innskráning í ríkisgátt',
   signedIn: 'Innskráður',
+pageTitleIndex: 'Skjólbeltastyrkir',
+  pageTitleApply: 'Sækja um skjólbelti — Skjólbeltastyrkir',
+  pageTitleSubmitted: 'Umsókn móttekin — Skjólbeltastyrkir',
+languageLabel: 'Tungumál',
   langIs: 'Íslenska',
   langEn: 'English',
   footerPrototype:

@@ -10,6 +10,10 @@ export const en: Record<string, string> = {
   schemeName: 'Windbreak Grant Scheme',
   portalSession: 'Government portal session',
   signedIn: 'Signed in',
+pageTitleIndex: 'Windbreak Grant Scheme',
+  pageTitleApply: 'Apply for windbreak — Windbreak Grant Scheme',
+  pageTitleSubmitted: 'Application submitted — Windbreak Grant Scheme',
+languageLabel: 'Language',
   langIs: 'Íslenska',
   langEn: 'English',
   footerPrototype:

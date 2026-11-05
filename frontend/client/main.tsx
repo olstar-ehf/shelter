@@ -70,7 +70,7 @@ const catalog: Record<string, string> = {
 function PageContent({ data }: { data: PageData }) {
   if (data.page === 'index') {
     return (
-      <Shell session="portal">
+      <Shell session="portal" titleId="pageTitleIndex">
         <IndexPage identity={data.identity ?? { fullName: '', kennitala: '' }} />
       </Shell>
     );
@@ -80,7 +80,7 @@ function PageContent({ data }: { data: PageData }) {
       <Shell
         session="identity"
         identity={data.identity}
-        title={locale === 'is' ? 'Skjólbeltastyrkir' : 'Windbreak Grant Scheme'}
+        titleId="pageTitleApply"
       >
         <ApplyPage
           locale={locale}
@@ -94,7 +94,7 @@ function PageContent({ data }: { data: PageData }) {
     );
   }
   return (
-    <Shell session="none">
+    <Shell session="none" titleId="pageTitleSubmitted">
       <SubmittedPage error={data.error} ticket={data.ticket} />
     </Shell>
   );

@@ -12,17 +12,19 @@ export interface ShellProps {
   identity?: { fullName: string; kennitala: string };
   /** Page title shown in the browser tab (localized by the caller). */
   title?: string;
+  /** Message id of the page title (preferred over the literal title). */
+  titleId?: string;
   children: React.ReactNode;
 }
 
-export function Shell({ session, identity, title, children }: ShellProps) {
+export function Shell({ session, identity, title, titleId, children }: ShellProps) {
   const intl = useIntl();
   const f = (id: string): string => intl.formatMessage({ id });
   const is = intl.locale === 'is';
 
   useEffect(() => {
-    document.title = title ?? f('schemeName');
-  }, [title, intl.locale]);
+    document.title = titleId ? f(titleId) : (title ?? f('schemeName'));
+  }, [title, titleId, intl.locale]);
 
   return (
     <div className="page">
@@ -47,7 +49,7 @@ export function Shell({ session, identity, title, children }: ShellProps) {
             {session === 'portal' && (
               <span className="muted-inverse">{f('portalSession')}</span>
             )}
-            <span className="lang-switch" aria-label="Language">
+            <span className="lang-switch" aria-label={f('languageLabel')}>
               <a href="?lang=is" className={is ? 'lang-active' : ''}>
                 Íslenska
               </a>

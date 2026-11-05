@@ -10,6 +10,7 @@ export const windbreakEn = {
     name: 'Windbreak grant',
   },
   step: {
+    label: 'Application steps',
     yourDetails: 'Your details',
     drawWindbreak: 'Draw windbreak',
     review: 'Review',

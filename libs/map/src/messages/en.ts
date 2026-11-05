@@ -4,6 +4,8 @@
  */
 export const en = {
   map: {
+    ariaLabel:
+      'Map of your land for drawing windbreak lines. Use the draw button to add a line.',
     legendParcels: 'Your parcels',
     legendEstablished: 'Established windbreak',
     legendPending: 'Pending (not accepted)',
