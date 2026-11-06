@@ -130,19 +130,60 @@ export function WindbreakAimControl({
   }, [aiming, map, f]);
 
   // Keyboard handling while aiming: arrows pan the map under the fixed
-  // crosshair, Enter/Space places a point, Backspace undoes, Escape cancels.
+  // crosshair, + / - zoom, Enter/Space places a point, Backspace undoes,
+  // Escape cancels.
   useEffect(() => {
     if (!aiming) {
       return;
     }
     const container = map.getContainer();
     const onKey = (event: KeyboardEvent) => {
+      // Escape always leaves aim mode, whatever has focus.
+      if (event.key === 'Escape') {
+        exitAim('map.aimCancelled');
+        event.preventDefault();
+        return;
+      }
+      // Let focused map controls (zoom buttons, draw toolbar) handle their
+      // own keys - otherwise Enter/Space would fire a point instead.
+      if (event.target !== container) {
+        return;
+      }
       const step = event.shiftKey ? FINE_STEP_PX : COARSE_STEP_PX;
       // Pan the map under the fixed crosshair (scope metaphor): the
       // crosshair never moves, the world does.
       const pan = (dx: number, dy: number) =>
         map.panBy([dx, dy], { animate: false });
+      // getZoom() updates only after the zoom animation; announce the
+      // clamped target level instead of the current one.
+      const nextZoom = (delta: number): number => {
+        const min = map.getMinZoom();
+        const max = map.getMaxZoom();
+        return Math.min(
+          Number.isFinite(max) ? max : Infinity,
+          Math.max(
+            Number.isFinite(min) ? min : -Infinity,
+            map.getZoom() + delta,
+          ),
+        );
+      };
       switch (event.key) {
+        case '+':
+        case '=':
+        case 'Add': {
+          const target = nextZoom(1);
+          map.setZoom(target);
+          setStatus(f('map.aimZoom', { zoom: target }));
+          break;
+        }
+        case '-':
+        case '_':
+        case 'Subtract': {
+          const target = nextZoom(-1);
+          map.setZoom(target);
+          setStatus(f('map.aimZoom', { zoom: target }));
+          break;
+        }
         case 'ArrowUp':
           // panBy moves the view opposite to the offset: +y pans south.
           pan(0, -step);
@@ -162,9 +203,6 @@ export function WindbreakAimControl({
           break;
         case 'Backspace':
           undo();
-          break;
-        case 'Escape':
-          exitAim('map.aimCancelled');
           break;
         default:
           return;
