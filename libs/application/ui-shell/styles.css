@@ -527,6 +527,8 @@ code {
 .aim-reticle {
   position: absolute;
   z-index: 1001;
+  left: 50%;
+  top: 50%;
   width: 26px;
   height: 26px;
   margin: -13px 0 0 -13px;

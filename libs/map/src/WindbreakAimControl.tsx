@@ -32,11 +32,8 @@ export function WindbreakAimControl({
   intlRef.current = intl;
 
   const [aiming, setAiming] = useState(false);
-  const [pos, setPos] = useState({ x: 0, y: 0 });
   const [points, setPoints] = useState<L.LatLng[]>([]);
   const [status, setStatus] = useState('');
-  const posRef = useRef(pos);
-  posRef.current = pos;
   const pointsRef = useRef<L.LatLng[]>(points);
   pointsRef.current = points;
   const previewRef = useRef<L.Polyline | null>(null);
@@ -57,8 +54,9 @@ export function WindbreakAimControl({
   }, []);
 
   const placePoint = useCallback(() => {
-    const { x, y } = posRef.current;
-    const latlng = map.containerPointToLatLng([x, y]);
+    // The crosshair is fixed at the map centre; "firing" places a point
+    // there while the map is panned underneath it.
+    const latlng = map.getCenter();
     const next = [...pointsRef.current, latlng];
     pointsRef.current = next;
     setPoints(next);
@@ -73,7 +71,13 @@ export function WindbreakAimControl({
     } else {
       previewRef.current.setLatLngs(next);
     }
-    setStatus(f('map.aimPointPlaced', { n: next.length }));
+    setStatus(
+      f('map.aimPointPlaced', {
+        n: next.length,
+        lat: latlng.lat.toFixed(4),
+        lon: latlng.lng.toFixed(4),
+      }),
+    );
   }, [map, f]);
 
   const undo = useCallback(() => {
@@ -118,10 +122,6 @@ export function WindbreakAimControl({
     }
     const container = map.getContainer();
     map.keyboard.disable();
-    const size = map.getSize();
-    const centre = { x: Math.round(size.x / 2), y: Math.round(size.y / 2) };
-    posRef.current = centre;
-    setPos(centre);
     setStatus(f('map.aimInstructions'));
     container.focus();
     return () => {
@@ -129,30 +129,32 @@ export function WindbreakAimControl({
     };
   }, [aiming, map, f]);
 
-  // Keyboard handling while aiming: arrows move, Enter/Space places,
-  // Backspace undoes, Escape cancels.
+  // Keyboard handling while aiming: arrows pan the map under the fixed
+  // crosshair, Enter/Space places a point, Backspace undoes, Escape cancels.
   useEffect(() => {
     if (!aiming) {
       return;
     }
     const container = map.getContainer();
-    const clamp = (value: number, max: number): number =>
-      Math.max(0, Math.min(max, value));
     const onKey = (event: KeyboardEvent) => {
       const step = event.shiftKey ? FINE_STEP_PX : COARSE_STEP_PX;
-      const size = map.getSize();
+      // Pan the map under the fixed crosshair (scope metaphor): the
+      // crosshair never moves, the world does.
+      const pan = (dx: number, dy: number) =>
+        map.panBy([dx, dy], { animate: false });
       switch (event.key) {
         case 'ArrowUp':
-          setPos((p) => ({ x: p.x, y: clamp(p.y - step, size.y) }));
+          // panBy moves the view opposite to the offset: +y pans south.
+          pan(0, -step);
           break;
         case 'ArrowDown':
-          setPos((p) => ({ x: p.x, y: clamp(p.y + step, size.y) }));
+          pan(0, step);
           break;
         case 'ArrowLeft':
-          setPos((p) => ({ x: clamp(p.x - step, size.x), y: p.y }));
+          pan(-step, 0);
           break;
         case 'ArrowRight':
-          setPos((p) => ({ x: clamp(p.x + step, size.x), y: p.y }));
+          pan(step, 0);
           break;
         case 'Enter':
         case ' ':
@@ -223,11 +225,7 @@ export function WindbreakAimControl({
           <div className="aim-instructions" aria-hidden="true">
             {f('map.aimInstructions')}
           </div>
-          <div
-            className="aim-reticle"
-            aria-hidden="true"
-            style={{ left: pos.x, top: pos.y }}
-          />
+          <div className="aim-reticle" aria-hidden="true" />
         </>
       )}
 

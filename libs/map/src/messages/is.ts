@@ -19,8 +19,8 @@ export const is: MapMessages = {
     aimToggle: 'Teikna með lyklaborði',
     aimToggleOff: 'Hætta að teikna með lyklaborði',
     aimInstructions:
-      'Nákvæmnisteikning: örvar færa krossinn (Shift gefur fína skref), Enter setur punkt, Backspace fjarlægir síðasta punkt, Escape hættir.',
-    aimPointPlaced: 'Punktur {n} settur.',
+      'Nákvæmnisteikning: krossinn stendur kyrr í miðjunni - örvar færa kortið undir honum (Shift gefur fína skref). Enter setur punkt, Backspace fjarlægir síðasta punkt, Escape hættir.',
+    aimPointPlaced: 'Punktur {n} settur á {lat}, {lon}.',
     aimUndone: 'Síðasti punktur fjarlægður.',
     aimFinish: 'Ljúka línu',
     aimFinished: 'Línu bætt við.',
