@@ -10,8 +10,10 @@ import {
 } from 'react-leaflet';
 import type { Feature, FeatureCollection } from 'geojson';
 import L from 'leaflet';
+import { WindbreakAimControl } from './WindbreakAimControl';
 import { WindbreakDrawControl } from './WindbreakDrawControl';
 import { WindbreakLegend } from './WindbreakLegend';
+import { linesFromFeatureGroup } from './lines';
 import type {
   ParcelFeature,
   WindbreakBasemap,
@@ -56,6 +58,13 @@ export interface WindbreakMapProps {
   /** Height of the map container (CSS value). */
   height?: string;
   onLinesChange?: (lines: WindbreakLine[]) => void;
+  /**
+   * Imperative "add a line from coordinates" API for non-pointer inputs
+   * (the coordinate textarea). Points are [lon, lat] pairs (WGS84).
+   */
+  addLineRef?: React.MutableRefObject<
+    ((points: Array<[number, number]>) => void) | null
+  >;
 }
 
 /**
@@ -90,6 +99,39 @@ function FitBoundsToData({ parcels }: { parcels: ParcelFeature[] }) {
       map.fitBounds(bounds, { padding: [24, 24] });
     }
   }, [map, parcels]);
+  return null;
+}
+
+/**
+ * Exposes a function that adds a windbreak line from [lon, lat] pairs into
+ * the drawn-lines feature group (used by the coordinate textarea).
+ */
+function LineAdder({
+  featureGroup,
+  onLinesChange,
+  apiRef,
+}: {
+  featureGroup: L.FeatureGroup;
+  onLinesChange: (lines: WindbreakLine[]) => void;
+  apiRef: React.MutableRefObject<
+    ((points: Array<[number, number]>) => void) | null
+  >;
+}) {
+  useEffect(() => {
+    apiRef.current = (points: Array<[number, number]>) => {
+      const latlngs = points.map(([lon, lat]) => L.latLng(lat, lon));
+      const line = L.polyline(latlngs, {
+        color: '#2e7d32',
+        weight: 4,
+        opacity: 0.9,
+      });
+      featureGroup.addLayer(line);
+      onLinesChange(linesFromFeatureGroup(featureGroup));
+    };
+    return () => {
+      apiRef.current = null;
+    };
+  }, [featureGroup, onLinesChange, apiRef]);
   return null;
 }
 
@@ -136,6 +178,7 @@ export function WindbreakMap({
   initialZoom = 7,
   height = '480px',
   onLinesChange,
+  addLineRef,
 }: WindbreakMapProps) {
   const intl = useIntl();
 
@@ -315,10 +358,23 @@ export function WindbreakMap({
         )}
         <DrawnLinesLayer layer={drawnItemsRef.current} />
         {!readOnly && onLinesChange && (
-          <WindbreakDrawControl
-            featureGroup={drawnItemsRef.current}
-            onLinesChange={onLinesChange}
-          />
+          <>
+            <WindbreakDrawControl
+              featureGroup={drawnItemsRef.current}
+              onLinesChange={onLinesChange}
+            />
+            <WindbreakAimControl
+              featureGroup={drawnItemsRef.current}
+              onLinesChange={onLinesChange}
+            />
+            {addLineRef && (
+              <LineAdder
+                featureGroup={drawnItemsRef.current}
+                onLinesChange={onLinesChange}
+                apiRef={addLineRef}
+              />
+            )}
+          </>
         )}
         {fitToData && <FitBoundsToData parcels={parcels} />}
       </MapContainer>

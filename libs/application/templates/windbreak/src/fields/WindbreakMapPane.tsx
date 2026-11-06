@@ -7,11 +7,13 @@
  * imports it through React.lazy so the server-side render of the form
  * stops at the static skeleton and never pulls Leaflet into the SSR bundle.
  */
+import { useRef, useState } from 'react';
 import { useIntl } from 'react-intl';
 import {
   totalLengthM,
   useWindbreakValidation,
   WindbreakMap,
+  parseCoordinateLines,
   type ParcelFeature,
   type WindbreakFeature,
   type ValidatedLine,
@@ -50,6 +52,34 @@ export default function WindbreakMapPane({
     lineStatuses[entry.line.clientId] = entry.validation.status;
   }
 
+  // Non-pointer input: coordinates typed/pasted by the farmer are added as
+  // ordinary drawn lines through the map's imperative API.
+  const addLineRef = useRef<((points: Array<[number, number]>) => void) | null>(
+    null,
+  );
+  const [coordsText, setCoordsText] = useState('');
+  const [coordsError, setCoordsError] = useState<string | null>(null);
+  const [coordsInfo, setCoordsInfo] = useState<string | null>(null);
+
+  const addCoordinateLines = () => {
+    const parsed = parseCoordinateLines(coordsText);
+    if (parsed.error) {
+      setCoordsInfo(null);
+      setCoordsError(f(parsed.error));
+      return;
+    }
+    const add = addLineRef.current;
+    if (!add) {
+      return;
+    }
+    for (const line of parsed.lines) {
+      add(line.points.map((point) => [point.lon, point.lat]));
+    }
+    setCoordsError(null);
+    setCoordsInfo(f('map.coordsAdded', { count: parsed.lines.length }));
+    setCoordsText('');
+  };
+
   const parcelName = (parcelId: string | null): string => {
     if (!parcelId) {
       return f('map.spansSeveralParcels');
@@ -71,6 +101,7 @@ export default function WindbreakMapPane({
           legend={false}
           height="100%"
           lineStatuses={lineStatuses}
+          addLineRef={addLineRef}
           onLinesChange={onChange}
         />
       </div>
@@ -87,6 +118,46 @@ export default function WindbreakMapPane({
           <i className="legend-swatch legend-pending" /> {f('map.legendPending')}
         </span>
       </div>
+
+      {!reviewing && (
+        <details className="coords-entry">
+          <summary>{f('map.coordsSummary')}</summary>
+          <p className="muted" id="coords-help">
+            {f('map.coordsHelp')}
+          </p>
+          <label className="sr-only" htmlFor="coords-input">
+            {f('map.coordsSummary')}
+          </label>
+          <textarea
+            id="coords-input"
+            className="coords-input"
+            rows={3}
+            value={coordsText}
+            placeholder={f('map.coordsPlaceholder')}
+            aria-describedby="coords-help"
+            onChange={(event) => setCoordsText(event.target.value)}
+          />
+          <div className="step-actions">
+            <button
+              type="button"
+              className="btn btn-secondary"
+              onClick={addCoordinateLines}
+            >
+              {f('map.coordsAdd')}
+            </button>
+          </div>
+          {coordsError && (
+            <p className="error-text" role="alert">
+              {coordsError}
+            </p>
+          )}
+          {coordsInfo && (
+            <p className="muted" role="status">
+              {coordsInfo}
+            </p>
+          )}
+        </details>
+      )}
 
       <div className="lines-summary" aria-live="polite">
         <h3>

@@ -307,6 +307,62 @@ async function main() {
     submitted.hasTicketNo && !submitted.startPageVisible;
   console.log(session2Ok ? 'SESSION 2: PASS' : 'SESSION 2: FAIL');
 
+
+  // ================= Session 3: keyboard-only input =================
+  // Aim-and-shoot: place a line with the keyboard only (arrows + Enter),
+  // then add a line by pasting WKT coordinates.
+  await page.goto(`${APP_URL}apply?lang=en`, { waitUntil: 'domcontentloaded', timeout: 120000 });
+  await page.waitForSelector('.map-container', { timeout: 120000 });
+  await page.waitForSelector('.leaflet-overlay-pane path', { timeout: 120000 });
+  await page.waitForTimeout(1500);
+
+  await page.click('.aim-toggle');
+  await page.waitForTimeout(400);
+  const aimPressed = await page.evaluate(() =>
+    document.querySelector('.aim-toggle').getAttribute('aria-pressed'),
+  );
+  await page.keyboard.press('ArrowLeft');
+  await page.keyboard.press('ArrowLeft');
+  await page.keyboard.press('Enter');
+  await page.keyboard.press('ArrowRight');
+  await page.keyboard.press('ArrowRight');
+  await page.keyboard.press('Enter');
+  await page.waitForTimeout(300);
+  const aimAnnouncement = await page.evaluate(() => {
+    const live = document.querySelector('.windbreak-map [role="status"]');
+    return live ? live.textContent.trim() : null;
+  });
+  await page.click('.aim-finish');
+  await page.waitForTimeout(700);
+  const afterAim = await page.evaluate(() => ({
+    count: document.getElementById('line-count').textContent.trim(),
+    reviewEnabled: !document.getElementById('review-btn').disabled,
+  }));
+
+  await page.click('.coords-entry summary');
+  await page.fill(
+    '#coords-input',
+    'LINESTRING (-21.805 65.485, -21.795 65.485)',
+  );
+  await page.click('.coords-entry button');
+  await page.waitForTimeout(700);
+  const afterCoords = await page.evaluate(() => ({
+    count: document.getElementById('line-count').textContent.trim(),
+    info: document.querySelector('.coords-entry [role="status"]')?.textContent.trim() ?? null,
+  }));
+
+  const session3Ok =
+    aimPressed === 'true' &&
+    typeof aimAnnouncement === 'string' && aimAnnouncement.length > 0 &&
+    afterAim.count === '1' && afterAim.reviewEnabled === true &&
+    afterCoords.count === '2' &&
+    typeof afterCoords.info === 'string' && afterCoords.info.length > 0;
+  console.log(
+    'SESSION 3:',
+    session3Ok ? 'PASS' : 'FAIL',
+    JSON.stringify({ aimPressed, aimAnnouncement, afterAim, afterCoords }),
+  );
+
   console.log('pageerrors:', pageErrors.length ? pageErrors : 'none');
   console.log('console errors:', consoleErrors.length ? consoleErrors.slice(0, 5) : 'none');
   console.log(
@@ -325,7 +381,8 @@ async function main() {
 
   const pass =
     isLanding.cta && isLanding.title &&
-    session1Ok && session2Ok && pageErrors.length === 0 && originsOk && cspOk;
+    session1Ok && session2Ok && session3Ok &&
+    pageErrors.length === 0 && originsOk && cspOk;
   console.log(pass ? 'E2E RESULT: PASS' : 'E2E RESULT: FAIL');
   await browser.close();
   process.exit(pass ? 0 : 1);

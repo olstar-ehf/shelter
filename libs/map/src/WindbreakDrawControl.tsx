@@ -3,7 +3,7 @@ import { useIntl } from 'react-intl';
 import { useMap } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet-draw';
-import { measureLineM } from './geometry';
+import { linesFromFeatureGroup } from './lines';
 import { messages, type Locale } from './messages';
 import type { WindbreakLine } from './types';
 
@@ -58,27 +58,7 @@ export function WindbreakDrawControl({
       drawLocal;
 
     const emit = () => {
-      const lines: WindbreakLine[] = [];
-      featureGroup.eachLayer((layer) => {
-        const anyLayer = layer as unknown as {
-          _leaflet_id?: number;
-          toGeoJSON: () => import('geojson').Feature;
-        };
-        const feature = anyLayer.toGeoJSON() as import('geojson').Feature;
-        if (!feature || feature.geometry?.type !== 'LineString') {
-          return;
-        }
-        const lineFeature = feature as import('geojson').Feature<
-          import('geojson').LineString,
-          Record<string, unknown>
-        >;
-        lines.push({
-          clientId: `line-${anyLayer._leaflet_id ?? lines.length + 1}`,
-          feature: lineFeature,
-          lengthM: measureLineM(lineFeature),
-        });
-      });
-      onLinesChangeRef.current(lines);
+      onLinesChangeRef.current(linesFromFeatureGroup(featureGroup));
     };
 
     const drawControl = new drawApi.Control.Draw({

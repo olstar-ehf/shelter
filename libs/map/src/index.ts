@@ -11,7 +11,13 @@ export {
   totalLengthM,
   validateLine,
   validateWindbreakLines,
+  parseCoordinateLines,
   MIN_LENGTH_M,
+} from './geometry';
+export type {
+  CoordinateParseResult,
+  CoordinateParseError,
+  CoordinatePoint,
 } from './geometry';
 export { messages, en, is, flattenMessages } from './messages';
 export type { Locale, MapMessages } from './messages';

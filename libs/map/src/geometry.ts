@@ -172,3 +172,129 @@ export function validateWindbreakLines(
     ),
   }));
 }
+
+/* ------------------------------------------------------------------ */
+/* Coordinate input (the non-pointer fallback for the draw step)      */
+/* ------------------------------------------------------------------ */
+
+export interface CoordinatePoint {
+  /** Longitude in WGS84 (EPSG:4326). */
+  lon: number;
+  /** Latitude in WGS84 (EPSG:4326). */
+  lat: number;
+}
+
+export type CoordinateParseError = 'map.coordsInvalid' | 'map.coordsTooFew';
+
+export interface CoordinateParseResult {
+  /** One entry per windbreak line, in input order. */
+  lines: Array<{ points: CoordinatePoint[] }>;
+  /** Message id of the failure, when the input could not be used. */
+  error?: CoordinateParseError;
+}
+
+const PAIR_TOKEN = /^(-?\d+(?:\.\d+)?)\s+(-?\d+(?:\.\d+)?)$/;
+const PAIR_LINE = /^(-?\d+(?:\.\d+)?)\s*,\s*(-?\d+(?:\.\d+)?)$/;
+
+function inRange(point: CoordinatePoint): boolean {
+  return Math.abs(point.lon) <= 180 && Math.abs(point.lat) <= 90;
+}
+
+/**
+ * Parse coordinates typed or pasted by the farmer. Two formats are
+ * accepted (WGS84):
+ *
+ *   LINESTRING (-21.80 65.48, -21.79 65.48)     (WKT; MULTILINESTRING too)
+ *   -21.80,65.48                                (one "lon,lat" pair per
+ *   -21.79,65.48                                 line; a blank line starts
+ *                                                a new windbreak)
+ *
+ * Returns the parsed lines, or the message id of the error.
+ */
+export function parseCoordinateLines(text: string): CoordinateParseResult {
+  const input = (text ?? '').trim();
+  if (input === '') {
+    return { lines: [], error: 'map.coordsInvalid' };
+  }
+
+  const parsed: Array<{ points: CoordinatePoint[] }> = [];
+
+  const parsePairTokens = (body: string): CoordinatePoint[] | null => {
+    const points: CoordinatePoint[] = [];
+    for (const token of body.split(',')) {
+      const pair = token.trim().match(PAIR_TOKEN);
+      if (!pair) {
+        return null;
+      }
+      const point = { lon: Number(pair[1]), lat: Number(pair[2]) };
+      if (!inRange(point)) {
+        return null;
+      }
+      points.push(point);
+    }
+    return points;
+  };
+
+  if (/MULTILINESTRING/i.test(input)) {
+    // Each part of the multi-geometry is one windbreak line; split the
+    // parts on the parenthesis separators, then parse the pairs.
+    const multi = /MULTILINESTRING\s*\(\(([\s\S]*?)\)\)/gi;
+    let match: RegExpExecArray | null;
+    while ((match = multi.exec(input)) !== null) {
+      for (const part of match[1].split(/\)\s*,\s*\(/)) {
+        const points = parsePairTokens(part);
+        if (!points) {
+          return { lines: [], error: 'map.coordsInvalid' };
+        }
+        parsed.push({ points });
+      }
+    }
+    if (parsed.length === 0) {
+      return { lines: [], error: 'map.coordsInvalid' };
+    }
+  } else if (/LINESTRING/i.test(input)) {
+    const wkt = /LINESTRING\s*\(([^)]*)\)/gi;
+    let match: RegExpExecArray | null;
+    while ((match = wkt.exec(input)) !== null) {
+      const points = parsePairTokens(match[1]);
+      if (!points) {
+        return { lines: [], error: 'map.coordsInvalid' };
+      }
+      parsed.push({ points });
+    }
+    if (parsed.length === 0) {
+      return { lines: [], error: 'map.coordsInvalid' };
+    }
+  } else {
+    // Blank lines separate windbreak lines; each other line is one point.
+    for (const block of input.split(/\n\s*\n/)) {
+      const points: CoordinatePoint[] = [];
+      for (const rawLine of block.split(/\r?\n/)) {
+        const line = rawLine.trim();
+        if (line === '') {
+          continue;
+        }
+        const pair = line.match(PAIR_LINE);
+        if (!pair) {
+          return { lines: [], error: 'map.coordsInvalid' };
+        }
+        const point = { lon: Number(pair[1]), lat: Number(pair[2]) };
+        if (!inRange(point)) {
+          return { lines: [], error: 'map.coordsInvalid' };
+        }
+        points.push(point);
+      }
+      if (points.length > 0) {
+        parsed.push({ points });
+      }
+    }
+    if (parsed.length === 0) {
+      return { lines: [], error: 'map.coordsInvalid' };
+    }
+  }
+
+  if (parsed.some((line) => line.points.length < 2)) {
+    return { lines: [], error: 'map.coordsTooFew' };
+  }
+  return { lines: parsed };
+}

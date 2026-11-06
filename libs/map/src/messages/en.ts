@@ -13,6 +13,26 @@ export const en = {
     popupEstablishedPlanted: 'Established windbreak (planted {year})',
     popupPending: 'Pending application {applicationId} — not accepted yet',
     insideLand: 'Inside your land',
+
+    aimToggle: 'Point with the keyboard',
+    aimToggleOff: 'Leave keyboard pointing',
+    aimInstructions:
+      'Aim mode: arrow keys move the crosshair (Shift for fine steps), Enter places a point, Backspace removes the last point, Escape leaves aim mode.',
+    aimPointPlaced: 'Point {n} placed.',
+    aimUndone: 'Last point removed.',
+    aimFinish: 'Finish line',
+    aimFinished: 'Line added.',
+    aimCancelled: 'Aim mode off.',
+    aimNeedPoints: 'Place at least two points before finishing.',
+    coordsSummary: 'Enter coordinates instead',
+    coordsHelp:
+      'Paste a WKT LINESTRING (lon lat, lon lat, ...) or one "lon,lat" pair per line. Separate multiple lines with a blank line. Coordinates are WGS84 (EPSG:4326).',
+    coordsPlaceholder: 'LINESTRING (-21.80 65.48, -21.79 65.48)',
+    coordsAdd: 'Add line',
+    coordsInvalid:
+      'Could not read the coordinates. Use a WKT LINESTRING or one "lon,lat" pair per line.',
+    coordsTooFew: 'A line needs at least two points.',
+    coordsAdded: '{count, plural, one {# line added} other {# lines added}}',
     spansSeveralParcels: 'Spans several parcels',
   },
   validation: {

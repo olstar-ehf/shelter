@@ -2,6 +2,7 @@ import type { Feature, LineString, MultiLineString, Polygon } from 'geojson';
 import {
   landUnion,
   linesConflict,
+  parseCoordinateLines,
   validateWindbreakLines,
   MIN_LENGTH_M,
 } from '../src/geometry';
@@ -231,5 +232,61 @@ describe('validateWindbreakLines', () => {
       status: 'error',
       messageId: 'validation.crossesDrawn',
     });
+  });
+});
+
+describe('parseCoordinateLines (non-pointer input)', () => {
+  it('parses a WKT LINESTRING in WGS84', () => {
+    const result = parseCoordinateLines(
+      'LINESTRING (-21.80 65.48, -21.79 65.48)',
+    );
+    expect(result.error).toBeUndefined();
+    expect(result.lines).toHaveLength(1);
+    expect(result.lines[0].points).toEqual([
+      { lon: -21.8, lat: 65.48 },
+      { lon: -21.79, lat: 65.48 },
+    ]);
+  });
+
+  it('parses each part of a MULTILINESTRING as its own line', () => {
+    const result = parseCoordinateLines(
+      'MULTILINESTRING ((-21.80 65.48, -21.79 65.48), (-21.78 65.47, -21.77 65.47))',
+    );
+    expect(result.error).toBeUndefined();
+    expect(result.lines).toHaveLength(2);
+    expect(result.lines[1].points[0]).toEqual({ lon: -21.78, lat: 65.47 });
+  });
+
+  it('parses one "lon,lat" pair per line, blank line separating lines', () => {
+    const result = parseCoordinateLines(
+      '-21.80,65.48\n-21.79,65.48\n\n-21.78,65.47\n-21.77,65.47',
+    );
+    expect(result.error).toBeUndefined();
+    expect(result.lines).toHaveLength(2);
+    expect(result.lines[0].points).toHaveLength(2);
+    expect(result.lines[1].points).toHaveLength(2);
+  });
+
+  it('rejects unreadable input', () => {
+    expect(parseCoordinateLines('not coordinates').error).toBe(
+      'map.coordsInvalid',
+    );
+    expect(parseCoordinateLines('').error).toBe('map.coordsInvalid');
+    expect(parseCoordinateLines('LINESTRING (garbage)').error).toBe(
+      'map.coordsInvalid',
+    );
+  });
+
+  it('rejects out-of-range coordinates', () => {
+    expect(parseCoordinateLines('LINESTRING (-200 65, -190 65)').error).toBe(
+      'map.coordsInvalid',
+    );
+  });
+
+  it('rejects a line with fewer than two points', () => {
+    expect(parseCoordinateLines('-21.80,65.48').error).toBe('map.coordsTooFew');
+    expect(parseCoordinateLines('LINESTRING (-21.80 65.48)').error).toBe(
+      'map.coordsTooFew',
+    );
   });
 });

@@ -15,6 +15,26 @@ export const is: MapMessages = {
     popupEstablishedPlanted: 'Skjólbelti (gróðursett {year})',
     popupPending: 'Umsókn í bið {applicationId} — ekki samþykkt enn',
     insideLand: 'Innan lands þíns',
+
+    aimToggle: 'Teikna með lyklaborði',
+    aimToggleOff: 'Hætta að teikna með lyklaborði',
+    aimInstructions:
+      'Nákvæmnisteikning: örvar færa krossinn (Shift gefur fína skref), Enter setur punkt, Backspace fjarlægir síðasta punkt, Escape hættir.',
+    aimPointPlaced: 'Punktur {n} settur.',
+    aimUndone: 'Síðasti punktur fjarlægður.',
+    aimFinish: 'Ljúka línu',
+    aimFinished: 'Línu bætt við.',
+    aimCancelled: 'Nákvæmnisteikning aflétt.',
+    aimNeedPoints: 'Settu að minnsta kosti tvo punkta áður en línunni er lokað.',
+    coordsSummary: 'Sláðu inn hnit í staðinn',
+    coordsHelp:
+      'Límdu WKT LINESTRING (lon lat, lon lat, ...) eða eitt "lon,lat" hnit par í hverri línu. Tóma lína skilur að skjólbeltalínur. Hnit eru í WGS84 (EPSG:4326).',
+    coordsPlaceholder: 'LINESTRING (-21.80 65.48, -21.79 65.48)',
+    coordsAdd: 'Bæta við línu',
+    coordsInvalid:
+      'Tókst ekki að lesa hnitin. Notaðu WKT LINESTRING eða eitt "lon,lat" par í hverri línu.',
+    coordsTooFew: 'Lína þarf að minnsta kosti tvo punkta.',
+    coordsAdded: '{count, plural, one {# lína bætt við} other {# línur bætt við}}',
     spansSeveralParcels: 'Nær yfir fleiri landspildur',
   },
   validation: {
