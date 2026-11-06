@@ -11,11 +11,29 @@ jest.mock('react-leaflet', () => ({
   ),
   TileLayer: () => <div data-testid="tile-layer" />,
   GeoJSON: () => <div data-testid="geojson-layer" />,
-  useMap: () => ({
-    addLayer: jest.fn(),
-    removeLayer: jest.fn(),
-    fitBounds: jest.fn(),
-  }),
+  AttributionControl: () => null,
+  ScaleControl: () => null,
+  useMap: () => {
+    const el = document.createElement('div');
+    return {
+      addLayer: jest.fn(),
+      removeLayer: jest.fn(),
+      fitBounds: jest.fn(),
+      getContainer: () => el,
+      getCenter: () => ({ lat: 65.48, lng: -21.79 }),
+      getZoom: () => 13,
+      getMinZoom: () => 0,
+      getMaxZoom: () => 16,
+      getSize: () => ({ x: 800, y: 480 }),
+      panBy: jest.fn(),
+      setZoom: jest.fn(),
+      keyboard: { enable: jest.fn(), disable: jest.fn() },
+      dragging: { enable: jest.fn(), disable: jest.fn() },
+      scrollWheelZoom: { enable: jest.fn(), disable: jest.fn() },
+      doubleClickZoom: { enable: jest.fn(), disable: jest.fn() },
+      boxZoom: { enable: jest.fn(), disable: jest.fn() },
+    };
+  },
 }));
 
 jest.mock('../src/WindbreakDrawControl', () => ({

@@ -61,6 +61,17 @@ export default function WindbreakMapPane({
   const [coordsError, setCoordsError] = useState<string | null>(null);
   const [coordsInfo, setCoordsInfo] = useState<string | null>(null);
 
+  // Keyboard aim mode ("aim and shoot"): the toggle and finish buttons live
+  // outside the map; while aiming the map's pointer controls are hidden and
+  // its mouse handlers are disabled.
+  const [aiming, setAiming] = useState(false);
+  const aimApiRef = useRef<(() => void) | null>(null);
+  const aimToggleRef = useRef<HTMLButtonElement | null>(null);
+  const exitAim = () => {
+    setAiming(false);
+    aimToggleRef.current?.focus();
+  };
+
   const addCoordinateLines = () => {
     const parsed = parseCoordinateLines(coordsText);
     if (parsed.error) {
@@ -92,7 +103,33 @@ export default function WindbreakMapPane({
 
   return (
     <>
-      <div className="map-container">
+      {!reviewing && (
+        <div className="aim-bar">
+          <button
+            ref={aimToggleRef}
+            type="button"
+            className="aim-toggle"
+            aria-pressed={aiming}
+            onClick={() => (aiming ? exitAim() : setAiming(true))}
+          >
+            {f(aiming ? 'map.aimToggleOff' : 'map.aimToggle')}
+          </button>
+          {aiming && (
+            <>
+              <button
+                type="button"
+                className="aim-finish"
+                onClick={() => aimApiRef.current?.()}
+              >
+                {f('map.aimFinish')}
+              </button>
+              <span className="aim-help muted">{f('map.aimInstructions')}</span>
+            </>
+          )}
+        </div>
+      )}
+
+      <div className={aiming ? 'map-container aiming' : 'map-container'}>
         <WindbreakMap
           parcels={parcels}
           existingWindbreaks={windbreaks}
@@ -102,6 +139,9 @@ export default function WindbreakMapPane({
           height="100%"
           lineStatuses={lineStatuses}
           addLineRef={addLineRef}
+          aimMode={aiming}
+          onAimExit={exitAim}
+          aimApiRef={aimApiRef}
           onLinesChange={onChange}
         />
       </div>

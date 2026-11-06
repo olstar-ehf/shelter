@@ -65,6 +65,16 @@ export interface WindbreakMapProps {
   addLineRef?: React.MutableRefObject<
     ((points: Array<[number, number]>) => void) | null
   >;
+  /**
+   * Keyboard aim mode ("aim and shoot"), controlled by the host's button
+   * outside the map. While active the map's pointer controls are hidden
+   * and its mouse handlers disabled.
+   */
+  aimMode?: boolean;
+  /** Called when the map asks to leave aim mode (Escape or line finished). */
+  onAimExit?: () => void;
+  /** Exposes the "finish line" action to the host's external button. */
+  aimApiRef?: React.MutableRefObject<(() => void) | null>;
 }
 
 /**
@@ -179,6 +189,9 @@ export function WindbreakMap({
   height = '480px',
   onLinesChange,
   addLineRef,
+  aimMode = false,
+  onAimExit,
+  aimApiRef,
 }: WindbreakMapProps) {
   const intl = useIntl();
 
@@ -364,8 +377,11 @@ export function WindbreakMap({
               onLinesChange={onLinesChange}
             />
             <WindbreakAimControl
+              aiming={aimMode}
               featureGroup={drawnItemsRef.current}
               onLinesChange={onLinesChange}
+              onExit={onAimExit ?? (() => undefined)}
+              finishRef={aimApiRef}
             />
             {addLineRef && (
               <LineAdder

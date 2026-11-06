@@ -472,22 +472,29 @@ code {
   border: 0;
 }
 
-/* Placed below Leaflet's zoom control (top-left). */
-.aim-control {
-  margin-top: 76px;
+/* The aim controls live outside the map, in a bar above it. */
+.aim-bar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin: 0 0 10px;
 }
 
 .aim-toggle {
   background: #fff;
-  border: 1px solid var(--border);
+  border: 1px solid var(--navy);
   border-radius: 6px;
-  padding: 6px 10px;
-  font-size: 0.8rem;
+  padding: 7px 12px;
+  font-size: 0.85rem;
   font-weight: 600;
   color: var(--navy);
   cursor: pointer;
-  box-shadow: 0 1px 4px rgba(15, 40, 60, 0.2);
-  max-width: 190px;
+}
+
+.aim-toggle:hover {
+  background: var(--navy);
+  color: #fff;
 }
 
 .aim-toggle[aria-pressed='true'] {
@@ -496,32 +503,31 @@ code {
 }
 
 .aim-finish {
-  margin-top: 6px;
   background: var(--green);
   color: #fff;
   border: 1px solid var(--green-dark);
   border-radius: 6px;
-  padding: 6px 10px;
-  font-size: 0.8rem;
+  padding: 7px 12px;
+  font-size: 0.85rem;
   font-weight: 600;
   cursor: pointer;
 }
 
-.aim-instructions {
-  position: absolute;
-  left: 50%;
-  top: 8px;
-  transform: translateX(-50%);
-  z-index: 1001;
-  max-width: 92%;
-  background: rgba(15, 58, 95, 0.95);
-  color: #fff;
-  font-size: 0.8rem;
-  line-height: 1.35;
-  padding: 6px 10px;
-  border-radius: 6px;
-  pointer-events: none;
-  text-align: center;
+.aim-finish:hover {
+  background: var(--green-dark);
+}
+
+.aim-help {
+  flex-basis: 100%;
+  font-size: 0.85rem;
+  line-height: 1.4;
+}
+
+/* While aiming, the map's pointer controls are hidden and the map itself
+   only responds to the keyboard (see WindbreakAimControl). */
+.map-container.aiming .leaflet-control-zoom,
+.map-container.aiming .leaflet-draw {
+  display: none;
 }
 
 .aim-reticle {

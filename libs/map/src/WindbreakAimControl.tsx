@@ -9,36 +9,44 @@ const COARSE_STEP_PX = 14;
 const FINE_STEP_PX = 2;
 
 interface WindbreakAimControlProps {
+  /** Whether keyboard aim mode is active (owned by the host UI). */
+  aiming: boolean;
   /** The drawn-lines group shared with the pointer draw control. */
   featureGroup: L.FeatureGroup;
   onLinesChange: (lines: WindbreakLine[]) => void;
+  /** Ask the host to leave aim mode (Escape or after finishing a line). */
+  onExit: () => void;
+  /** Exposes the "finish line" action to the host's external button. */
+  finishRef?: React.MutableRefObject<(() => void) | null>;
 }
 
 /**
- * Keyboard-only line input ("aim and shoot"): a crosshair that is moved
- * with the arrow keys over the map and placed with Enter/Space, so the
- * windbreak can be drawn without a pointer. The crosshair is a neutral
- * reticle; all feedback is also announced through a live region for screen
- * readers. Placed lines are written into the same feature group as pointer
- * drawing, so validation and the red/green styling work unchanged.
+ * Keyboard-only line input ("aim and shoot"), controlled by the host UI's
+ * button outside the map. While aiming, the map's pointer controls are
+ * hidden and its mouse handlers disabled: the crosshair is fixed at the
+ * map centre, arrow keys pan the world under it, +/- zoom, and Enter/Space
+ * places a point. Placed lines are written into the same feature group as
+ * pointer drawing, so validation and the red/green styling are unchanged.
  */
 export function WindbreakAimControl({
+  aiming,
   featureGroup,
   onLinesChange,
+  onExit,
+  finishRef,
 }: WindbreakAimControlProps) {
   const map = useMap();
   const intl = useIntl();
   const intlRef = useRef(intl);
   intlRef.current = intl;
 
-  const [aiming, setAiming] = useState(false);
   const [points, setPoints] = useState<L.LatLng[]>([]);
   const [status, setStatus] = useState('');
   const pointsRef = useRef<L.LatLng[]>(points);
   pointsRef.current = points;
   const previewRef = useRef<L.Polyline | null>(null);
-  const toggleRef = useRef<HTMLButtonElement | null>(null);
-  const finishRef = useRef<() => void>(() => undefined);
+  const exitRef = useRef(onExit);
+  exitRef.current = onExit;
 
   const f = useCallback(
     (id: string, values?: Record<string, string | number>): string =>
@@ -88,16 +96,6 @@ export function WindbreakAimControl({
     setStatus(f('map.aimUndone'));
   }, [f]);
 
-  const exitAim = useCallback(
-    (messageId: string) => {
-      clearPreview();
-      setAiming(false);
-      setStatus(f(messageId));
-      toggleRef.current?.focus();
-    },
-    [clearPreview, f],
-  );
-
   const finish = useCallback(() => {
     if (pointsRef.current.length < 2) {
       setStatus(f('map.aimNeedPoints'));
@@ -110,24 +108,60 @@ export function WindbreakAimControl({
     });
     featureGroup.addLayer(line);
     onLinesChange(linesFromFeatureGroup(featureGroup));
-    exitAim('map.aimFinished');
-  }, [featureGroup, onLinesChange, exitAim, f]);
-  finishRef.current = finish;
+    setStatus(f('map.aimFinished'));
+    clearPreview();
+    exitRef.current();
+  }, [featureGroup, onLinesChange, f, clearPreview]);
+  if (finishRef) {
+    finishRef.current = finish;
+  }
 
-  // Entering aim mode: remember the crosshair start (map centre), disable
-  // Leaflet's arrow-key panning and put focus on the map so keys arrive.
+  // Entering aim mode: disable the map's pointer/keyboard handlers (the
+  // pointer controls are also hidden by CSS while `.aiming`), put focus on
+  // the map and announce the key map.
   useEffect(() => {
     if (!aiming) {
       return;
     }
     const container = map.getContainer();
+    // Leaflet's tap handler exists only on touch devices and is not in the
+    // Map typings.
+    const tap = (
+      map as unknown as {
+        tap?: { enable: () => void; disable: () => void };
+      }
+    ).tap;
     map.keyboard.disable();
+    map.dragging.disable();
+    map.scrollWheelZoom.disable();
+    map.doubleClickZoom.disable();
+    map.boxZoom.disable();
+    tap?.disable();
+    container.style.cursor = 'crosshair';
     setStatus(f('map.aimInstructions'));
     container.focus();
     return () => {
+      container.style.cursor = '';
       map.keyboard.enable();
+      map.dragging.enable();
+      map.scrollWheelZoom.enable();
+      map.boxZoom.enable();
+      tap?.enable();
+      // Keep double-click zoom off (finishing a line must not zoom).
+      map.doubleClickZoom.disable();
     };
   }, [aiming, map, f]);
+
+  // Clear a half-drawn preview whenever aim mode ends or on unmount.
+  useEffect(() => {
+    if (!aiming) {
+      clearPreview();
+      return;
+    }
+    return () => {
+      clearPreview();
+    };
+  }, [aiming, clearPreview]);
 
   // Keyboard handling while aiming: arrows pan the map under the fixed
   // crosshair, + / - zoom, Enter/Space places a point, Backspace undoes,
@@ -140,12 +174,11 @@ export function WindbreakAimControl({
     const onKey = (event: KeyboardEvent) => {
       // Escape always leaves aim mode, whatever has focus.
       if (event.key === 'Escape') {
-        exitAim('map.aimCancelled');
+        setStatus(f('map.aimCancelled'));
+        exitRef.current();
         event.preventDefault();
         return;
       }
-      // Let focused map controls (zoom buttons, draw toolbar) handle their
-      // own keys - otherwise Enter/Space would fire a point instead.
       if (event.target !== container) {
         return;
       }
@@ -214,59 +247,11 @@ export function WindbreakAimControl({
     return () => {
       container.removeEventListener('keydown', onKey);
     };
-  }, [aiming, map, placePoint, undo, exitAim]);
-
-  // Clean up a half-drawn preview when the control unmounts.
-  useEffect(
-    () => () => {
-      previewRef.current?.remove();
-      previewRef.current = null;
-    },
-    [],
-  );
-
-  const toggle = () => {
-    if (aiming) {
-      exitAim('map.aimCancelled');
-    } else {
-      setAiming(true);
-    }
-  };
+  }, [aiming, map, placePoint, undo, f]);
 
   return (
     <>
-      <div className="leaflet-top leaflet-left aim-control">
-        <div className="leaflet-control">
-          <button
-            ref={toggleRef}
-            type="button"
-            className="aim-toggle"
-            aria-pressed={aiming}
-            onClick={toggle}
-          >
-            {f(aiming ? 'map.aimToggleOff' : 'map.aimToggle')}
-          </button>
-          {aiming && (
-            <button
-              type="button"
-              className="aim-finish"
-              onClick={() => finishRef.current()}
-            >
-              {f('map.aimFinish')}
-            </button>
-          )}
-        </div>
-      </div>
-
-      {aiming && (
-        <>
-          <div className="aim-instructions" aria-hidden="true">
-            {f('map.aimInstructions')}
-          </div>
-          <div className="aim-reticle" aria-hidden="true" />
-        </>
-      )}
-
+      {aiming && <div className="aim-reticle" aria-hidden="true" />}
       <div className="sr-only" role="status" aria-live="polite">
         {status}
       </div>
