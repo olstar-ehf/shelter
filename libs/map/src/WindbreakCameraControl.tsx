@@ -85,15 +85,21 @@ export function WindbreakCameraControl({
     setPoints([]);
   }, []);
 
-  const placePoint = useCallback(() => {
-    // The crosshair is fixed at the map centre; "firing" places a point
-    // there while the map is panned underneath it.
-    const latlng = map.getCenter();
-    const next = [...pointsRef.current, latlng];
-    pointsRef.current = next;
-    setPoints(next);
+  /**
+   * The provisional (dashed) line: the placed points plus the crosshair
+   * position as the current end, so the farmer always sees the segment
+   * from the last placed point to where the next point would land.
+   */
+  const updatePreview = useCallback(() => {
+    const placed = pointsRef.current;
+    if (placed.length === 0) {
+      previewRef.current?.remove();
+      previewRef.current = null;
+      return;
+    }
+    const latlngs = [...placed, map.getCenter()];
     if (!previewRef.current) {
-      previewRef.current = L.polyline(next, {
+      previewRef.current = L.polyline(latlngs, {
         color: '#2e7d32',
         weight: 3,
         dashArray: '6 6',
@@ -101,8 +107,18 @@ export function WindbreakCameraControl({
         interactive: false,
       }).addTo(map);
     } else {
-      previewRef.current.setLatLngs(next);
+      previewRef.current.setLatLngs(latlngs);
     }
+  }, [map]);
+
+  const placePoint = useCallback(() => {
+    // The crosshair is fixed at the map centre; "firing" places a point
+    // there while the map is panned underneath it.
+    const latlng = map.getCenter();
+    const next = [...pointsRef.current, latlng];
+    pointsRef.current = next;
+    setPoints(next);
+    updatePreview();
     setStatus(
       f('map.cameraPointPlaced', {
         n: next.length,
@@ -110,15 +126,15 @@ export function WindbreakCameraControl({
         lon: latlng.lng.toFixed(4),
       }),
     );
-  }, [map, f]);
+  }, [map, f, updatePreview]);
 
   const undo = useCallback(() => {
     const next = pointsRef.current.slice(0, -1);
     pointsRef.current = next;
     setPoints(next);
-    previewRef.current?.setLatLngs(next);
+    updatePreview();
     setStatus(f('map.cameraUndone'));
-  }, [f]);
+  }, [f, updatePreview]);
 
   const finish = useCallback(() => {
     if (pointsRef.current.length < 2) {
@@ -247,6 +263,9 @@ export function WindbreakCameraControl({
 
       if (stepX !== 0 || stepY !== 0) {
         rawPan(stepX, stepY);
+        if (pointsRef.current.length > 0) {
+          updatePreview();
+        }
       }
 
       // Refresh the tiles a few times per second during long pans; firing
@@ -257,7 +276,7 @@ export function WindbreakCameraControl({
       }
       panRafRef.current = requestAnimationFrame(panFrame);
     },
-    [map, rawPan, stopPan],
+    [map, rawPan, stopPan, updatePreview],
   );
 
   const startPan = useCallback(
@@ -273,6 +292,9 @@ export function WindbreakCameraControl({
       const dy = key === 'ArrowDown' ? nudge : key === 'ArrowUp' ? -nudge : 0;
       if (dx !== 0 || dy !== 0) {
         map.panBy([dx, dy], { animate: false });
+        if (pointsRef.current.length > 0) {
+          updatePreview();
+        }
       }
       if (panRafRef.current === null) {
         lastFrameAtRef.current = 0;
@@ -281,7 +303,7 @@ export function WindbreakCameraControl({
         panRafRef.current = requestAnimationFrame(panFrame);
       }
     },
-    [panFrame],
+    [panFrame, updatePreview],
   );
 
   const stopZoomHold = useCallback(() => {
