@@ -609,6 +609,7 @@ code {
 }
 
 /* Live coordinate readout at the bottom of the map. */
+/* Styled exactly like Leaflet's basemap attribution box (bottom right). */
 .map-coords {
   position: absolute;
   left: 50%;
@@ -616,24 +617,28 @@ code {
   transform: translateX(-50%);
   z-index: 1000;
   display: flex;
-  gap: 6px;
+  gap: 5px;
   align-items: baseline;
   max-width: 92%;
-  padding: 4px 10px;
-  background: rgba(255, 255, 255, 0.94);
-  border: 1px solid var(--border);
-  border-radius: 6px;
-  font-size: 0.78rem;
-  color: var(--navy);
+  margin: 0;
+  padding: 0 5px;
+  background: rgba(255, 255, 255, 0.8);
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+  font-size: 12px;
+  line-height: 1.4;
+  color: #333;
   pointer-events: none;
   white-space: nowrap;
 }
 
-.map-coords-label {
-  color: var(--muted);
-  font-size: 0.72rem;
+.map-coords-label,
+.map-coords-value {
+  font-size: inherit;
+  color: inherit;
 }
 
 .map-coords-value {
-  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-variant-numeric: tabular-nums;
 }
