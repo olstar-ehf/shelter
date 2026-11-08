@@ -613,7 +613,7 @@ code {
 .map-coords {
   position: absolute;
   left: 50%;
-  bottom: 10px;
+  bottom: 0;
   transform: translateX(-50%);
   z-index: 1000;
   display: flex;
@@ -641,4 +641,20 @@ code {
 
 .map-coords-value {
   font-variant-numeric: tabular-nums;
+}
+
+/* On narrow screens the centred readout would overlap the attribution box;
+   stack it directly above the attribution instead (right-aligned, no gap
+   between the two boxes). */
+@media (max-width: 720px) {
+  .map-coords {
+    left: auto;
+    right: 0;
+    bottom: 18px;
+    transform: none;
+  }
+
+  .map-coords-label {
+    display: none;
+  }
 }
