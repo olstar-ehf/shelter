@@ -17,7 +17,7 @@ export const en = {
     cameraToggle: 'Camera mode',
     cameraToggleOff: 'Leave camera mode',
     cameraInstructions:
-      'Camera mode: the crosshair stays at the centre - the arrow keys move the map underneath it (Shift for fine steps). Hold Z to zoom in and X to zoom out. Space places a point; double-tap space finishes the line and camera mode stays on for the next one. Backspace removes the last point, Escape leaves camera mode.',
+      'Camera mode: the crosshair stays at the centre - the arrow keys move the map underneath it (hold to keep moving; Shift for fine steps). Hold Z to zoom in and X to zoom out. Space places a point; double-tap space finishes the line and camera mode stays on for the next one. Backspace removes the last point, Escape leaves camera mode.',
     cameraZoom: 'Zoom level {zoom}.',
     cameraPointPlaced: 'Point {n} placed at {lat}, {lon}.',
     cameraUndone: 'Last point removed.',

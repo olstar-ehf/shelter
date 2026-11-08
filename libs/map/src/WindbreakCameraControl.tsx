@@ -52,6 +52,11 @@ export function WindbreakCameraControl({
   // the line (like a double-click with the pointer).
   const zoomTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const zoomTargetRef = useRef(0);
+  // Holding an arrow key keeps panning until keyup: a timer applies the
+  // held directions, so movement does not depend on the OS key repeat.
+  const panTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const heldDirsRef = useRef<Set<string>>(new Set());
+  const panStepRef = useRef(COARSE_STEP_PX);
   const lastSpaceAtRef = useRef(0);
   const DOUBLE_SPACE_MS = 400;
 
@@ -145,6 +150,7 @@ export function WindbreakCameraControl({
     map.boxZoom.disable();
     tap?.disable();
     container.style.cursor = 'crosshair';
+    stopPan();
     zoomTargetRef.current = map.getZoom();
     lastSpaceAtRef.current = 0;
     setStatus(f('map.cameraInstructions'));
@@ -171,6 +177,47 @@ export function WindbreakCameraControl({
       clearPreview();
     };
   }, [cameraMode, clearPreview]);
+
+  const stopPan = useCallback(() => {
+    if (panTimerRef.current !== null) {
+      clearInterval(panTimerRef.current);
+      panTimerRef.current = null;
+    }
+    heldDirsRef.current.clear();
+  }, []);
+
+  const panTick = useCallback(() => {
+    const step = panStepRef.current;
+    let dx = 0;
+    let dy = 0;
+    if (heldDirsRef.current.has('ArrowUp')) {
+      dy -= step;
+    }
+    if (heldDirsRef.current.has('ArrowDown')) {
+      dy += step;
+    }
+    if (heldDirsRef.current.has('ArrowLeft')) {
+      dx -= step;
+    }
+    if (heldDirsRef.current.has('ArrowRight')) {
+      dx += step;
+    }
+    if (dx !== 0 || dy !== 0) {
+      map.panBy([dx, dy], { animate: false });
+    }
+  }, [map]);
+
+  const startPan = useCallback(
+    (key: string, step: number) => {
+      heldDirsRef.current.add(key);
+      panStepRef.current = step;
+      panTick();
+      if (panTimerRef.current === null) {
+        panTimerRef.current = setInterval(panTick, 70);
+      }
+    },
+    [panTick],
+  );
 
   const stopZoomHold = useCallback(() => {
     if (zoomTimerRef.current !== null) {
@@ -237,10 +284,6 @@ export function WindbreakCameraControl({
         return;
       }
       const step = event.shiftKey ? FINE_STEP_PX : COARSE_STEP_PX;
-      // Pan the map under the fixed crosshair (scope metaphor): the
-      // crosshair never moves, the world does.
-      const pan = (dx: number, dy: number) =>
-        map.panBy([dx, dy], { animate: false });
       if (event.repeat) {
         // Holding z/x is driven by the zoom timer; holding space/enter must
         // not place a stream of points (and must not scroll the page).
@@ -257,17 +300,10 @@ export function WindbreakCameraControl({
           startZoomHold(-1);
           break;
         case 'ArrowUp':
-          // panBy moves the view opposite to the offset: +y pans south.
-          pan(0, -step);
-          break;
         case 'ArrowDown':
-          pan(0, step);
-          break;
         case 'ArrowLeft':
-          pan(-step, 0);
-          break;
         case 'ArrowRight':
-          pan(step, 0);
+          startPan(event.key, step);
           break;
         case ' ':
           handleSpace();
@@ -292,6 +328,17 @@ export function WindbreakCameraControl({
         event.key === 'X'
       ) {
         stopZoomHold();
+      }
+      if (
+        event.key === 'ArrowUp' ||
+        event.key === 'ArrowDown' ||
+        event.key === 'ArrowLeft' ||
+        event.key === 'ArrowRight'
+      ) {
+        heldDirsRef.current.delete(event.key);
+        if (heldDirsRef.current.size === 0) {
+          stopPan();
+        }
       }
     };
     container.addEventListener('keydown', onKey);

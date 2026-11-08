@@ -362,6 +362,32 @@ async function main() {
     reviewEnabled: !document.getElementById('review-btn').disabled,
     pressed: document.querySelector('.camera-toggle').getAttribute('aria-pressed'),
   }));
+  const lineLength = (row) =>
+    page.evaluate((index) => {
+      const rows = [...document.querySelectorAll('#lines-body tr')];
+      const cells = rows[index] ? [...rows[index].querySelectorAll('td')] : [];
+      const match = cells[1] ? cells[1].textContent.match(/[\d.]+/) : null;
+      return match ? Number(match[0]) : null;
+    }, row);
+  const line1Length = await lineLength(0);
+
+  // Second line in the SAME camera-mode session, moved by holding the key:
+  // the held pan must make the line much longer than the tapped one.
+  await page.keyboard.press(' ');
+  await page.waitForTimeout(200);
+  await page.keyboard.down('ArrowDown');
+  await page.waitForTimeout(700);
+  await page.keyboard.up('ArrowDown');
+  await page.waitForTimeout(120);
+  await page.keyboard.press(' ');
+  await page.waitForTimeout(80);
+  await page.keyboard.press(' ');
+  await page.waitForTimeout(600);
+  const afterSecondLine = await page.evaluate(() => ({
+    count: document.getElementById('line-count').textContent.trim(),
+    pressed: document.querySelector('.camera-toggle').getAttribute('aria-pressed'),
+  }));
+  const line2Length = await lineLength(1);
 
   await page.click('.coords-entry summary');
   await page.fill(
@@ -388,7 +414,10 @@ async function main() {
     typeof cameraAnnouncement === 'string' && cameraAnnouncement.length > 0 &&
     afterCamera.count === '1' && afterCamera.reviewEnabled === true &&
     afterCamera.pressed === 'true' &&
-    afterCoords.count === '2' &&
+    typeof line1Length === 'number' && typeof line2Length === 'number' &&
+    line2Length > line1Length * 2 &&
+    afterSecondLine.count === '2' && afterSecondLine.pressed === 'true' &&
+    afterCoords.count === '3' &&
     typeof afterCoords.info === 'string' && afterCoords.info.length > 0 &&
     afterExit.pressed === 'false';
   console.log(
@@ -401,6 +430,9 @@ async function main() {
       zoomedOut,
       cameraAnnouncement,
       afterCamera,
+      line1Length,
+      afterSecondLine,
+      line2Length,
       afterCoords,
       afterExit,
     }),
