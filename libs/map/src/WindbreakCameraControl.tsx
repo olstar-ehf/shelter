@@ -23,8 +23,6 @@ interface WindbreakCameraControlProps {
   onLinesChange: (lines: WindbreakLine[]) => void;
   /** Ask the host to leave camera mode (Escape). */
   onExit: () => void;
-  /** Exposes the "finish line" action to the host's external button. */
-  finishRef?: React.MutableRefObject<(() => void) | null>;
 }
 
 /**
@@ -40,7 +38,6 @@ export function WindbreakCameraControl({
   featureGroup,
   onLinesChange,
   onExit,
-  finishRef,
 }: WindbreakCameraControlProps) {
   const map = useMap();
   const intl = useIntl();
@@ -152,9 +149,6 @@ export function WindbreakCameraControl({
     clearPreview();
     // Stay in camera mode so the next line can be drawn immediately.
   }, [featureGroup, onLinesChange, f, clearPreview]);
-  if (finishRef) {
-    finishRef.current = finish;
-  }
 
   // Entering camera mode: disable the map's pointer/keyboard handlers (the
   // pointer controls are also hidden by CSS while `.camera-mode`), put focus on

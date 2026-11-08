@@ -502,21 +502,6 @@ code {
   color: #fff;
 }
 
-.camera-finish {
-  background: var(--green);
-  color: #fff;
-  border: 1px solid var(--green-dark);
-  border-radius: 6px;
-  padding: 7px 12px;
-  font-size: 0.85rem;
-  font-weight: 600;
-  cursor: pointer;
-}
-
-.camera-finish:hover {
-  background: var(--green-dark);
-}
-
 .camera-help {
   flex-basis: 100%;
   font-size: 0.85rem;

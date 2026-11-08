@@ -23,7 +23,6 @@ export const is: MapMessages = {
     cameraZoom: 'Aðdráttarstig {zoom}.',
     cameraPointPlaced: 'Punktur {n} settur á {lat}, {lon}.',
     cameraUndone: 'Síðasti punktur fjarlægður.',
-    cameraFinish: 'Ljúka línu',
     cameraFinished: 'Línu bætt við. Myndavélahamur helst áfram.',
     cameraCancelled: 'Myndavélahamur afléttur.',
     cameraNeedPoints: 'Settu að minnsta kosti tvo punkta áður en línunni er lokað.',

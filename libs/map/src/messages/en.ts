@@ -21,7 +21,6 @@ export const en = {
     cameraZoom: 'Zoom level {zoom}.',
     cameraPointPlaced: 'Point {n} placed at {lat}, {lon}.',
     cameraUndone: 'Last point removed.',
-    cameraFinish: 'Finish line',
     cameraFinished: 'Line added. Camera mode stays on.',
     cameraCancelled: 'Camera mode off.',
     cameraNeedPoints: 'Place at least two points before finishing.',

@@ -73,8 +73,6 @@ export interface WindbreakMapProps {
   cameraMode?: boolean;
   /** Called when the map asks to leave aim mode (Escape or line finished). */
   onCameraExit?: () => void;
-  /** Exposes the "finish line" action to the host's external button. */
-  cameraApiRef?: React.MutableRefObject<(() => void) | null>;
 }
 
 /**
@@ -191,7 +189,6 @@ export function WindbreakMap({
   addLineRef,
   cameraMode = false,
   onCameraExit,
-  cameraApiRef,
 }: WindbreakMapProps) {
   const intl = useIntl();
 
@@ -381,7 +378,6 @@ export function WindbreakMap({
               featureGroup={drawnItemsRef.current}
               onLinesChange={onLinesChange}
               onExit={onCameraExit ?? (() => undefined)}
-              finishRef={cameraApiRef}
             />
             {addLineRef && (
               <LineAdder

@@ -316,6 +316,15 @@ async function main() {
   await page.waitForSelector('.leaflet-overlay-pane path', { timeout: 120000 });
   await page.waitForTimeout(1500);
 
+  // Pointer-mode toolbar: only the draw-line button; the edit-layer and
+  // trash-can buttons are removed and there is no Finish-line button.
+  const toolbar = await page.evaluate(() => ({
+    finishBtn: !!document.querySelector('.camera-finish'),
+    editBtn: !!document.querySelector('.leaflet-draw-edit-edit'),
+    removeBtn: !!document.querySelector('.leaflet-draw-edit-remove'),
+    drawPolyline: !!document.querySelector('.leaflet-draw-draw-polyline'),
+  }));
+
   await page.click('.camera-toggle');
   await page.waitForTimeout(400);
   const cameraPressed = await page.evaluate(() =>
@@ -407,6 +416,10 @@ async function main() {
   }));
 
   const session3Ok =
+    toolbar.finishBtn === false &&
+    toolbar.editBtn === false &&
+    toolbar.removeBtn === false &&
+    toolbar.drawPolyline === true &&
     cameraPressed === 'true' &&
     typeof zoomStart === 'number' &&
     zoomedIn > zoomStart &&
@@ -425,6 +438,7 @@ async function main() {
     session3Ok ? 'PASS' : 'FAIL',
     JSON.stringify({
       cameraPressed,
+      toolbar,
       zoomStart,
       zoomedIn,
       zoomedOut,

@@ -65,7 +65,6 @@ export default function WindbreakMapPane({
   // outside the map; while aiming the map's pointer controls are hidden and
   // its mouse handlers are disabled.
   const [cameraMode, setCameraMode] = useState(false);
-  const cameraApiRef = useRef<(() => void) | null>(null);
   const cameraToggleRef = useRef<HTMLButtonElement | null>(null);
   const exitCameraMode = () => {
     setCameraMode(false);
@@ -115,16 +114,7 @@ export default function WindbreakMapPane({
             {f(cameraMode ? 'map.cameraToggleOff' : 'map.cameraToggle')}
           </button>
           {cameraMode && (
-            <>
-              <button
-                type="button"
-                className="camera-finish"
-                onClick={() => cameraApiRef.current?.()}
-              >
-                {f('map.cameraFinish')}
-              </button>
-              <span className="camera-help muted">{f('map.cameraInstructions')}</span>
-            </>
+            <span className="camera-help muted">{f('map.cameraInstructions')}</span>
           )}
         </div>
       )}
@@ -141,7 +131,6 @@ export default function WindbreakMapPane({
           addLineRef={addLineRef}
           cameraMode={cameraMode}
           onCameraExit={exitCameraMode}
-          cameraApiRef={cameraApiRef}
           onLinesChange={onChange}
         />
       </div>

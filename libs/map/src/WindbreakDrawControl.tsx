@@ -34,8 +34,8 @@ interface WindbreakDrawControlProps {
 
 /**
  * Imperative leaflet-draw polyline control inside a react-leaflet map.
- * Only polyline drawing is enabled; edit/delete of the drawn lines is
- * allowed while the control is mounted.
+ * Only polyline drawing is enabled - there is no edit/delete toolbar
+ * (the trash-can and edit-layer buttons are intentionally absent).
  */
 export function WindbreakDrawControl({
   featureGroup,
@@ -76,7 +76,6 @@ export function WindbreakDrawControl({
           showLength: true,
         },
       },
-      edit: { featureGroup },
     });
     map.addControl(drawControl);
 
@@ -85,16 +84,12 @@ export function WindbreakDrawControl({
       featureGroup.addLayer(e.layer);
       emit();
     });
-    map.on(drawApi.Draw.Event.EDITED, () => emit());
-    map.on(drawApi.Draw.Event.DELETED, () => emit());
 
     return () => {
       // The feature group is owned by WindbreakMap (DrawnLinesLayer) and
       // stays on the map, so the drawn lines survive read-only toggles.
       map.removeControl(drawControl);
       map.off(drawApi.Draw.Event.CREATED);
-      map.off(drawApi.Draw.Event.EDITED);
-      map.off(drawApi.Draw.Event.DELETED);
     };
   }, [map, drawLocal, featureGroup]);
 
