@@ -25,6 +25,7 @@ export const en = {
     cameraFinished: 'Line added. Camera mode stays on.',
     cameraCancelled: 'Camera mode off.',
     cameraNeedPoints: 'Place at least two points before finishing.',
+    coordsDraftHint: 'The windbreak you are drawing appears here as WKT.',
     coordsSummary: 'Enter coordinates instead',
     coordsHelp:
       'Paste a WKT LINESTRING (lon lat, lon lat, ...) or one "lon,lat" pair per line. Separate multiple lines with a blank line. Coordinates are WGS84 (EPSG:4326).',

@@ -21,13 +21,20 @@ export function WindbreakCoordinateReadout({
   const map = useMap();
   const intl = useIntl();
   const [coords, setCoords] = useState<L.LatLng | null>(null);
+  const setCoordsIfChanged = (next: L.LatLng) => {
+    setCoords((current) =>
+      current && current.lat === next.lat && current.lng === next.lng
+        ? current
+        : next,
+    );
+  };
   const cameraModeRef = useRef(cameraMode);
   cameraModeRef.current = cameraMode;
 
   // Centre tracking: the map fires 'move' on every pan frame, so the
   // readout follows the crosshair while the camera glides.
   useEffect(() => {
-    const updateCentre = () => setCoords(map.getCenter());
+    const updateCentre = () => setCoordsIfChanged(map.getCenter());
     updateCentre();
     map.on('move', updateCentre);
     map.on('zoom', updateCentre);
@@ -44,7 +51,7 @@ export function WindbreakCoordinateReadout({
     const flush = () => {
       frame = null;
       if (pending) {
-        setCoords(pending);
+        setCoordsIfChanged(pending);
         pending = null;
       }
     };
@@ -59,7 +66,7 @@ export function WindbreakCoordinateReadout({
     };
     const onMouseOut = () => {
       if (!cameraModeRef.current) {
-        setCoords(map.getCenter());
+        setCoordsIfChanged(map.getCenter());
       }
     };
     map.on('mousemove', onMouseMove);

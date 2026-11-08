@@ -173,8 +173,13 @@ async function main() {
     await page.waitForTimeout(250);
     await page.mouse.click(to.x, to.y);
     await page.waitForTimeout(250);
+    // The line being drawn must show up as WKT in the coordinate box.
+    const draftWkt = await page
+      .inputValue('#coords-input')
+      .catch(() => null);
     await page.mouse.dblclick(finishAt.x, finishAt.y, { delay: 80 });
     await page.waitForTimeout(1200);
+    return draftWkt;
   };
 
   // ================= Session 1: draw + validation =================
@@ -185,9 +190,10 @@ async function main() {
   console.log('parcel bbox:', JSON.stringify(pts.bbox));
 
   // 1a. line inside the parcel
-  await drawLine(pts.p1, pts.p2, pts.p2);
+  const mouseDraftWkt = await drawLine(pts.p1, pts.p2, pts.p2);
   const s1 = await drawState();
   console.log('STEP 1a state:', JSON.stringify(s1));
+  console.log('mouse-mode draft WKT:', mouseDraftWkt);
 
   // 1b. line outside the parcels (left edge of the map view, turf-verified
   // outside the Garpsdalur polygon)
@@ -381,7 +387,8 @@ async function main() {
   await page.waitForTimeout(500);
   await page.keyboard.press('ArrowRight');
   await page.keyboard.press('ArrowRight');
-  await page.waitForTimeout(250);
+  await page.waitForTimeout(300);
+  const cameraDraftWkt = await page.inputValue('#coords-input').catch(() => null);
   await page.keyboard.press(' ');
   await page.waitForTimeout(80);
   await page.keyboard.press(' ');
@@ -423,7 +430,14 @@ async function main() {
   }));
   const line2Length = await lineLength(1);
 
-  await page.click('.coords-entry summary');
+  // The panel may already be open (it auto-opens while drawing in camera
+  // mode), so only toggle it when it is closed.
+  const coordsOpen = await page.evaluate(
+    () => document.querySelector('.coords-entry')?.open ?? false,
+  );
+  if (!coordsOpen) {
+    await page.click('.coords-entry summary');
+  }
   await page.fill(
     '#coords-input',
     'LINESTRING (-21.805 65.485, -21.795 65.485)',
@@ -473,7 +487,13 @@ async function main() {
     pressed: document.querySelector('.camera-toggle').getAttribute('aria-pressed'),
   }));
 
+  const wktOk = (wkt) =>
+    typeof wkt === 'string' &&
+    wkt.startsWith('LINESTRING (') &&
+    wkt.endsWith(')') &&
+    wkt.split(',').length >= 2;
   const session3Ok =
+    wktOk(cameraDraftWkt) &&
     typeof pointerCoordsA === 'string' &&
     typeof pointerCoordsB === 'string' &&
     coordsPattern.test(pointerCoordsA) && coordsPattern.test(pointerCoordsB) &&
@@ -510,6 +530,7 @@ async function main() {
     session3Ok ? 'PASS' : 'FAIL',
     JSON.stringify({
       cameraPressed,
+      cameraDraftWkt,
       pointerCoordsA,
       pointerCoordsB,
       cameraCoordsA,
@@ -550,6 +571,7 @@ async function main() {
 
   const pass =
     isLanding.cta && isLanding.title &&
+    wktOk(mouseDraftWkt) &&
     session1Ok && session2Ok && session3Ok &&
     pageErrors.length === 0 && originsOk && cspOk;
   console.log(pass ? 'E2E RESULT: PASS' : 'E2E RESULT: FAIL');

@@ -4,6 +4,7 @@ import { useMap } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet-draw';
 import { linesFromFeatureGroup } from './lines';
+import { formatWktLine } from './wkt';
 import { messages, type Locale } from './messages';
 import type { WindbreakLine } from './types';
 
@@ -18,6 +19,9 @@ type LeafletDrawApi = typeof import('leaflet') & {
       CREATED: string;
       EDITED: string;
       DELETED: string;
+      DRAWSTART: string;
+      DRAWVERTEX: string;
+      DRAWSTOP: string;
     };
   };
 };
@@ -30,6 +34,8 @@ interface WindbreakDrawControlProps {
   featureGroup: L.FeatureGroup;
   /** Report the drawn lines (GeoJSON + length) on every change. */
   onLinesChange: (lines: WindbreakLine[]) => void;
+  /** Reports the line being drawn as WKT (null when no line is in progress). */
+  onDraftChange?: (wkt: string | null) => void;
 }
 
 /**
@@ -40,11 +46,14 @@ interface WindbreakDrawControlProps {
 export function WindbreakDrawControl({
   featureGroup,
   onLinesChange,
+  onDraftChange,
 }: WindbreakDrawControlProps) {
   const map = useMap();
   const intl = useIntl();
   const onLinesChangeRef = useRef(onLinesChange);
   onLinesChangeRef.current = onLinesChange;
+  const onDraftChangeRef = useRef(onDraftChange);
+  onDraftChangeRef.current = onDraftChange;
 
   const drawLocal = useMemo(() => {
     const locale: Locale = intl.locale === 'is' ? 'is' : 'en';
@@ -85,11 +94,73 @@ export function WindbreakDrawControl({
       emit();
     });
 
+    // Live draft of the line being drawn with the mouse: the vertices
+    // placed so far plus the current pointer position, as WKT.
+    let drawing = false;
+    let vertices: L.LatLng[] = [];
+    let lastDraftAt = 0;
+    const DRAFT_THROTTLE_MS = 120;
+    const emitDraft = (pointer?: L.LatLng, immediate = false) => {
+      const cb = onDraftChangeRef.current;
+      if (!cb) {
+        return;
+      }
+      const now = performance.now();
+      if (!immediate && now - lastDraftAt < DRAFT_THROTTLE_MS) {
+        return;
+      }
+      lastDraftAt = now;
+      if (!drawing || vertices.length === 0) {
+        cb(null);
+        return;
+      }
+      cb(formatWktLine(pointer ? [...vertices, pointer] : vertices));
+    };
+    const readVertices = (event: unknown): L.LatLng[] => {
+      const layers = (event as { layers?: L.LayerGroup }).layers;
+      const points: L.LatLng[] = [];
+      layers?.eachLayer((layer) => {
+        const marker = layer as L.Marker;
+        if (typeof marker.getLatLng === 'function') {
+          points.push(marker.getLatLng());
+        }
+      });
+      return points;
+    };
+    const onDrawStart = () => {
+      drawing = true;
+      vertices = [];
+      emitDraft(undefined, true);
+    };
+    const onDrawVertex = (event: unknown) => {
+      vertices = readVertices(event);
+      emitDraft();
+    };
+    const onDrawStop = () => {
+      drawing = false;
+      vertices = [];
+      emitDraft(undefined, true);
+    };
+    const onMouseMoveDraft = (event: L.LeafletMouseEvent) => {
+      if (drawing && vertices.length > 0) {
+        emitDraft(event.latlng);
+      }
+    };
+    map.on(drawApi.Draw.Event.DRAWSTART, onDrawStart);
+    map.on(drawApi.Draw.Event.DRAWVERTEX, onDrawVertex);
+    map.on(drawApi.Draw.Event.DRAWSTOP, onDrawStop);
+    map.on(drawApi.Draw.Event.CREATED, onDrawStop);
+    map.on('mousemove', onMouseMoveDraft);
+
     return () => {
       // The feature group is owned by WindbreakMap (DrawnLinesLayer) and
       // stays on the map, so the drawn lines survive read-only toggles.
       map.removeControl(drawControl);
       map.off(drawApi.Draw.Event.CREATED);
+      map.off(drawApi.Draw.Event.DRAWSTART, onDrawStart);
+      map.off(drawApi.Draw.Event.DRAWVERTEX, onDrawVertex);
+      map.off(drawApi.Draw.Event.DRAWSTOP, onDrawStop);
+      map.off('mousemove', onMouseMoveDraft);
     };
   }, [map, drawLocal, featureGroup]);
 

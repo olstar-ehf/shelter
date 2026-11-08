@@ -7,7 +7,7 @@
  * imports it through React.lazy so the server-side render of the form
  * stops at the static skeleton and never pulls Leaflet into the SSR bundle.
  */
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type { KeyboardEvent } from 'react';
 import { useIntl } from 'react-intl';
 import {
@@ -59,6 +59,16 @@ export default function WindbreakMapPane({
     null,
   );
   const removeLineRef = useRef<((clientId: string) => void) | null>(null);
+  // Live WKT of the line currently being drawn (camera or mouse mode).
+  const [draftWkt, setDraftWkt] = useState<string | null>(null);
+  const coordsDetailsRef = useRef<HTMLDetailsElement | null>(null);
+  const hasDraft = draftWkt !== null;
+  // Open the coordinate box so the live WKT is visible while drawing.
+  useEffect(() => {
+    if (hasDraft && coordsDetailsRef.current) {
+      coordsDetailsRef.current.open = true;
+    }
+  }, [hasDraft]);
   const [coordsText, setCoordsText] = useState('');
   const [coordsError, setCoordsError] = useState<string | null>(null);
   const [coordsInfo, setCoordsInfo] = useState<string | null>(null);
@@ -164,6 +174,7 @@ export default function WindbreakMapPane({
           removeLineRef={removeLineRef}
           cameraMode={cameraMode}
           onCameraExit={exitCameraMode}
+          onDraftLineChange={setDraftWkt}
           onLinesChange={onChange}
         />
       </div>
@@ -182,7 +193,7 @@ export default function WindbreakMapPane({
       </div>
 
       {!reviewing && (
-        <details className="coords-entry">
+        <details className="coords-entry" ref={coordsDetailsRef}>
           <summary>{f('map.coordsSummary')}</summary>
           <p className="muted" id="coords-help">
             {f('map.coordsHelp')}
@@ -194,11 +205,19 @@ export default function WindbreakMapPane({
             id="coords-input"
             className="coords-input"
             rows={3}
-            value={coordsText}
+            value={draftWkt ?? coordsText}
+            readOnly={hasDraft}
             placeholder={f('map.coordsPlaceholder')}
-            aria-describedby="coords-help"
+            aria-describedby={
+              hasDraft ? 'coords-help coords-draft-hint' : 'coords-help'
+            }
             onChange={(event) => setCoordsText(event.target.value)}
           />
+          {hasDraft && (
+            <p className="muted" id="coords-draft-hint">
+              {f('map.coordsDraftHint')}
+            </p>
+          )}
           <div className="step-actions">
             <button
               type="button"

@@ -3,6 +3,7 @@ import { useIntl } from 'react-intl';
 import { useMap } from 'react-leaflet';
 import L from 'leaflet';
 import { linesFromFeatureGroup } from './lines';
+import { formatWktLine } from './wkt';
 import type { WindbreakLine } from './types';
 
 /** A single key press nudges the map by this many pixels. */
@@ -23,6 +24,8 @@ interface WindbreakCameraControlProps {
   onLinesChange: (lines: WindbreakLine[]) => void;
   /** Ask the host to leave camera mode (Escape). */
   onExit: () => void;
+  /** Reports the in-progress line as WKT (null when none). */
+  onDraftChange?: (wkt: string | null) => void;
 }
 
 /**
@@ -38,6 +41,7 @@ export function WindbreakCameraControl({
   featureGroup,
   onLinesChange,
   onExit,
+  onDraftChange,
 }: WindbreakCameraControlProps) {
   const map = useMap();
   const intl = useIntl();
@@ -51,6 +55,10 @@ export function WindbreakCameraControl({
   const previewRef = useRef<L.Polyline | null>(null);
   const exitRef = useRef(onExit);
   exitRef.current = onExit;
+  const onDraftChangeRef = useRef(onDraftChange);
+  onDraftChangeRef.current = onDraftChange;
+  const lastDraftAtRef = useRef(0);
+  const DRAFT_THROTTLE_MS = 120;
   // Hold-to-zoom (z/x) drives its own timer; the browser's key auto-repeat
   // is ignored so the speed is consistent. Double-tapping space finishes
   // the line (like a double-click with the pointer).
@@ -80,7 +88,34 @@ export function WindbreakCameraControl({
     previewRef.current = null;
     pointsRef.current = [];
     setPoints([]);
+    onDraftChangeRef.current?.(null);
   }, []);
+
+  /**
+   * Reports the line being drawn (placed points + the crosshair end) as
+   * WKT, throttled so the textarea updates without re-rendering the page on
+   * every pan frame.
+   */
+  const emitDraft = useCallback(
+    (immediate = false) => {
+      const cb = onDraftChangeRef.current;
+      if (!cb) {
+        return;
+      }
+      const now = performance.now();
+      if (!immediate && now - lastDraftAtRef.current < DRAFT_THROTTLE_MS) {
+        return;
+      }
+      lastDraftAtRef.current = now;
+      const placed = pointsRef.current;
+      cb(
+        placed.length === 0
+          ? null
+          : formatWktLine([...placed, map.getCenter()]),
+      );
+    },
+    [map],
+  );
 
   /**
    * The provisional (dashed) line: the placed points plus the crosshair
@@ -92,8 +127,10 @@ export function WindbreakCameraControl({
     if (placed.length === 0) {
       previewRef.current?.remove();
       previewRef.current = null;
+      emitDraft(true);
       return;
     }
+    emitDraft();
     const latlngs = [...placed, map.getCenter()];
     if (!previewRef.current) {
       previewRef.current = L.polyline(latlngs, {

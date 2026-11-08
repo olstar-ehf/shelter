@@ -27,6 +27,7 @@ export const is: MapMessages = {
     cameraFinished: 'Línu bætt við. Myndavélahamur helst áfram.',
     cameraCancelled: 'Myndavélahamur afléttur.',
     cameraNeedPoints: 'Settu að minnsta kosti tvo punkta áður en línunni er lokað.',
+    coordsDraftHint: 'Skjólbeltið sem þú ert að teikna birtist hér sem WKT.',
     coordsSummary: 'Sláðu inn hnit í staðinn',
     coordsHelp:
       'Límdu WKT LINESTRING (lon lat, lon lat, ...) eða eitt "lon,lat" hnit par í hverri línu. Tóma lína skilur að skjólbeltalínur. Hnit eru í WGS84 (EPSG:4326).',

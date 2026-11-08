@@ -57,6 +57,12 @@ export interface WindbreakMapProps {
    * the line on the map can be matched at a glance.
    */
   selectedClientId?: string | null;
+  /**
+   * Reports the line currently being drawn (mouse drawing or camera mode)
+   * as a WKT LINESTRING, or null when no line is in progress. Used to show
+   * the live draft in the coordinate textarea.
+   */
+  onDraftLineChange?: (wkt: string | null) => void;
   /** Read-only mode hides the draw/edit controls (e.g. review step). */
   readOnly?: boolean;
   /** Fit the view to the parcels once the map is ready (default true). */
@@ -232,6 +238,7 @@ export function WindbreakMap({
   removeLineRef,
   cameraMode = false,
   onCameraExit,
+  onDraftLineChange,
 }: WindbreakMapProps) {
   const intl = useIntl();
 
@@ -419,12 +426,14 @@ export function WindbreakMap({
             <WindbreakDrawControl
               featureGroup={drawnItemsRef.current}
               onLinesChange={onLinesChange}
+              onDraftChange={onDraftLineChange}
             />
             <WindbreakCameraControl
               cameraMode={cameraMode}
               featureGroup={drawnItemsRef.current}
               onLinesChange={onLinesChange}
               onExit={onCameraExit ?? (() => undefined)}
+              onDraftChange={onDraftLineChange}
             />
             {addLineRef && (
               <LineAdder
