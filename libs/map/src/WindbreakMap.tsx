@@ -10,7 +10,7 @@ import {
 } from 'react-leaflet';
 import type { Feature, FeatureCollection } from 'geojson';
 import L from 'leaflet';
-import { WindbreakAimControl } from './WindbreakAimControl';
+import { WindbreakCameraControl } from './WindbreakCameraControl';
 import { WindbreakDrawControl } from './WindbreakDrawControl';
 import { WindbreakLegend } from './WindbreakLegend';
 import { linesFromFeatureGroup } from './lines';
@@ -66,15 +66,15 @@ export interface WindbreakMapProps {
     ((points: Array<[number, number]>) => void) | null
   >;
   /**
-   * Keyboard aim mode ("aim and shoot"), controlled by the host's button
+   * Keyboard camera mode, controlled by the host's button
    * outside the map. While active the map's pointer controls are hidden
    * and its mouse handlers disabled.
    */
-  aimMode?: boolean;
+  cameraMode?: boolean;
   /** Called when the map asks to leave aim mode (Escape or line finished). */
-  onAimExit?: () => void;
+  onCameraExit?: () => void;
   /** Exposes the "finish line" action to the host's external button. */
-  aimApiRef?: React.MutableRefObject<(() => void) | null>;
+  cameraApiRef?: React.MutableRefObject<(() => void) | null>;
 }
 
 /**
@@ -189,9 +189,9 @@ export function WindbreakMap({
   height = '480px',
   onLinesChange,
   addLineRef,
-  aimMode = false,
-  onAimExit,
-  aimApiRef,
+  cameraMode = false,
+  onCameraExit,
+  cameraApiRef,
 }: WindbreakMapProps) {
   const intl = useIntl();
 
@@ -376,12 +376,12 @@ export function WindbreakMap({
               featureGroup={drawnItemsRef.current}
               onLinesChange={onLinesChange}
             />
-            <WindbreakAimControl
-              aiming={aimMode}
+            <WindbreakCameraControl
+              cameraMode={cameraMode}
               featureGroup={drawnItemsRef.current}
               onLinesChange={onLinesChange}
-              onExit={onAimExit ?? (() => undefined)}
-              finishRef={aimApiRef}
+              onExit={onCameraExit ?? (() => undefined)}
+              finishRef={cameraApiRef}
             />
             {addLineRef && (
               <LineAdder

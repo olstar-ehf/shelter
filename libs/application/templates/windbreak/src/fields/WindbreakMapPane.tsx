@@ -61,15 +61,15 @@ export default function WindbreakMapPane({
   const [coordsError, setCoordsError] = useState<string | null>(null);
   const [coordsInfo, setCoordsInfo] = useState<string | null>(null);
 
-  // Keyboard aim mode ("aim and shoot"): the toggle and finish buttons live
+  // Keyboard camera mode: the toggle and finish buttons live
   // outside the map; while aiming the map's pointer controls are hidden and
   // its mouse handlers are disabled.
-  const [aiming, setAiming] = useState(false);
-  const aimApiRef = useRef<(() => void) | null>(null);
-  const aimToggleRef = useRef<HTMLButtonElement | null>(null);
-  const exitAim = () => {
-    setAiming(false);
-    aimToggleRef.current?.focus();
+  const [cameraMode, setCameraMode] = useState(false);
+  const cameraApiRef = useRef<(() => void) | null>(null);
+  const cameraToggleRef = useRef<HTMLButtonElement | null>(null);
+  const exitCameraMode = () => {
+    setCameraMode(false);
+    cameraToggleRef.current?.focus();
   };
 
   const addCoordinateLines = () => {
@@ -104,32 +104,32 @@ export default function WindbreakMapPane({
   return (
     <>
       {!reviewing && (
-        <div className="aim-bar">
+        <div className="camera-bar">
           <button
-            ref={aimToggleRef}
+            ref={cameraToggleRef}
             type="button"
-            className="aim-toggle"
-            aria-pressed={aiming}
-            onClick={() => (aiming ? exitAim() : setAiming(true))}
+            className="camera-toggle"
+            aria-pressed={cameraMode}
+            onClick={() => (cameraMode ? exitCameraMode() : setCameraMode(true))}
           >
-            {f(aiming ? 'map.aimToggleOff' : 'map.aimToggle')}
+            {f(cameraMode ? 'map.cameraToggleOff' : 'map.cameraToggle')}
           </button>
-          {aiming && (
+          {cameraMode && (
             <>
               <button
                 type="button"
-                className="aim-finish"
-                onClick={() => aimApiRef.current?.()}
+                className="camera-finish"
+                onClick={() => cameraApiRef.current?.()}
               >
-                {f('map.aimFinish')}
+                {f('map.cameraFinish')}
               </button>
-              <span className="aim-help muted">{f('map.aimInstructions')}</span>
+              <span className="camera-help muted">{f('map.cameraInstructions')}</span>
             </>
           )}
         </div>
       )}
 
-      <div className={aiming ? 'map-container aiming' : 'map-container'}>
+      <div className={cameraMode ? 'map-container camera-mode' : 'map-container'}>
         <WindbreakMap
           parcels={parcels}
           existingWindbreaks={windbreaks}
@@ -139,9 +139,9 @@ export default function WindbreakMapPane({
           height="100%"
           lineStatuses={lineStatuses}
           addLineRef={addLineRef}
-          aimMode={aiming}
-          onAimExit={exitAim}
-          aimApiRef={aimApiRef}
+          cameraMode={cameraMode}
+          onCameraExit={exitCameraMode}
+          cameraApiRef={cameraApiRef}
           onLinesChange={onChange}
         />
       </div>

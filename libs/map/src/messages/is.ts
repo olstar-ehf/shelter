@@ -16,17 +16,17 @@ export const is: MapMessages = {
     popupPending: 'Umsókn í bið {applicationId} — ekki samþykkt enn',
     insideLand: 'Innan lands þíns',
 
-    aimToggle: 'Teikna með lyklaborði',
-    aimToggleOff: 'Hætta að teikna með lyklaborði',
-    aimInstructions:
-      'Nákvæmnisteikning: krossinn stendur kyrr í miðjunni - örvar færa kortið undir honum (Shift gefur fína skref). Haltu Z niðri til að þysja inn og X til að þysja út. Space setur punkt; tvísmelltu á space til að ljúka línunni. Backspace fjarlægir síðasta punkt, Escape hættir.',
-    aimZoom: 'Aðdráttarstig {zoom}.',
-    aimPointPlaced: 'Punktur {n} settur á {lat}, {lon}.',
-    aimUndone: 'Síðasti punktur fjarlægður.',
-    aimFinish: 'Ljúka línu',
-    aimFinished: 'Línu bætt við.',
-    aimCancelled: 'Nákvæmnisteikning aflétt.',
-    aimNeedPoints: 'Settu að minnsta kosti tvo punkta áður en línunni er lokað.',
+    cameraToggle: 'Myndavélahamur',
+    cameraToggleOff: 'Hætta í myndavélaham',
+    cameraInstructions:
+      'Myndavélahamur: krossinn stendur kyrr í miðjunni - örvar færa kortið undir honum (Shift gefur fína skref). Haltu Z niðri til að þysja inn og X til að þysja út. Space setur punkt; tvísmelltu á space til að ljúka línunni og myndavélahamur helst áfram fyrir næstu línu. Backspace fjarlægir síðasta punkt, Escape hættir í myndavélaham.',
+    cameraZoom: 'Aðdráttarstig {zoom}.',
+    cameraPointPlaced: 'Punktur {n} settur á {lat}, {lon}.',
+    cameraUndone: 'Síðasti punktur fjarlægður.',
+    cameraFinish: 'Ljúka línu',
+    cameraFinished: 'Línu bætt við. Myndavélahamur helst áfram.',
+    cameraCancelled: 'Myndavélahamur afléttur.',
+    cameraNeedPoints: 'Settu að minnsta kosti tvo punkta áður en línunni er lokað.',
     coordsSummary: 'Sláðu inn hnit í staðinn',
     coordsHelp:
       'Límdu WKT LINESTRING (lon lat, lon lat, ...) eða eitt "lon,lat" hnit par í hverri línu. Tóma lína skilur að skjólbeltalínur. Hnit eru í WGS84 (EPSG:4326).',

@@ -14,17 +14,17 @@ export const en = {
     popupPending: 'Pending application {applicationId} — not accepted yet',
     insideLand: 'Inside your land',
 
-    aimToggle: 'Point with the keyboard',
-    aimToggleOff: 'Leave keyboard pointing',
-    aimInstructions:
-      'Aim mode: the crosshair stays at the centre - the arrow keys move the map underneath it (Shift for fine steps). Hold Z to zoom in and X to zoom out. Space places a point; double-tap space finishes the line. Backspace removes the last point, Escape leaves aim mode.',
-    aimZoom: 'Zoom level {zoom}.',
-    aimPointPlaced: 'Point {n} placed at {lat}, {lon}.',
-    aimUndone: 'Last point removed.',
-    aimFinish: 'Finish line',
-    aimFinished: 'Line added.',
-    aimCancelled: 'Aim mode off.',
-    aimNeedPoints: 'Place at least two points before finishing.',
+    cameraToggle: 'Camera mode',
+    cameraToggleOff: 'Leave camera mode',
+    cameraInstructions:
+      'Camera mode: the crosshair stays at the centre - the arrow keys move the map underneath it (Shift for fine steps). Hold Z to zoom in and X to zoom out. Space places a point; double-tap space finishes the line and camera mode stays on for the next one. Backspace removes the last point, Escape leaves camera mode.',
+    cameraZoom: 'Zoom level {zoom}.',
+    cameraPointPlaced: 'Point {n} placed at {lat}, {lon}.',
+    cameraUndone: 'Last point removed.',
+    cameraFinish: 'Finish line',
+    cameraFinished: 'Line added. Camera mode stays on.',
+    cameraCancelled: 'Camera mode off.',
+    cameraNeedPoints: 'Place at least two points before finishing.',
     coordsSummary: 'Enter coordinates instead',
     coordsHelp:
       'Paste a WKT LINESTRING (lon lat, lon lat, ...) or one "lon,lat" pair per line. Separate multiple lines with a blank line. Coordinates are WGS84 (EPSG:4326).',

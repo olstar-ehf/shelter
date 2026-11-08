@@ -8,33 +8,33 @@ import type { WindbreakLine } from './types';
 const COARSE_STEP_PX = 14;
 const FINE_STEP_PX = 2;
 
-interface WindbreakAimControlProps {
-  /** Whether keyboard aim mode is active (owned by the host UI). */
-  aiming: boolean;
+interface WindbreakCameraControlProps {
+  /** Whether camera mode is active (owned by the host UI). */
+  cameraMode: boolean;
   /** The drawn-lines group shared with the pointer draw control. */
   featureGroup: L.FeatureGroup;
   onLinesChange: (lines: WindbreakLine[]) => void;
-  /** Ask the host to leave aim mode (Escape or after finishing a line). */
+  /** Ask the host to leave camera mode (Escape). */
   onExit: () => void;
   /** Exposes the "finish line" action to the host's external button. */
   finishRef?: React.MutableRefObject<(() => void) | null>;
 }
 
 /**
- * Keyboard-only line input ("aim and shoot"), controlled by the host UI's
- * button outside the map. While aiming, the map's pointer controls are
+ * Keyboard-only line input ("camera mode"), controlled by the host UI's
+ * button outside the map. While in camera mode, the map's pointer controls are
  * hidden and its mouse handlers disabled: the crosshair is fixed at the
  * map centre, arrow keys pan the world under it, +/- zoom, and Enter/Space
  * places a point. Placed lines are written into the same feature group as
  * pointer drawing, so validation and the red/green styling are unchanged.
  */
-export function WindbreakAimControl({
-  aiming,
+export function WindbreakCameraControl({
+  cameraMode,
   featureGroup,
   onLinesChange,
   onExit,
   finishRef,
-}: WindbreakAimControlProps) {
+}: WindbreakCameraControlProps) {
   const map = useMap();
   const intl = useIntl();
   const intlRef = useRef(intl);
@@ -87,7 +87,7 @@ export function WindbreakAimControl({
       previewRef.current.setLatLngs(next);
     }
     setStatus(
-      f('map.aimPointPlaced', {
+      f('map.cameraPointPlaced', {
         n: next.length,
         lat: latlng.lat.toFixed(4),
         lon: latlng.lng.toFixed(4),
@@ -100,12 +100,12 @@ export function WindbreakAimControl({
     pointsRef.current = next;
     setPoints(next);
     previewRef.current?.setLatLngs(next);
-    setStatus(f('map.aimUndone'));
+    setStatus(f('map.cameraUndone'));
   }, [f]);
 
   const finish = useCallback(() => {
     if (pointsRef.current.length < 2) {
-      setStatus(f('map.aimNeedPoints'));
+      setStatus(f('map.cameraNeedPoints'));
       return;
     }
     const line = L.polyline(pointsRef.current, {
@@ -115,19 +115,19 @@ export function WindbreakAimControl({
     });
     featureGroup.addLayer(line);
     onLinesChange(linesFromFeatureGroup(featureGroup));
-    setStatus(f('map.aimFinished'));
+    setStatus(f('map.cameraFinished'));
     clearPreview();
-    exitRef.current();
+    // Stay in camera mode so the next line can be drawn immediately.
   }, [featureGroup, onLinesChange, f, clearPreview]);
   if (finishRef) {
     finishRef.current = finish;
   }
 
-  // Entering aim mode: disable the map's pointer/keyboard handlers (the
-  // pointer controls are also hidden by CSS while `.aiming`), put focus on
+  // Entering camera mode: disable the map's pointer/keyboard handlers (the
+  // pointer controls are also hidden by CSS while `.camera-mode`), put focus on
   // the map and announce the key map.
   useEffect(() => {
-    if (!aiming) {
+    if (!cameraMode) {
       return;
     }
     const container = map.getContainer();
@@ -147,7 +147,7 @@ export function WindbreakAimControl({
     container.style.cursor = 'crosshair';
     zoomTargetRef.current = map.getZoom();
     lastSpaceAtRef.current = 0;
-    setStatus(f('map.aimInstructions'));
+    setStatus(f('map.cameraInstructions'));
     container.focus();
     return () => {
       container.style.cursor = '';
@@ -159,24 +159,24 @@ export function WindbreakAimControl({
       // Keep double-click zoom off (finishing a line must not zoom).
       map.doubleClickZoom.disable();
     };
-  }, [aiming, map, f]);
+  }, [cameraMode, map, f]);
 
-  // Clear a half-drawn preview whenever aim mode ends or on unmount.
+  // Clear a half-drawn preview whenever camera mode ends or on unmount.
   useEffect(() => {
-    if (!aiming) {
+    if (!cameraMode) {
       clearPreview();
       return;
     }
     return () => {
       clearPreview();
     };
-  }, [aiming, clearPreview]);
+  }, [cameraMode, clearPreview]);
 
   const stopZoomHold = useCallback(() => {
     if (zoomTimerRef.current !== null) {
       clearInterval(zoomTimerRef.current);
       zoomTimerRef.current = null;
-      setStatus(f('map.aimZoom', { zoom: zoomTargetRef.current }));
+      setStatus(f('map.cameraZoom', { zoom: zoomTargetRef.current }));
     }
   }, [f]);
 
@@ -216,19 +216,19 @@ export function WindbreakAimControl({
     placePoint();
   }, [finish, placePoint]);
 
-  // Keyboard handling while aiming: arrows pan the map under the fixed
+  // Keyboard handling while cameraMode: arrows pan the map under the fixed
   // crosshair, z/x zoom (hold to keep zooming), space places a point and a
   // double-tap of space finishes the line, Enter places a point, Backspace
   // undoes, Escape cancels.
   useEffect(() => {
-    if (!aiming) {
+    if (!cameraMode) {
       return;
     }
     const container = map.getContainer();
     const onKey = (event: KeyboardEvent) => {
-      // Escape always leaves aim mode, whatever has focus.
+      // Escape always leaves camera mode, whatever has focus.
       if (event.key === 'Escape') {
-        setStatus(f('map.aimCancelled'));
+        setStatus(f('map.cameraCancelled'));
         exitRef.current();
         event.preventDefault();
         return;
@@ -301,11 +301,11 @@ export function WindbreakAimControl({
       container.removeEventListener('keyup', onKeyUp);
       stopZoomHold();
     };
-  }, [aiming, map, placePoint, undo, f, startZoomHold, stopZoomHold, handleSpace]);
+  }, [cameraMode, map, placePoint, undo, f, startZoomHold, stopZoomHold, handleSpace]);
 
   return (
     <>
-      {aiming && <div className="aim-reticle" aria-hidden="true" />}
+      {cameraMode && <div className="camera-reticle" aria-hidden="true" />}
       <div className="sr-only" role="status" aria-live="polite">
         {status}
       </div>

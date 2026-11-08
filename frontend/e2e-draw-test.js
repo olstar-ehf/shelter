@@ -316,10 +316,10 @@ async function main() {
   await page.waitForSelector('.leaflet-overlay-pane path', { timeout: 120000 });
   await page.waitForTimeout(1500);
 
-  await page.click('.aim-toggle');
+  await page.click('.camera-toggle');
   await page.waitForTimeout(400);
-  const aimPressed = await page.evaluate(() =>
-    document.querySelector('.aim-toggle').getAttribute('aria-pressed'),
+  const cameraPressed = await page.evaluate(() =>
+    document.querySelector('.camera-toggle').getAttribute('aria-pressed'),
   );
   const zoomLevel = () =>
     page.evaluate(() => {
@@ -352,14 +352,15 @@ async function main() {
   await page.waitForTimeout(80);
   await page.keyboard.press(' ');
   await page.waitForTimeout(700);
-  const aimAnnouncement = await page.evaluate(() => {
+  const cameraAnnouncement = await page.evaluate(() => {
     const live = document.querySelector('.windbreak-map [role="status"]');
     return live ? live.textContent.trim() : null;
   });
-  const afterAim = await page.evaluate(() => ({
+  // Finishing a line must KEEP camera mode on for the next line.
+  const afterCamera = await page.evaluate(() => ({
     count: document.getElementById('line-count').textContent.trim(),
     reviewEnabled: !document.getElementById('review-btn').disabled,
-    pressed: document.querySelector('.aim-toggle').getAttribute('aria-pressed'),
+    pressed: document.querySelector('.camera-toggle').getAttribute('aria-pressed'),
   }));
 
   await page.click('.coords-entry summary');
@@ -373,28 +374,35 @@ async function main() {
     count: document.getElementById('line-count').textContent.trim(),
     info: document.querySelector('.coords-entry [role="status"]')?.textContent.trim() ?? null,
   }));
+  await page.click('.camera-toggle');
+  await page.waitForTimeout(300);
+  const afterExit = await page.evaluate(() => ({
+    pressed: document.querySelector('.camera-toggle').getAttribute('aria-pressed'),
+  }));
 
   const session3Ok =
-    aimPressed === 'true' &&
+    cameraPressed === 'true' &&
     typeof zoomStart === 'number' &&
     zoomedIn > zoomStart &&
     zoomedOut < zoomedIn &&
-    typeof aimAnnouncement === 'string' && aimAnnouncement.length > 0 &&
-    afterAim.count === '1' && afterAim.reviewEnabled === true &&
-    afterAim.pressed === 'false' &&
+    typeof cameraAnnouncement === 'string' && cameraAnnouncement.length > 0 &&
+    afterCamera.count === '1' && afterCamera.reviewEnabled === true &&
+    afterCamera.pressed === 'true' &&
     afterCoords.count === '2' &&
-    typeof afterCoords.info === 'string' && afterCoords.info.length > 0;
+    typeof afterCoords.info === 'string' && afterCoords.info.length > 0 &&
+    afterExit.pressed === 'false';
   console.log(
     'SESSION 3:',
     session3Ok ? 'PASS' : 'FAIL',
     JSON.stringify({
-      aimPressed,
+      cameraPressed,
       zoomStart,
       zoomedIn,
       zoomedOut,
-      aimAnnouncement,
-      afterAim,
+      cameraAnnouncement,
+      afterCamera,
       afterCoords,
+      afterExit,
     }),
   );
 

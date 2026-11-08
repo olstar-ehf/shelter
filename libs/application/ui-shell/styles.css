@@ -472,8 +472,8 @@ code {
   border: 0;
 }
 
-/* The aim controls live outside the map, in a bar above it. */
-.aim-bar {
+/* The camera-mode controls live outside the map, in a bar above it. */
+.camera-bar {
   display: flex;
   align-items: center;
   gap: 10px;
@@ -481,7 +481,7 @@ code {
   margin: 0 0 10px;
 }
 
-.aim-toggle {
+.camera-toggle {
   background: #fff;
   border: 1px solid var(--navy);
   border-radius: 6px;
@@ -492,17 +492,17 @@ code {
   cursor: pointer;
 }
 
-.aim-toggle:hover {
+.camera-toggle:hover {
   background: var(--navy);
   color: #fff;
 }
 
-.aim-toggle[aria-pressed='true'] {
+.camera-toggle[aria-pressed='true'] {
   background: var(--navy);
   color: #fff;
 }
 
-.aim-finish {
+.camera-finish {
   background: var(--green);
   color: #fff;
   border: 1px solid var(--green-dark);
@@ -513,24 +513,24 @@ code {
   cursor: pointer;
 }
 
-.aim-finish:hover {
+.camera-finish:hover {
   background: var(--green-dark);
 }
 
-.aim-help {
+.camera-help {
   flex-basis: 100%;
   font-size: 0.85rem;
   line-height: 1.4;
 }
 
-/* While aiming, the map's pointer controls are hidden and the map itself
+/* In camera mode, the map's pointer controls are hidden and the map itself
    only responds to the keyboard (see WindbreakAimControl). */
-.map-container.aiming .leaflet-control-zoom,
-.map-container.aiming .leaflet-draw {
+.map-container.camera-mode .leaflet-control-zoom,
+.map-container.camera-mode .leaflet-draw {
   display: none;
 }
 
-.aim-reticle {
+.camera-reticle {
   position: absolute;
   z-index: 1001;
   left: 50%;
@@ -543,14 +543,14 @@ code {
   pointer-events: none;
 }
 
-.aim-reticle::before,
-.aim-reticle::after {
+.camera-reticle::before,
+.camera-reticle::after {
   content: '';
   position: absolute;
   background: var(--danger);
 }
 
-.aim-reticle::before {
+.camera-reticle::before {
   left: 50%;
   top: -7px;
   bottom: -7px;
@@ -558,7 +558,7 @@ code {
   transform: translateX(-1px);
 }
 
-.aim-reticle::after {
+.camera-reticle::after {
   top: 50%;
   left: -7px;
   right: -7px;
