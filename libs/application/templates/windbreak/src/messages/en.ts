@@ -45,6 +45,7 @@ export const windbreakEn = {
     colActions: 'Actions',
     removeAction: 'Remove',
     removeLine: 'Remove windbreak line {n}',
+    selectHint: 'Select a line in the table to highlight it on the map.',
     totalLength: 'Total length:',
   },
   actions: {

@@ -8,6 +8,7 @@
  * stops at the static skeleton and never pulls Leaflet into the SSR bundle.
  */
 import { useRef, useState } from 'react';
+import type { KeyboardEvent } from 'react';
 import { useIntl } from 'react-intl';
 import {
   totalLengthM,
@@ -66,6 +67,35 @@ export default function WindbreakMapPane({
   // outside the map; while aiming the map's pointer controls are hidden and
   // its mouse handlers are disabled.
   const [cameraMode, setCameraMode] = useState(false);
+  // The line selected in the drawn-windbreaks table is highlighted on the
+  // map (thicker, blue) so row and line can be matched at a glance.
+  const [selectedClientId, setSelectedClientId] = useState<string | null>(null);
+  const toggleSelection = (clientId: string) => {
+    setSelectedClientId((current) => (current === clientId ? null : clientId));
+  };
+  const removeLine = (clientId: string) => {
+    if (selectedClientId === clientId) {
+      setSelectedClientId(null);
+    }
+    removeLineRef.current?.(clientId);
+  };
+  const selectRowProps = (clientId: string) =>
+    reviewing
+      ? {}
+      : {
+          className:
+            selectedClientId === clientId ? 'line-row selected' : 'line-row',
+          tabIndex: 0,
+          'aria-current':
+            selectedClientId === clientId ? ('true' as const) : undefined,
+          onClick: () => toggleSelection(clientId),
+          onKeyDown: (event: KeyboardEvent<HTMLTableRowElement>) => {
+            if (event.key === 'Enter' || event.key === ' ') {
+              event.preventDefault();
+              toggleSelection(clientId);
+            }
+          },
+        };
   const cameraToggleRef = useRef<HTMLButtonElement | null>(null);
   const exitCameraMode = () => {
     setCameraMode(false);
@@ -129,6 +159,7 @@ export default function WindbreakMapPane({
           legend={false}
           height="100%"
           lineStatuses={lineStatuses}
+          selectedClientId={selectedClientId}
           addLineRef={addLineRef}
           removeLineRef={removeLineRef}
           cameraMode={cameraMode}
@@ -198,6 +229,11 @@ export default function WindbreakMapPane({
         <p className="muted" id="no-lines" hidden={lines.length > 0}>
           {f('windbreak.lines.none')}
         </p>
+        {!reviewing && lines.length > 0 && (
+          <p className="muted" id="lines-hint">
+            {f('windbreak.lines.selectHint')}
+          </p>
+        )}
         <table
           className="lines-table"
           id="lines-table"
@@ -224,7 +260,7 @@ export default function WindbreakMapPane({
               if (validation.status === 'error') {
                 const message = f(validation.messageId, validation.values);
                 return (
-                  <tr key={entry.line.clientId}>
+                  <tr key={entry.line.clientId} {...selectRowProps(entry.line.clientId)}>
                     <td>{index + 1}</td>
                     <td>{Math.round(entry.line.lengthM)} m</td>
                     <td>—</td>
@@ -241,9 +277,10 @@ export default function WindbreakMapPane({
                           aria-label={f('windbreak.lines.removeLine', {
                             n: index + 1,
                           })}
-                          onClick={() =>
-                            removeLineRef.current?.(entry.line.clientId)
-                          }
+                          onClick={(event) => {
+                            event.stopPropagation();
+                            removeLine(entry.line.clientId);
+                          }}
                         >
                           {f('windbreak.lines.removeAction')}
                         </button>
@@ -253,7 +290,7 @@ export default function WindbreakMapPane({
                 );
               }
               return (
-                <tr key={entry.line.clientId}>
+                <tr key={entry.line.clientId} {...selectRowProps(entry.line.clientId)}>
                   <td>{index + 1}</td>
                   <td>{Math.round(entry.line.lengthM)} m</td>
                   <td>{parcelName(validation.parcelId)}</td>
@@ -268,9 +305,10 @@ export default function WindbreakMapPane({
                         aria-label={f('windbreak.lines.removeLine', {
                           n: index + 1,
                         })}
-                        onClick={() =>
-                          removeLineRef.current?.(entry.line.clientId)
-                        }
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          removeLine(entry.line.clientId);
+                        }}
                       >
                         {f('windbreak.lines.removeAction')}
                       </button>

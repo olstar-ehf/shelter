@@ -409,6 +409,28 @@ async function main() {
     count: document.getElementById('line-count').textContent.trim(),
     info: document.querySelector('.coords-entry [role="status"]')?.textContent.trim() ?? null,
   }));
+  // Selecting a table row highlights that windbreak on the map.
+  const selectedInfo = () =>
+    page.evaluate(() => ({
+      bluePaths: [...document.querySelectorAll('.leaflet-overlay-pane path')]
+        .filter((path) => path.getAttribute('stroke') === '#1565c0').length,
+    }));
+  await page.click('#lines-body tr:nth-child(1)');
+  await page.waitForTimeout(400);
+  const selection1 = await page.evaluate(() => ({
+    current: document.querySelector('#lines-body tr:nth-child(1)').getAttribute('aria-current'),
+    selectedClass: document.querySelector('#lines-body tr:nth-child(1)').classList.contains('selected'),
+    ...{},
+  }));
+  selection1.bluePaths = (await selectedInfo()).bluePaths;
+  await page.click('#lines-body tr:nth-child(2)');
+  await page.waitForTimeout(400);
+  const selection2 = await page.evaluate(() => ({
+    firstCurrent: document.querySelector('#lines-body tr:nth-child(1)').getAttribute('aria-current'),
+    secondCurrent: document.querySelector('#lines-body tr:nth-child(2)').getAttribute('aria-current'),
+  }));
+  selection2.bluePaths = (await selectedInfo()).bluePaths;
+
   // Each drawn windbreak has a remove button in the table; use the last one.
   const removeButtonCount = await page.evaluate(
     () => document.querySelectorAll('#lines-body .line-remove').length,
@@ -443,6 +465,10 @@ async function main() {
     afterSecondLine.count === '2' && afterSecondLine.pressed === 'true' &&
     afterCoords.count === '3' &&
     typeof afterCoords.info === 'string' && afterCoords.info.length > 0 &&
+    selection1.current === 'true' && selection1.selectedClass === true &&
+    selection1.bluePaths >= 1 &&
+    selection2.firstCurrent === null && selection2.secondCurrent === 'true' &&
+    selection2.bluePaths >= 1 &&
     removeButtonCount === 3 &&
     afterDelete.count === '2' && afterDelete.rows === 2 &&
     afterExit.pressed === 'false';
@@ -461,6 +487,8 @@ async function main() {
       afterSecondLine,
       line2Length,
       afterCoords,
+      selection1,
+      selection2,
       removeButtonCount,
       afterDelete,
       afterExit,

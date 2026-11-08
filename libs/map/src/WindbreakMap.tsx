@@ -50,6 +50,12 @@ export interface WindbreakMapProps {
    * a glance; everything else keeps the green drawn-line colour.
    */
   lineStatuses?: Record<string, 'ok' | 'error'>;
+  /**
+   * clientId of the line selected in the drawn-windbreaks table. The
+   * selected line is highlighted on the map (thicker, blue) so the row and
+   * the line on the map can be matched at a glance.
+   */
+  selectedClientId?: string | null;
   /** Read-only mode hides the draw/edit controls (e.g. review step). */
   readOnly?: boolean;
   /** Fit the view to the parcels once the map is ready (default true). */
@@ -213,6 +219,7 @@ export function WindbreakMap({
   basemap,
   drawnLines,
   lineStatuses,
+  selectedClientId = null,
   readOnly = false,
   fitToData = true,
   legend = true,
@@ -272,14 +279,22 @@ export function WindbreakMap({
   );
 
   // Valid lines keep the green drawn-line colour; invalid lines (outside
-  // the land, or crossing/touching an existing windbreak) render red.
-  const drawnStyle = (feature?: Feature) => {
-    const clientId = (feature?.properties as { clientId?: string } | undefined)
-      ?.clientId;
+  // the land, or crossing/touching an existing windbreak) render red; the
+  // line selected in the table is highlighted (thicker, blue).
+  const styleForLine = (clientId: string | null | undefined) => {
+    if (clientId && clientId === selectedClientId) {
+      return { color: '#1565c0', weight: 7, opacity: 1 };
+    }
     if (clientId && lineStatuses?.[clientId] === 'error') {
       return { color: '#b3261e', weight: 4, opacity: 0.9 };
     }
     return { color: '#2e7d32', weight: 4, opacity: 0.9 };
+  };
+
+  const drawnStyle = (feature?: Feature) => {
+    const clientId = (feature?.properties as { clientId?: string } | undefined)
+      ?.clientId;
+    return styleForLine(clientId);
   };
 
   // The live drawn lines are the leaflet-draw feature group's layers
@@ -298,14 +313,9 @@ export function WindbreakMap({
       if (typeof anyLayer.setStyle !== 'function') {
         return;
       }
-      const clientId = `line-${anyLayer._leaflet_id}`;
-      anyLayer.setStyle(
-        lineStatuses?.[clientId] === 'error'
-          ? { color: '#b3261e', weight: 4, opacity: 0.9 }
-          : { color: '#2e7d32', weight: 4, opacity: 0.9 },
-      );
+      anyLayer.setStyle(styleForLine(`line-${anyLayer._leaflet_id}`));
     });
-  }, [lineStatuses, drawnLines]);
+  }, [lineStatuses, drawnLines, selectedClientId]);
 
   return (
     <div className="windbreak-map">

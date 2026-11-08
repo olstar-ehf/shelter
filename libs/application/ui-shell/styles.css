@@ -589,3 +589,21 @@ code {
 .line-remove:hover {
   background: var(--danger-bg);
 }
+
+/* Selectable rows in the drawn-windbreaks table (draw step). */
+.lines-table tr.line-row {
+  cursor: pointer;
+}
+
+.lines-table tr.line-row:hover {
+  background: #f2f6fa;
+}
+
+.lines-table tr.line-row.selected {
+  background: #e3ecf5;
+}
+
+.lines-table tr.line-row:focus-visible {
+  outline: 3px solid var(--navy);
+  outline-offset: -2px;
+}
