@@ -5,8 +5,15 @@ import L from 'leaflet';
 import { linesFromFeatureGroup } from './lines';
 import type { WindbreakLine } from './types';
 
-const COARSE_STEP_PX = 14;
-const FINE_STEP_PX = 2;
+/** A single key press nudges the map by this many pixels. */
+const NUDGE_PX = 14;
+const FINE_NUDGE_PX = 2;
+/** Camera panning speed while an arrow key is held (pixels per second). */
+const PAN_SPEED_PX_PER_S = 320;
+/** Fine panning speed with Shift held. */
+const FINE_SPEED_PX_PER_S = 90;
+/** How often tiles are refreshed during a long held pan (ms). */
+const TILE_REFRESH_MS = 250;
 
 interface WindbreakCameraControlProps {
   /** Whether camera mode is active (owned by the host UI). */
@@ -52,11 +59,16 @@ export function WindbreakCameraControl({
   // the line (like a double-click with the pointer).
   const zoomTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const zoomTargetRef = useRef(0);
-  // Holding an arrow key keeps panning until keyup: a timer applies the
-  // held directions, so movement does not depend on the OS key repeat.
-  const panTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  // Holding an arrow key keeps panning until keyup. The movement runs in a
+  // requestAnimationFrame loop with small, time-based steps (like Leaflet's
+  // own drag panning), so it glides instead of jumping. Fractional pixels
+  // are carried over between frames so the speed is exact.
+  const panRafRef = useRef<number | null>(null);
   const heldDirsRef = useRef<Set<string>>(new Set());
-  const panStepRef = useRef(COARSE_STEP_PX);
+  const panSpeedRef = useRef(PAN_SPEED_PX_PER_S);
+  const panAccumRef = useRef({ x: 0, y: 0 });
+  const lastFrameAtRef = useRef(0);
+  const lastTileRefreshRef = useRef(0);
   const lastSpaceAtRef = useRef(0);
   const DOUBLE_SPACE_MS = 400;
 
@@ -178,45 +190,98 @@ export function WindbreakCameraControl({
     };
   }, [cameraMode, clearPreview]);
 
-  const stopPan = useCallback(() => {
-    if (panTimerRef.current !== null) {
-      clearInterval(panTimerRef.current);
-      panTimerRef.current = null;
-    }
-    heldDirsRef.current.clear();
-  }, []);
-
-  const panTick = useCallback(() => {
-    const step = panStepRef.current;
-    let dx = 0;
-    let dy = 0;
-    if (heldDirsRef.current.has('ArrowUp')) {
-      dy -= step;
-    }
-    if (heldDirsRef.current.has('ArrowDown')) {
-      dy += step;
-    }
-    if (heldDirsRef.current.has('ArrowLeft')) {
-      dx -= step;
-    }
-    if (heldDirsRef.current.has('ArrowRight')) {
-      dx += step;
-    }
-    if (dx !== 0 || dy !== 0) {
-      map.panBy([dx, dy], { animate: false });
-    }
-  }, [map]);
-
-  const startPan = useCallback(
-    (key: string, step: number) => {
-      heldDirsRef.current.add(key);
-      panStepRef.current = step;
-      panTick();
-      if (panTimerRef.current === null) {
-        panTimerRef.current = setInterval(panTick, 70);
+  /** Moves the map without firing a full moveend on every frame. */
+  const rawPan = useCallback(
+    (dx: number, dy: number) => {
+      const internals = map as unknown as {
+        _rawPanBy?: (offset: L.Point) => void;
+      };
+      if (typeof internals._rawPanBy === 'function') {
+        internals._rawPanBy(L.point(dx, dy));
+        map.fire('move');
+      } else {
+        map.panBy([dx, dy], { animate: false });
       }
     },
-    [panTick],
+    [map],
+  );
+
+  const stopPan = useCallback(() => {
+    if (panRafRef.current !== null) {
+      cancelAnimationFrame(panRafRef.current);
+      panRafRef.current = null;
+      // Let the tile layer catch up with the final position.
+      map.fire('moveend');
+    }
+    heldDirsRef.current.clear();
+    panAccumRef.current = { x: 0, y: 0 };
+  }, [map]);
+
+  const panFrame = useCallback(
+    (now: number) => {
+      const last = lastFrameAtRef.current || now;
+      const dt = Math.min((now - last) / 1000, 0.1);
+      lastFrameAtRef.current = now;
+
+      const dirX =
+        (heldDirsRef.current.has('ArrowRight') ? 1 : 0) -
+        (heldDirsRef.current.has('ArrowLeft') ? 1 : 0);
+      const dirY =
+        (heldDirsRef.current.has('ArrowDown') ? 1 : 0) -
+        (heldDirsRef.current.has('ArrowUp') ? 1 : 0);
+
+      if (dirX === 0 && dirY === 0) {
+        stopPan();
+        return;
+      }
+
+      // Diagonal movement must not be faster than straight movement.
+      const normalise = dirX !== 0 && dirY !== 0 ? Math.SQRT1_2 : 1;
+      const distance = panSpeedRef.current * dt * normalise;
+      panAccumRef.current.x += dirX * distance;
+      panAccumRef.current.y += dirY * distance;
+      const stepX = Math.trunc(panAccumRef.current.x);
+      const stepY = Math.trunc(panAccumRef.current.y);
+      panAccumRef.current.x -= stepX;
+      panAccumRef.current.y -= stepY;
+
+      if (stepX !== 0 || stepY !== 0) {
+        rawPan(stepX, stepY);
+      }
+
+      // Refresh the tiles a few times per second during long pans; firing
+      // moveend on every frame would churn the tile layer.
+      if (now - lastTileRefreshRef.current > TILE_REFRESH_MS) {
+        lastTileRefreshRef.current = now;
+        map.fire('moveend');
+      }
+      panRafRef.current = requestAnimationFrame(panFrame);
+    },
+    [map, rawPan, stopPan],
+  );
+
+  const startPan = useCallback(
+    (key: string, speed: number, fine: boolean) => {
+      heldDirsRef.current.add(key);
+      panSpeedRef.current = speed;
+      // The first press moves immediately, so a quick tap is still a nudge
+      // (a key released before the next animation frame would not move at
+      // all otherwise).
+      const nudge = fine ? FINE_NUDGE_PX : NUDGE_PX;
+      const dx =
+        key === 'ArrowRight' ? nudge : key === 'ArrowLeft' ? -nudge : 0;
+      const dy = key === 'ArrowDown' ? nudge : key === 'ArrowUp' ? -nudge : 0;
+      if (dx !== 0 || dy !== 0) {
+        map.panBy([dx, dy], { animate: false });
+      }
+      if (panRafRef.current === null) {
+        lastFrameAtRef.current = 0;
+        lastTileRefreshRef.current = 0;
+        panAccumRef.current = { x: 0, y: 0 };
+        panRafRef.current = requestAnimationFrame(panFrame);
+      }
+    },
+    [panFrame],
   );
 
   const stopZoomHold = useCallback(() => {
@@ -283,7 +348,9 @@ export function WindbreakCameraControl({
       if (event.target !== container) {
         return;
       }
-      const step = event.shiftKey ? FINE_STEP_PX : COARSE_STEP_PX;
+      panSpeedRef.current = event.shiftKey
+        ? FINE_SPEED_PX_PER_S
+        : PAN_SPEED_PX_PER_S;
       if (event.repeat) {
         // Holding z/x is driven by the zoom timer; holding space/enter must
         // not place a stream of points (and must not scroll the page).
@@ -303,7 +370,11 @@ export function WindbreakCameraControl({
         case 'ArrowDown':
         case 'ArrowLeft':
         case 'ArrowRight':
-          startPan(event.key, step);
+          startPan(
+            event.key,
+            event.shiftKey ? FINE_SPEED_PX_PER_S : PAN_SPEED_PX_PER_S,
+            event.shiftKey,
+          );
           break;
         case ' ':
           handleSpace();
