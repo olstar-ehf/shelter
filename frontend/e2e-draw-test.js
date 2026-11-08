@@ -321,22 +321,45 @@ async function main() {
   const aimPressed = await page.evaluate(() =>
     document.querySelector('.aim-toggle').getAttribute('aria-pressed'),
   );
-  await page.keyboard.press('ArrowLeft');
-  await page.keyboard.press('ArrowLeft');
-  await page.keyboard.press('Enter');
-  await page.keyboard.press('ArrowRight');
-  await page.keyboard.press('ArrowRight');
-  await page.keyboard.press('Enter');
+  const zoomLevel = () =>
+    page.evaluate(() => {
+      const live = document.querySelector('.windbreak-map [role="status"]');
+      const match = (live?.textContent ?? '').match(/\d+/);
+      return match ? Number(match[0]) : null;
+    });
+  // One x tap announces a baseline level; holding z must raise it, holding
+  // x must lower it again.
+  await page.keyboard.press('x');
   await page.waitForTimeout(300);
+  const zoomStart = await zoomLevel();
+  await page.keyboard.down('z');
+  await page.waitForTimeout(700);
+  await page.keyboard.up('z');
+  await page.waitForTimeout(300);
+  const zoomedIn = await zoomLevel();
+  await page.keyboard.down('x');
+  await page.waitForTimeout(700);
+  await page.keyboard.up('x');
+  await page.waitForTimeout(300);
+  const zoomedOut = await zoomLevel();
+  // Place two points with the spacebar, then double-tap space to finish.
+  await page.keyboard.press(' ');
+  await page.waitForTimeout(500);
+  await page.keyboard.press('ArrowRight');
+  await page.keyboard.press('ArrowRight');
+  await page.waitForTimeout(250);
+  await page.keyboard.press(' ');
+  await page.waitForTimeout(80);
+  await page.keyboard.press(' ');
+  await page.waitForTimeout(700);
   const aimAnnouncement = await page.evaluate(() => {
     const live = document.querySelector('.windbreak-map [role="status"]');
     return live ? live.textContent.trim() : null;
   });
-  await page.click('.aim-finish');
-  await page.waitForTimeout(700);
   const afterAim = await page.evaluate(() => ({
     count: document.getElementById('line-count').textContent.trim(),
     reviewEnabled: !document.getElementById('review-btn').disabled,
+    pressed: document.querySelector('.aim-toggle').getAttribute('aria-pressed'),
   }));
 
   await page.click('.coords-entry summary');
@@ -353,14 +376,26 @@ async function main() {
 
   const session3Ok =
     aimPressed === 'true' &&
+    typeof zoomStart === 'number' &&
+    zoomedIn > zoomStart &&
+    zoomedOut < zoomedIn &&
     typeof aimAnnouncement === 'string' && aimAnnouncement.length > 0 &&
     afterAim.count === '1' && afterAim.reviewEnabled === true &&
+    afterAim.pressed === 'false' &&
     afterCoords.count === '2' &&
     typeof afterCoords.info === 'string' && afterCoords.info.length > 0;
   console.log(
     'SESSION 3:',
     session3Ok ? 'PASS' : 'FAIL',
-    JSON.stringify({ aimPressed, aimAnnouncement, afterAim, afterCoords }),
+    JSON.stringify({
+      aimPressed,
+      zoomStart,
+      zoomedIn,
+      zoomedOut,
+      aimAnnouncement,
+      afterAim,
+      afterCoords,
+    }),
   );
 
   console.log('pageerrors:', pageErrors.length ? pageErrors : 'none');

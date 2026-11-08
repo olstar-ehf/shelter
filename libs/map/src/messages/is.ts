@@ -19,7 +19,7 @@ export const is: MapMessages = {
     aimToggle: 'Teikna með lyklaborði',
     aimToggleOff: 'Hætta að teikna með lyklaborði',
     aimInstructions:
-      'Nákvæmnisteikning: krossinn stendur kyrr í miðjunni - örvar færa kortið undir honum (Shift gefur fína skref), + og - aðdrætti. Enter setur punkt, Backspace fjarlægir síðasta punkt, Escape hættir.',
+      'Nákvæmnisteikning: krossinn stendur kyrr í miðjunni - örvar færa kortið undir honum (Shift gefur fína skref). Haltu Z niðri til að þysja inn og X til að þysja út. Space setur punkt; tvísmelltu á space til að ljúka línunni. Backspace fjarlægir síðasta punkt, Escape hættir.',
     aimZoom: 'Aðdráttarstig {zoom}.',
     aimPointPlaced: 'Punktur {n} settur á {lat}, {lon}.',
     aimUndone: 'Síðasti punktur fjarlægður.',

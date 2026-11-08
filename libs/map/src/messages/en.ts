@@ -17,7 +17,7 @@ export const en = {
     aimToggle: 'Point with the keyboard',
     aimToggleOff: 'Leave keyboard pointing',
     aimInstructions:
-      'Aim mode: the crosshair stays at the centre - the arrow keys move the map underneath it (Shift for fine steps), + and - zoom. Enter places a point, Backspace removes the last point, Escape leaves aim mode.',
+      'Aim mode: the crosshair stays at the centre - the arrow keys move the map underneath it (Shift for fine steps). Hold Z to zoom in and X to zoom out. Space places a point; double-tap space finishes the line. Backspace removes the last point, Escape leaves aim mode.',
     aimZoom: 'Zoom level {zoom}.',
     aimPointPlaced: 'Point {n} placed at {lat}, {lon}.',
     aimUndone: 'Last point removed.',

@@ -47,6 +47,13 @@ export function WindbreakAimControl({
   const previewRef = useRef<L.Polyline | null>(null);
   const exitRef = useRef(onExit);
   exitRef.current = onExit;
+  // Hold-to-zoom (z/x) drives its own timer; the browser's key auto-repeat
+  // is ignored so the speed is consistent. Double-tapping space finishes
+  // the line (like a double-click with the pointer).
+  const zoomTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const zoomTargetRef = useRef(0);
+  const lastSpaceAtRef = useRef(0);
+  const DOUBLE_SPACE_MS = 400;
 
   const f = useCallback(
     (id: string, values?: Record<string, string | number>): string =>
@@ -138,6 +145,8 @@ export function WindbreakAimControl({
     map.boxZoom.disable();
     tap?.disable();
     container.style.cursor = 'crosshair';
+    zoomTargetRef.current = map.getZoom();
+    lastSpaceAtRef.current = 0;
     setStatus(f('map.aimInstructions'));
     container.focus();
     return () => {
@@ -163,9 +172,54 @@ export function WindbreakAimControl({
     };
   }, [aiming, clearPreview]);
 
+  const stopZoomHold = useCallback(() => {
+    if (zoomTimerRef.current !== null) {
+      clearInterval(zoomTimerRef.current);
+      zoomTimerRef.current = null;
+      setStatus(f('map.aimZoom', { zoom: zoomTargetRef.current }));
+    }
+  }, [f]);
+
+  const startZoomHold = useCallback(
+    (delta: number) => {
+      if (zoomTimerRef.current !== null) {
+        return;
+      }
+      const stepZoom = () => {
+        const min = map.getMinZoom();
+        const max = map.getMaxZoom();
+        const next = Math.min(
+          Number.isFinite(max) ? max : Infinity,
+          Math.max(
+            Number.isFinite(min) ? min : -Infinity,
+            zoomTargetRef.current + delta,
+          ),
+        );
+        zoomTargetRef.current = next;
+        map.setZoom(next);
+      };
+      stepZoom();
+      zoomTimerRef.current = setInterval(stepZoom, 180);
+    },
+    [map],
+  );
+
+  const handleSpace = useCallback(() => {
+    const now = Date.now();
+    if (now - lastSpaceAtRef.current <= DOUBLE_SPACE_MS) {
+      // The second tap of a double-tap: finish at the last placed point.
+      lastSpaceAtRef.current = 0;
+      finish();
+      return;
+    }
+    lastSpaceAtRef.current = now;
+    placePoint();
+  }, [finish, placePoint]);
+
   // Keyboard handling while aiming: arrows pan the map under the fixed
-  // crosshair, + / - zoom, Enter/Space places a point, Backspace undoes,
-  // Escape cancels.
+  // crosshair, z/x zoom (hold to keep zooming), space places a point and a
+  // double-tap of space finishes the line, Enter places a point, Backspace
+  // undoes, Escape cancels.
   useEffect(() => {
     if (!aiming) {
       return;
@@ -187,36 +241,21 @@ export function WindbreakAimControl({
       // crosshair never moves, the world does.
       const pan = (dx: number, dy: number) =>
         map.panBy([dx, dy], { animate: false });
-      // getZoom() updates only after the zoom animation; announce the
-      // clamped target level instead of the current one.
-      const nextZoom = (delta: number): number => {
-        const min = map.getMinZoom();
-        const max = map.getMaxZoom();
-        return Math.min(
-          Number.isFinite(max) ? max : Infinity,
-          Math.max(
-            Number.isFinite(min) ? min : -Infinity,
-            map.getZoom() + delta,
-          ),
-        );
-      };
+      if (event.repeat) {
+        // Holding z/x is driven by the zoom timer; holding space/enter must
+        // not place a stream of points (and must not scroll the page).
+        event.preventDefault();
+        return;
+      }
       switch (event.key) {
-        case '+':
-        case '=':
-        case 'Add': {
-          const target = nextZoom(1);
-          map.setZoom(target);
-          setStatus(f('map.aimZoom', { zoom: target }));
+        case 'z':
+        case 'Z':
+          startZoomHold(1);
           break;
-        }
-        case '-':
-        case '_':
-        case 'Subtract': {
-          const target = nextZoom(-1);
-          map.setZoom(target);
-          setStatus(f('map.aimZoom', { zoom: target }));
+        case 'x':
+        case 'X':
+          startZoomHold(-1);
           break;
-        }
         case 'ArrowUp':
           // panBy moves the view opposite to the offset: +y pans south.
           pan(0, -step);
@@ -230,8 +269,10 @@ export function WindbreakAimControl({
         case 'ArrowRight':
           pan(step, 0);
           break;
-        case 'Enter':
         case ' ':
+          handleSpace();
+          break;
+        case 'Enter':
           placePoint();
           break;
         case 'Backspace':
@@ -243,11 +284,24 @@ export function WindbreakAimControl({
       event.preventDefault();
       event.stopPropagation();
     };
+    const onKeyUp = (event: KeyboardEvent) => {
+      if (
+        event.key === 'z' ||
+        event.key === 'Z' ||
+        event.key === 'x' ||
+        event.key === 'X'
+      ) {
+        stopZoomHold();
+      }
+    };
     container.addEventListener('keydown', onKey);
+    container.addEventListener('keyup', onKeyUp);
     return () => {
       container.removeEventListener('keydown', onKey);
+      container.removeEventListener('keyup', onKeyUp);
+      stopZoomHold();
     };
-  }, [aiming, map, placePoint, undo, f]);
+  }, [aiming, map, placePoint, undo, f, startZoomHold, stopZoomHold, handleSpace]);
 
   return (
     <>
