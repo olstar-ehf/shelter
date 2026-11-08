@@ -553,6 +553,22 @@ async function main() {
     }),
   );
 
+  // Basemap attribution is localized (institution name).
+  const attributionText = () =>
+    page.evaluate(() =>
+      (document.querySelector('.leaflet-control-attribution')?.textContent ?? '').trim(),
+    );
+  await page.goto(`${APP_URL}apply?lang=is`, { waitUntil: 'domcontentloaded', timeout: 120000 });
+  await page.waitForSelector('.leaflet-control-attribution', { timeout: 120000 });
+  const attributionIs = await attributionText();
+  await page.goto(`${APP_URL}apply?lang=en`, { waitUntil: 'domcontentloaded', timeout: 120000 });
+  await page.waitForSelector('.leaflet-control-attribution', { timeout: 120000 });
+  const attributionEn = await attributionText();
+  const attributionOk =
+    attributionIs.includes('Kortagögn: Náttúrufræðistofnun') &&
+    attributionEn.includes('Nature Science Institute of Iceland');
+  console.log('basemap attribution:', JSON.stringify({ attributionIs, attributionEn, attributionOk }));
+
   console.log('pageerrors:', pageErrors.length ? pageErrors : 'none');
   console.log('console errors:', consoleErrors.length ? consoleErrors.slice(0, 5) : 'none');
   console.log(
@@ -572,6 +588,7 @@ async function main() {
   const pass =
     isLanding.cta && isLanding.title &&
     wktOk(mouseDraftWkt) &&
+    attributionOk &&
     session1Ok && session2Ok && session3Ok &&
     pageErrors.length === 0 && originsOk && cspOk;
   console.log(pass ? 'E2E RESULT: PASS' : 'E2E RESULT: FAIL');

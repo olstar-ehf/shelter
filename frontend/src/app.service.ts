@@ -291,7 +291,9 @@ export class AppService {
         `${this.pygeoapiUrl}/collections/basemap/tiles/WebMercatorQuad/{z}/{y}/{x}.png`,
       attribution:
         process.env.WINDBREAK_BASEMAP_ATTRIBUTION ??
-        'Kortagögn: Náttúrustofa Íslands',
+        (locale === 'is'
+          ? 'Kortagögn: Náttúrufræðistofnun'
+          : 'Map data: Nature Science Institute of Iceland'),
       maxZoom: Number(process.env.WINDBREAK_BASEMAP_MAX_ZOOM ?? 16),
     };
 

@@ -136,7 +136,7 @@ APIRequest.from_flask = from_flask
 from pygeoapi.flask_app import APP  # noqa: E402,F401
 
 # ---- Basemap tile proxy ------------------------------------------------------
-# The national basemap (Náttúrustofa Íslands / former Landmælingar Íslands)
+# The national basemap (Náttúrufræðistofnun Íslands / former Landmælingar Íslands)
 # is served from ogc.gis.is. The app maps through this OGC API service so
 # the browser only ever contacts our own origin.
 
@@ -444,7 +444,7 @@ def _tileset_metadata():
             "title": "Windbreak basemap",
             "description": (
                 "The national basemap assembled by the windbreak backend: "
-                "Náttúrustofa grunnkort tiles composited with the Ornefni "
+                "Náttúrufræðistofnun grunnkort tiles composited with the Ornefni "
                 "place-name layer, rendered as seamless metatiles."
             ),
             "crs": "http://www.opengis.net/def/crs/EPSG/0/3857",
