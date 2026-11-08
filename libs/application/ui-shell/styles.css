@@ -607,3 +607,33 @@ code {
   outline: 3px solid var(--navy);
   outline-offset: -2px;
 }
+
+/* Live coordinate readout at the bottom of the map. */
+.map-coords {
+  position: absolute;
+  left: 50%;
+  bottom: 10px;
+  transform: translateX(-50%);
+  z-index: 1000;
+  display: flex;
+  gap: 6px;
+  align-items: baseline;
+  max-width: 92%;
+  padding: 4px 10px;
+  background: rgba(255, 255, 255, 0.94);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  font-size: 0.78rem;
+  color: var(--navy);
+  pointer-events: none;
+  white-space: nowrap;
+}
+
+.map-coords-label {
+  color: var(--muted);
+  font-size: 0.72rem;
+}
+
+.map-coords-value {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}

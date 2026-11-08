@@ -16,6 +16,7 @@ export const is: MapMessages = {
     popupPending: 'Umsókn í bið {applicationId} — ekki samþykkt enn',
     insideLand: 'Innan lands þíns',
 
+    coordsLabel: 'Hnit (WGS84)',
     cameraToggle: 'Myndavélahamur',
     cameraToggleOff: 'Hætta í myndavélaham',
     cameraInstructions:

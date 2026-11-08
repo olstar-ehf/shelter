@@ -14,6 +14,7 @@ export const en = {
     popupPending: 'Pending application {applicationId} — not accepted yet',
     insideLand: 'Inside your land',
 
+    coordsLabel: 'Coordinates (WGS84)',
     cameraToggle: 'Camera mode',
     cameraToggleOff: 'Leave camera mode',
     cameraInstructions:

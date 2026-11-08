@@ -11,6 +11,7 @@ import {
 import type { Feature, FeatureCollection } from 'geojson';
 import L from 'leaflet';
 import { WindbreakCameraControl } from './WindbreakCameraControl';
+import { WindbreakCoordinateReadout } from './WindbreakCoordinateReadout';
 import { WindbreakDrawControl } from './WindbreakDrawControl';
 import { WindbreakLegend } from './WindbreakLegend';
 import {
@@ -332,6 +333,7 @@ export function WindbreakMap({
         attributionControl={false}
       >
         <MapRegionLabel label={intl.formatMessage({ id: 'map.ariaLabel' })} />
+        <WindbreakCoordinateReadout cameraMode={cameraMode} />
         <AttributionControl position="bottomright" prefix={false} />
         {/* Scale bar (metric only - the grant is measured in metres). */}
         <ScaleControl position="bottomleft" metric imperial={false} maxWidth={120} />

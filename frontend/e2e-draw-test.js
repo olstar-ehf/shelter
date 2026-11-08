@@ -325,11 +325,36 @@ async function main() {
     drawPolyline: !!document.querySelector('.leaflet-draw-draw-polyline'),
   }));
 
+  const coordsValue = () =>
+    page.evaluate(
+      () =>
+        document.querySelector('.map-coords-value')?.textContent?.trim() ??
+        null,
+    );
+  const coordsPattern = /^-?\d+\.\d{7}, -?\d+\.\d{7}$/;
+  // Pointer mode: the readout follows the mouse, at 7 decimals (~1 cm).
+  const mapBox = await page.evaluate(() => {
+    const rect = document.querySelector('.map-container').getBoundingClientRect();
+    return { x: rect.x, y: rect.y, w: rect.width, h: rect.height };
+  });
+  await page.mouse.move(mapBox.x + mapBox.w * 0.3, mapBox.y + mapBox.h * 0.4);
+  await page.waitForTimeout(250);
+  const pointerCoordsA = await coordsValue();
+  await page.mouse.move(mapBox.x + mapBox.w * 0.7, mapBox.y + mapBox.h * 0.6);
+  await page.waitForTimeout(250);
+  const pointerCoordsB = await coordsValue();
+
   await page.click('.camera-toggle');
   await page.waitForTimeout(400);
   const cameraPressed = await page.evaluate(() =>
     document.querySelector('.camera-toggle').getAttribute('aria-pressed'),
   );
+  // Camera mode: the readout follows the crosshair (map centre).
+  const cameraCoordsA = await coordsValue();
+  await page.keyboard.press('ArrowRight');
+  await page.keyboard.press('ArrowRight');
+  await page.waitForTimeout(300);
+  const cameraCoordsB = await coordsValue();
   const zoomLevel = () =>
     page.evaluate(() => {
       const live = document.querySelector('.windbreak-map [role="status"]');
@@ -449,6 +474,14 @@ async function main() {
   }));
 
   const session3Ok =
+    typeof pointerCoordsA === 'string' &&
+    typeof pointerCoordsB === 'string' &&
+    coordsPattern.test(pointerCoordsA) && coordsPattern.test(pointerCoordsB) &&
+    pointerCoordsA !== pointerCoordsB &&
+    typeof cameraCoordsA === 'string' &&
+    typeof cameraCoordsB === 'string' &&
+    coordsPattern.test(cameraCoordsB) &&
+    cameraCoordsA !== cameraCoordsB &&
     toolbar.finishBtn === false &&
     toolbar.editBtn === false &&
     toolbar.removeBtn === false &&
@@ -477,6 +510,10 @@ async function main() {
     session3Ok ? 'PASS' : 'FAIL',
     JSON.stringify({
       cameraPressed,
+      pointerCoordsA,
+      pointerCoordsB,
+      cameraCoordsA,
+      cameraCoordsB,
       toolbar,
       zoomStart,
       zoomedIn,
