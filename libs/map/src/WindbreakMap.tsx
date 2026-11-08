@@ -13,7 +13,10 @@ import L from 'leaflet';
 import { WindbreakCameraControl } from './WindbreakCameraControl';
 import { WindbreakDrawControl } from './WindbreakDrawControl';
 import { WindbreakLegend } from './WindbreakLegend';
-import { linesFromFeatureGroup } from './lines';
+import {
+  linesFromFeatureGroup,
+  removeLineFromFeatureGroup,
+} from './lines';
 import type {
   ParcelFeature,
   WindbreakBasemap,
@@ -65,6 +68,11 @@ export interface WindbreakMapProps {
   addLineRef?: React.MutableRefObject<
     ((points: Array<[number, number]>) => void) | null
   >;
+  /**
+   * Imperative "remove a line" API for the drawn-windbreaks table, keyed by
+   * the line's clientId.
+   */
+  removeLineRef?: React.MutableRefObject<((clientId: string) => void) | null>;
   /**
    * Keyboard camera mode, controlled by the host's button
    * outside the map. While active the map's pointer controls are hidden
@@ -144,6 +152,32 @@ function LineAdder({
 }
 
 /**
+ * Exposes a function that removes one drawn line (by clientId) from the
+ * feature group, for the remove buttons in the drawn-windbreaks table.
+ */
+function LineRemover({
+  featureGroup,
+  onLinesChange,
+  apiRef,
+}: {
+  featureGroup: L.FeatureGroup;
+  onLinesChange: (lines: WindbreakLine[]) => void;
+  apiRef: React.MutableRefObject<((clientId: string) => void) | null>;
+}) {
+  useEffect(() => {
+    apiRef.current = (clientId: string) => {
+      if (removeLineFromFeatureGroup(featureGroup, clientId)) {
+        onLinesChange(linesFromFeatureGroup(featureGroup));
+      }
+    };
+    return () => {
+      apiRef.current = null;
+    };
+  }, [featureGroup, onLinesChange, apiRef]);
+  return null;
+}
+
+/**
  * Adds the drawn-lines feature group to the map and removes it when the
  * whole map unmounts. The group is owned by WindbreakMap (not the draw
  * control), so the drawn lines stay on the map while the control is
@@ -187,6 +221,7 @@ export function WindbreakMap({
   height = '480px',
   onLinesChange,
   addLineRef,
+  removeLineRef,
   cameraMode = false,
   onCameraExit,
 }: WindbreakMapProps) {
@@ -384,6 +419,13 @@ export function WindbreakMap({
                 featureGroup={drawnItemsRef.current}
                 onLinesChange={onLinesChange}
                 apiRef={addLineRef}
+              />
+            )}
+            {removeLineRef && (
+              <LineRemover
+                featureGroup={drawnItemsRef.current}
+                onLinesChange={onLinesChange}
+                apiRef={removeLineRef}
               />
             )}
           </>

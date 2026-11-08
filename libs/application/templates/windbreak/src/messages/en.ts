@@ -42,6 +42,9 @@ export const windbreakEn = {
     colLength: 'Length',
     colParcel: 'On parcel',
     colCheck: 'Check',
+    colActions: 'Actions',
+    removeAction: 'Remove',
+    removeLine: 'Remove windbreak line {n}',
     totalLength: 'Total length:',
   },
   actions: {

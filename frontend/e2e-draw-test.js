@@ -409,6 +409,17 @@ async function main() {
     count: document.getElementById('line-count').textContent.trim(),
     info: document.querySelector('.coords-entry [role="status"]')?.textContent.trim() ?? null,
   }));
+  // Each drawn windbreak has a remove button in the table; use the last one.
+  const removeButtonCount = await page.evaluate(
+    () => document.querySelectorAll('#lines-body .line-remove').length,
+  );
+  await page.click('#lines-body tr:last-child .line-remove');
+  await page.waitForTimeout(500);
+  const afterDelete = await page.evaluate(() => ({
+    count: document.getElementById('line-count').textContent.trim(),
+    rows: document.querySelectorAll('#lines-body tr').length,
+  }));
+
   await page.click('.camera-toggle');
   await page.waitForTimeout(300);
   const afterExit = await page.evaluate(() => ({
@@ -432,6 +443,8 @@ async function main() {
     afterSecondLine.count === '2' && afterSecondLine.pressed === 'true' &&
     afterCoords.count === '3' &&
     typeof afterCoords.info === 'string' && afterCoords.info.length > 0 &&
+    removeButtonCount === 3 &&
+    afterDelete.count === '2' && afterDelete.rows === 2 &&
     afterExit.pressed === 'false';
   console.log(
     'SESSION 3:',
@@ -448,6 +461,8 @@ async function main() {
       afterSecondLine,
       line2Length,
       afterCoords,
+      removeButtonCount,
+      afterDelete,
       afterExit,
     }),
   );

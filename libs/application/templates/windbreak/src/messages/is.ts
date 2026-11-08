@@ -41,6 +41,9 @@ export const windbreakIs: WindbreakTemplateMessages = {
     colLength: 'Lengd',
     colParcel: 'Á landspildu',
     colCheck: 'Athugun',
+    colActions: 'Aðgerðir',
+    removeAction: 'Fjarlægja',
+    removeLine: 'Fjarlægja skjólbeltalínu {n}',
     totalLength: 'Heildarlengd:',
   },
   actions: {

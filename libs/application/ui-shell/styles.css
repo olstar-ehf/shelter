@@ -573,3 +573,19 @@ code {
   min-height: 72px;
   box-sizing: border-box;
 }
+
+/* Remove button in the drawn-windbreaks table (one per line). */
+.line-remove {
+  background: #fff;
+  border: 1px solid var(--danger);
+  color: var(--danger);
+  border-radius: 6px;
+  padding: 4px 10px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.line-remove:hover {
+  background: var(--danger-bg);
+}

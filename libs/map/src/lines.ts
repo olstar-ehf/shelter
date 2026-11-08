@@ -32,3 +32,29 @@ export function linesFromFeatureGroup(
   });
   return lines;
 }
+
+/**
+ * Removes one drawn line from the feature group by clientId (used by the
+ * remove button in the drawn-windbreaks table). Returns false when the line
+ * is no longer there.
+ */
+export function removeLineFromFeatureGroup(
+  featureGroup: FeatureGroup,
+  clientId: string,
+): boolean {
+  let target: Parameters<FeatureGroup['removeLayer']>[0] | null = null;
+  featureGroup.eachLayer((layer) => {
+    if (target) {
+      return;
+    }
+    const anyLayer = layer as unknown as { _leaflet_id?: number };
+    if (`line-${anyLayer._leaflet_id}` === clientId) {
+      target = layer;
+    }
+  });
+  if (!target) {
+    return false;
+  }
+  featureGroup.removeLayer(target);
+  return true;
+}

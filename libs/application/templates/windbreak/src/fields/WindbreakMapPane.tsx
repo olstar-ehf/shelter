@@ -57,6 +57,7 @@ export default function WindbreakMapPane({
   const addLineRef = useRef<((points: Array<[number, number]>) => void) | null>(
     null,
   );
+  const removeLineRef = useRef<((clientId: string) => void) | null>(null);
   const [coordsText, setCoordsText] = useState('');
   const [coordsError, setCoordsError] = useState<string | null>(null);
   const [coordsInfo, setCoordsInfo] = useState<string | null>(null);
@@ -129,6 +130,7 @@ export default function WindbreakMapPane({
           height="100%"
           lineStatuses={lineStatuses}
           addLineRef={addLineRef}
+          removeLineRef={removeLineRef}
           cameraMode={cameraMode}
           onCameraExit={exitCameraMode}
           onLinesChange={onChange}
@@ -207,6 +209,13 @@ export default function WindbreakMapPane({
               <th>{f('windbreak.lines.colLength')}</th>
               <th>{f('windbreak.lines.colParcel')}</th>
               <th>{f('windbreak.lines.colCheck')}</th>
+              {!reviewing && (
+                <th>
+                  <span className="sr-only">
+                    {f('windbreak.lines.colActions')}
+                  </span>
+                </th>
+              )}
             </tr>
           </thead>
           <tbody id="lines-body">
@@ -224,6 +233,22 @@ export default function WindbreakMapPane({
                         {message}
                       </span>
                     </td>
+                    {!reviewing && (
+                      <td>
+                        <button
+                          type="button"
+                          className="line-remove"
+                          aria-label={f('windbreak.lines.removeLine', {
+                            n: index + 1,
+                          })}
+                          onClick={() =>
+                            removeLineRef.current?.(entry.line.clientId)
+                          }
+                        >
+                          {f('windbreak.lines.removeAction')}
+                        </button>
+                      </td>
+                    )}
                   </tr>
                 );
               }
@@ -235,6 +260,22 @@ export default function WindbreakMapPane({
                   <td>
                     <span className="chip chip-ok">{f('map.insideLand')}</span>
                   </td>
+                  {!reviewing && (
+                    <td>
+                      <button
+                        type="button"
+                        className="line-remove"
+                        aria-label={f('windbreak.lines.removeLine', {
+                          n: index + 1,
+                        })}
+                        onClick={() =>
+                          removeLineRef.current?.(entry.line.clientId)
+                        }
+                      >
+                        {f('windbreak.lines.removeAction')}
+                      </button>
+                    </td>
+                  )}
                 </tr>
               );
             })}
