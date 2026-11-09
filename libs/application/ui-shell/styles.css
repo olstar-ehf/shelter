@@ -606,6 +606,7 @@ code {
 .lines-table tr.line-row:focus-visible {
   outline: 3px solid var(--navy);
   outline-offset: -2px;
+  background: #eef3f9;
 }
 
 /* Live coordinate readout at the bottom of the map. */

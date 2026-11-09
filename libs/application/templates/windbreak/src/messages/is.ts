@@ -44,7 +44,8 @@ export const windbreakIs: WindbreakTemplateMessages = {
     colActions: 'Aðgerðir',
     removeAction: 'Fjarlægja',
     removeLine: 'Fjarlægja skjólbeltalínu {n}',
-    selectHint: 'Veldu línu í töflunni til að auðkenna hana á kortinu.',
+    selectHint:
+      'Veldu línu í töflunni til að auðkenna hana á kortinu. Með lyklaborði: notaðu Tab til að fara á línu og ýttu á Enter eða bilstöng.',
     totalLength: 'Heildarlengd:',
   },
   actions: {

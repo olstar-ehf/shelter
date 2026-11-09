@@ -448,6 +448,41 @@ async function main() {
     count: document.getElementById('line-count').textContent.trim(),
     info: document.querySelector('.coords-entry [role="status"]')?.textContent.trim() ?? null,
   }));
+  // Keyboard focus on a row previews its windbreak on the map (like hover),
+  // without selecting it.
+  let focusedRow = false;
+  for (let i = 0; i < 80 && !focusedRow; i += 1) {
+    await page.keyboard.press('Tab');
+    focusedRow = await page.evaluate(
+      () => document.activeElement?.tagName === 'TR',
+    );
+  }
+  await page.waitForTimeout(300);
+  const focusPreview = await page.evaluate(() => ({
+    focusedRow: document.activeElement?.tagName === 'TR',
+    bluePaths: [...document.querySelectorAll('.leaflet-overlay-pane path')]
+      .filter((path) => path.getAttribute('stroke') === '#1565c0').length,
+    ariaCurrent: document.activeElement?.getAttribute('aria-current'),
+  }));
+  // Pointer hover on a row previews it too, and clearing it removes the
+  // highlight again.
+  await page.hover('#lines-body tr:nth-child(3)');
+  await page.waitForTimeout(300);
+  const hoverPreview = await page.evaluate(
+    () =>
+      [...document.querySelectorAll('.leaflet-overlay-pane path')].filter(
+        (path) => path.getAttribute('stroke') === '#1565c0',
+      ).length,
+  );
+  await page.mouse.move(8, 8);
+  await page.waitForTimeout(300);
+  const hoverCleared = await page.evaluate(
+    () =>
+      [...document.querySelectorAll('.leaflet-overlay-pane path')].filter(
+        (path) => path.getAttribute('stroke') === '#1565c0',
+      ).length,
+  );
+
   // Selecting a table row highlights that windbreak on the map.
   const selectedInfo = () =>
     page.evaluate(() => ({
@@ -518,6 +553,9 @@ async function main() {
     afterSecondLine.count === '2' && afterSecondLine.pressed === 'true' &&
     afterCoords.count === '3' &&
     typeof afterCoords.info === 'string' && afterCoords.info.length > 0 &&
+    focusPreview.focusedRow === true &&
+    focusPreview.bluePaths >= 1 && focusPreview.ariaCurrent === null &&
+    hoverPreview >= 1 && hoverCleared === 0 &&
     selection1.current === 'true' && selection1.selectedClass === true &&
     selection1.bluePaths >= 1 &&
     selection2.firstCurrent === null && selection2.secondCurrent === 'true' &&
@@ -545,6 +583,9 @@ async function main() {
       afterSecondLine,
       line2Length,
       afterCoords,
+      focusPreview,
+      hoverPreview,
+      hoverCleared,
       selection1,
       selection2,
       removeButtonCount,

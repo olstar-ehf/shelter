@@ -8,7 +8,7 @@
  * stops at the static skeleton and never pulls Leaflet into the SSR bundle.
  */
 import { useEffect, useRef, useState } from 'react';
-import type { KeyboardEvent } from 'react';
+import type { FocusEvent, KeyboardEvent } from 'react';
 import { useIntl } from 'react-intl';
 import {
   totalLengthM,
@@ -80,6 +80,9 @@ export default function WindbreakMapPane({
   // The line selected in the drawn-windbreaks table is highlighted on the
   // map (thicker, blue) so row and line can be matched at a glance.
   const [selectedClientId, setSelectedClientId] = useState<string | null>(null);
+  // Row hover/keyboard focus previews the windbreak on the map (like a
+  // pointer hover); Enter/Space pins it as the selection.
+  const [previewClientId, setPreviewClientId] = useState<string | null>(null);
   const toggleSelection = (clientId: string) => {
     setSelectedClientId((current) => (current === clientId ? null : clientId));
   };
@@ -103,6 +106,16 @@ export default function WindbreakMapPane({
             if (event.key === 'Enter' || event.key === ' ') {
               event.preventDefault();
               toggleSelection(clientId);
+            }
+          },
+          onMouseEnter: () => setPreviewClientId(clientId),
+          onMouseLeave: () => setPreviewClientId(null),
+          onFocus: () => setPreviewClientId(clientId),
+          onBlur: (event: FocusEvent<HTMLTableRowElement>) => {
+            // Keep the preview while focus stays inside the row (e.g. the
+            // remove button).
+            if (!event.currentTarget.contains(event.relatedTarget as Node | null)) {
+              setPreviewClientId(null);
             }
           },
         };
@@ -170,6 +183,7 @@ export default function WindbreakMapPane({
           height="100%"
           lineStatuses={lineStatuses}
           selectedClientId={selectedClientId}
+          previewClientId={previewClientId}
           addLineRef={addLineRef}
           removeLineRef={removeLineRef}
           cameraMode={cameraMode}

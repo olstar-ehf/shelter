@@ -58,6 +58,12 @@ export interface WindbreakMapProps {
    */
   selectedClientId?: string | null;
   /**
+   * clientId previewed by hovering/focusing a row in the drawn-windbreaks
+   * table. Rendered as a temporary highlight (Tab through the rows to see
+   * each windbreak on the map), weaker than the pinned selection.
+   */
+  previewClientId?: string | null;
+  /**
    * Reports the line currently being drawn (mouse drawing or camera mode)
    * as a WKT LINESTRING, or null when no line is in progress. Used to show
    * the live draft in the coordinate textarea.
@@ -227,6 +233,7 @@ export function WindbreakMap({
   drawnLines,
   lineStatuses,
   selectedClientId = null,
+  previewClientId = null,
   readOnly = false,
   fitToData = true,
   legend = true,
@@ -291,7 +298,10 @@ export function WindbreakMap({
   // line selected in the table is highlighted (thicker, blue).
   const styleForLine = (clientId: string | null | undefined) => {
     if (clientId && clientId === selectedClientId) {
-      return { color: '#1565c0', weight: 7, opacity: 1 };
+      return { color: '#1565c0', weight: 8, opacity: 1 };
+    }
+    if (clientId && clientId === previewClientId) {
+      return { color: '#1565c0', weight: 6, opacity: 0.9 };
     }
     if (clientId && lineStatuses?.[clientId] === 'error') {
       return { color: '#b3261e', weight: 4, opacity: 0.9 };
@@ -323,7 +333,7 @@ export function WindbreakMap({
       }
       anyLayer.setStyle(styleForLine(`line-${anyLayer._leaflet_id}`));
     });
-  }, [lineStatuses, drawnLines, selectedClientId]);
+  }, [lineStatuses, drawnLines, selectedClientId, previewClientId]);
 
   return (
     <div className="windbreak-map">
