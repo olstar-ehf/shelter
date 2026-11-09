@@ -91,7 +91,9 @@ services:
       # Basemap handed to the browser: tiles proxy through our own backend
       # (published port 5000). Override for e.g. plain OSM tiles offline.
       WINDBREAK_BASEMAP_TILE_URL: "${WINDBREAK_BASEMAP_TILE_URL:-http://localhost:5000/tiles/basemap/{z}/{x}/{y}.png}"
-      WINDBREAK_BASEMAP_ATTRIBUTION: "${WINDBREAK_BASEMAP_ATTRIBUTION:-Kortagögn: Náttúrustofa Íslands}"
+      # The attribution is localized by default; uncomment to override both
+      # locales with one string.
+      # WINDBREAK_BASEMAP_ATTRIBUTION: "Kortagögn: Náttúrufræðistofnun"
       WINDBREAK_BASEMAP_MAX_ZOOM: "${WINDBREAK_BASEMAP_MAX_ZOOM:-16}"
       # Submissions create a Zendesk ticket with a GeoJSON attachment (the
       # grant authority's database is read-only). Real by default; requires

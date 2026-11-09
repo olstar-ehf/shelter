@@ -129,9 +129,11 @@ npm hooks.
   `WINDBREAK_BASEMAP_MAX_ZOOM` — the basemap the apply context hands to the
   browser. Defaults to our own OGC API - Tiles tileset
   (`{PYGEOAPI_URL}/collections/basemap/tiles/WebMercatorQuad/{z}/{y}/{x}.png`,
-  or the published `http://localhost:5000/...` in compose) with attribution
-  `Kortagögn: Náttúrustofa Íslands`. Override with e.g. plain OSM tiles for
-  fully-offline development.
+  or the published `http://localhost:5000/...` in compose) with a localized
+  attribution: `Kortagögn: Náttúrufræðistofnun` (is) /
+  `Map data: Nature Science Institute of Iceland` (en). Set
+  `WINDBREAK_BASEMAP_ATTRIBUTION` to override it for every locale, or use
+  plain OSM tiles for fully-offline development.
 * `ZENDESK_MOCK` — **real by default**; `true` selects the in-memory mock
   (tickets live for the server lifetime). The real client needs
   `ZENDESK_SUBDOMAIN` (e.g. `myagency` → `https://myagency.zendesk.com`),

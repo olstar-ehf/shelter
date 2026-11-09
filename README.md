@@ -73,7 +73,7 @@ draws lines on a map of their own land and submits.
   authority's database is **read-only**, so submissions create a **Zendesk
   ticket with the drawn lines as a GeoJSON attachment** — nothing is
   written to PostGIS.
-* The **basemap** is the national basemap (Náttúrustofa's `grunnkort` +
+* The **basemap** is the national basemap (Náttúrufræðistofnun's `grunnkort` +
   `Ornefni`, the Örnefnasjá sources), assembled by our backend and exposed
   as a standard **OGC API - Tiles** tileset — the browser only ever talks
   to our own origins.
@@ -170,7 +170,7 @@ foreign stack that would need rewriting.
 | GraphQL domain consumed by the web host | Code-first Nest GraphQL domain at `/graphql` (context query, ticket query, submit mutation) — the Next.js host runs entirely on it |
 | X-Road integration | Property lookup through the X-Road gateway with an island.is Bearer JWT |
 | Security headers (CSP + companions) | Enforced `Content-Security-Policy` plus `X-Content-Type-Options`, `Referrer-Policy` and HSTS on both hosts, mirroring island.is's production headers — with a report-only copy when a `CSP_REPORT_URI` is configured |
-| National basemap behind an own OGC API - Tiles tileset | The backend exposes a standard **OGC API - Tiles** `basemap` tileset: `/collections/basemap/tiles` (tilesets), `/collections/basemap/tiles/WebMercatorQuad/{z}/{y}/{x}` (the 256px tiles), a WebMercatorQuad TileMatrixSet definition at `/tileMatrixSets/WebMercatorQuad`, the tiles conformance classes, and the OpenAPI paths — assembling each tile from Náttúrustofa's pre-rendered `grunnkort` tiles + the `Ornefni` place-name layer (seamless metatiles) so the browser only ever talks to our own origins. |
+| National basemap behind an own OGC API - Tiles tileset | The backend exposes a standard **OGC API - Tiles** `basemap` tileset: `/collections/basemap/tiles` (tilesets), `/collections/basemap/tiles/WebMercatorQuad/{z}/{y}/{x}` (the 256px tiles), a WebMercatorQuad TileMatrixSet definition at `/tileMatrixSets/WebMercatorQuad`, the tiles conformance classes, and the OpenAPI paths — assembling each tile from Náttúrufræðistofnun's pre-rendered `grunnkort` tiles + the `Ornefni` place-name layer (seamless metatiles) so the browser only ever talks to our own origins. |
 | Storybook + Jest + browser e2e | Both libs have stories; unit/contract/locale suites; Playwright regression over the whole draw → review → submit flow, asserting the enforced CSP and that the browser never contacts an outside origin |
 | Docker, multi-stage monorepo builds | Backend + frontend + web images, dependency-ordered lib builds, clean build contexts |
 | Open solution | Everything here is open — configuration via env, no black boxes |
@@ -260,7 +260,7 @@ island.is's shell, not rebuilding them.
   so the backend also works when called directly.
 * **`WSGI_WORKERS=1`**: the GeoJSON provider does no write locking and
   documents a single-process assumption.
-* The basemap is the **national basemap** — Náttúrustofa Íslands'
+* The basemap is the **national basemap** — Náttúrufræðistofnun Íslands'
   pre-rendered `grunnkort` tiles plus the `Ornefni` place-name layer (the
   same sources the Örnefnasjá viewer uses) — assembled by our own backend
   and exposed as a standard OGC API - Tiles tileset
