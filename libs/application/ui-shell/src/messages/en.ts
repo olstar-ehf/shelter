@@ -6,7 +6,7 @@
  */
 export const en: Record<string, string> = {
   // shared chrome
-  agencyName: 'Land & Nature Agency',
+  agencyName: 'Land and Forest Iceland',
   schemeName: 'Windbreak Grant Scheme',
   portalSession: 'Government portal session',
   signedIn: 'Signed in',

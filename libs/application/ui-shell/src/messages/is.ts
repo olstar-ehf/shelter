@@ -4,7 +4,7 @@
  */
 export const is: Record<string, string> = {
   // sameiginlegt
-  agencyName: 'Land- og náttúrustofa',
+  agencyName: 'Land og skógur',
   schemeName: 'Skjólbeltastyrkir',
   portalSession: 'Innskráning í ríkisgátt',
   signedIn: 'Innskráður',
@@ -46,11 +46,11 @@ languageLabel: 'Tungumál',
   ticketStatusPending: 'í bið',
   ticketStatusSolved: 'leyst',
   ticketStatusClosed: 'lokað',
-  ticketOpenButton: 'Opna miða í Zendesk',
+  ticketOpenButton: 'Opna mál í Zendesk',
   submittedNote:
-    'Teiknuðu skjólbeltislínurnar fylgja miðanum sem GeoJSON-viðhengi. Þar til umsóknin er samþykkt telst umbeðið skjólbelti vera fyrirliggjandi skjólbelti: nýjar umsóknir mega ekki skerast það.',
+    'Teiknuðu skjólbeltislínurnar fylgja málinu sem GeoJSON-viðhengi. Þar til umsóknin er samþykkt telst umbeðið skjólbelti vera fyrirliggjandi skjólbelti: nýjar umsóknir mega ekki skerast það.',
   submittedNoTicketUrl:
-    'Miðinn er aðeins sýnilegur inni í Zendesk (enginn opinber hlekkur er stilltur í þessari frumgerð).',
+    'Mál er aðeins sýnilegt inni í Zendesk (enginn opinber hlekkur er stilltur í þessari frumgerð).',
   btnApplyAgain: 'Sækja um annað skjólbelti',
   btnBackToApplication: 'Til baka í umsókn',
 
@@ -68,7 +68,7 @@ languageLabel: 'Tungumál',
     'Fasteignir-Xroad fann engar fasteignir á kennitölu {kennitala}.',
   errorNoParcels: 'Engar landspildur fundust fyrir landeignarnúmer {list}.',
   errorNoLines: 'Engar skjólbeltislínur bárust.',
-  errorInvalidAnswers: 'Innsend umsókn stóðst ekki gagnaþrýf (schema).',
+  errorInvalidAnswers: 'Innsend umsókn stóðst ekki gagnasniðmát (schema).',
   errorApplicationNotFound:
     'Umsókn {applicationId} fannst ekki í bakvinnslu.',
   errorBackendUnreachable: 'Næ ekki sambandi við OGC API bakvinnsluna ({url}).',
@@ -87,5 +87,5 @@ languageLabel: 'Tungumál',
     'Zendesk er ekki stillt: {detail}. Stilltu ZENDESK_SUBDOMAIN, ZENDESK_EMAIL og ZENDESK_API_TOKEN, eða ZENDESK_MOCK=true.',
   errorZendeskFailed: 'Stofnun Zendesk-miða mistókst: {detail}',
   errorZendeskHttp: 'Zendesk skilaði HTTP {status}: {detail}',
-  errorTicketNotFound: 'Zendesk-miði {ticketId} fannst ekki.',
+  errorTicketNotFound: 'Zendesk-mál {ticketId} fannst ekki.',
 };
