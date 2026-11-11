@@ -20,7 +20,7 @@ export const is: MapMessages = {
     cameraToggle: 'Myndavélahamur',
     cameraToggleOff: 'Hætta í myndavélaham',
     cameraInstructions:
-      'Myndavélahamur: krossinn stendur kyrr í miðjunni - örvar færa kortið undir honum (haltu niðri til að halda áfram; Shift gefur fína skref). Haltu Z niðri til að þysja inn og X til að þysja út. Space setur punkt; tvísmelltu á space til að ljúka línunni og myndavélahamur helst áfram fyrir næstu línu. Backspace fjarlægir síðasta punkt, Escape hættir í myndavélaham.',
+      'Myndavélahamur: krossinn stendur kyrr í miðjunni - örvar færa kortið undir honum (haltu niðri til að halda áfram; Shift gefur fína skref). Haltu Z niðri til að þysja inn og X til að þysja út. Space setur punkt; tvísmelltu á space til að ljúka línunni og myndavélahamur helst áfram fyrir næstu línu. Backspace fjarlægir síðasta punkt, Escape hættir í myndavélaham. Skjálesari: ef örvarnar hreyfa kortið ekki, ýttu á NVDA+Space til að fara í fókusstillingu.',
     cameraZoom: 'Aðdráttarstig {zoom}.',
     cameraPointPlaced: 'Punktur {n} settur á {lat}, {lon}.',
     cameraUndone: 'Síðasti punktur fjarlægður.',

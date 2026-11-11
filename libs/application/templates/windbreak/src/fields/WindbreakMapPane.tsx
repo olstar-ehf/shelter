@@ -168,7 +168,9 @@ export default function WindbreakMapPane({
             {f(cameraMode ? 'map.cameraToggleOff' : 'map.cameraToggle')}
           </button>
           {cameraMode && (
-            <span className="camera-help muted">{f('map.cameraInstructions')}</span>
+            <span className="camera-help muted" id="camera-keyboard-help">
+              {f('map.cameraInstructions')}
+            </span>
           )}
         </div>
       )}

@@ -104,17 +104,36 @@ export interface WindbreakMapProps {
 
 /**
  * Sets the accessible name/role on the Leaflet container after mount (the
- * MapContainer typings do not expose DOM attributes). The container is
- * already focusable (Leaflet keyboard support), so without this screen
- * readers land on an unnamed focusable region.
+ * MapContainer typings do not expose DOM attributes).
+ *
+ * While camera mode is active the map becomes an ARIA `application` region:
+ * screen readers (NVDA/JAWS) only hand arrow/Space/Enter keys to the page in
+ * focus mode, and the application role makes them switch automatically for
+ * correctly coded custom widgets. Tab still moves focus out of the region,
+ * so this does not create a keyboard trap; the description points at the
+ * key instructions (including the NVDA+Space fallback).
  */
-function MapRegionLabel({ label }: { label: string }) {
+const CAMERA_HELP_ID = 'camera-keyboard-help';
+
+function MapRegionLabel({
+  label,
+  cameraMode = false,
+}: {
+  label: string;
+  cameraMode?: boolean;
+}) {
   const map = useMap();
   useEffect(() => {
     const container = map.getContainer();
-    container.setAttribute('role', 'region');
     container.setAttribute('aria-label', label);
-  }, [map, label]);
+    if (cameraMode) {
+      container.setAttribute('role', 'application');
+      container.setAttribute('aria-describedby', CAMERA_HELP_ID);
+    } else {
+      container.setAttribute('role', 'region');
+      container.removeAttribute('aria-describedby');
+    }
+  }, [map, label, cameraMode]);
   return null;
 }
 
@@ -349,7 +368,10 @@ export function WindbreakMap({
         // below shows only the map-data attribution.
         attributionControl={false}
       >
-        <MapRegionLabel label={intl.formatMessage({ id: 'map.ariaLabel' })} />
+        <MapRegionLabel
+          label={intl.formatMessage({ id: 'map.ariaLabel' })}
+          cameraMode={cameraMode}
+        />
         <WindbreakCoordinateReadout cameraMode={cameraMode} />
         <AttributionControl position="bottomright" prefix={false} />
         {/* Scale bar (metric only - the grant is measured in metres). */}

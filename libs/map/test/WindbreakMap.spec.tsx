@@ -80,6 +80,25 @@ describe('WindbreakMap', () => {
     expect(screen.getByTestId('draw-control')).toBeInTheDocument();
   });
 
+  it('becomes an ARIA application region in camera mode, region otherwise', () => {
+    const { rerender } = renderMap('en', { cameraMode: true });
+    expect(mockMapElement.getAttribute('role')).toBe('application');
+    expect(mockMapElement.getAttribute('aria-describedby')).toBe(
+      'camera-keyboard-help',
+    );
+    rerender(
+      <IntlProvider locale="en" messages={flattenMessages(en)}>
+        <WindbreakMap
+          parcels={parcels}
+          existingWindbreaks={[]}
+          onLinesChange={() => undefined}
+        />
+      </IntlProvider>,
+    );
+    expect(mockMapElement.getAttribute('role')).toBe('region');
+    expect(mockMapElement.getAttribute('aria-describedby')).toBeNull();
+  });
+
   it('hides the draw control in read-only mode', () => {
     renderMap('en', { readOnly: true });
     expect(screen.queryByTestId('draw-control')).not.toBeInTheDocument();

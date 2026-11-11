@@ -355,6 +355,19 @@ async function main() {
   const cameraPressed = await page.evaluate(() =>
     document.querySelector('.camera-toggle').getAttribute('aria-pressed'),
   );
+  // Screen readers only pass arrow keys through in focus mode: the map must
+  // become an application region while camera mode is active, described by
+  // the key instructions (which mention NVDA+Space).
+  const cameraA11y = await page.evaluate(() => {
+    const container = document.querySelector('.leaflet-container');
+    const helpId = container?.getAttribute('aria-describedby');
+    const help = helpId ? document.getElementById(helpId) : null;
+    return {
+      role: container?.getAttribute('role'),
+      describedBy: helpId,
+      helpMentionsNvda: !!help && help.textContent.includes('NVDA'),
+    };
+  });
   // Camera mode: the readout follows the crosshair (map centre).
   const cameraCoordsA = await coordsValue();
   await page.keyboard.press('ArrowRight');
@@ -518,9 +531,14 @@ async function main() {
 
   await page.click('.camera-toggle');
   await page.waitForTimeout(300);
-  const afterExit = await page.evaluate(() => ({
-    pressed: document.querySelector('.camera-toggle').getAttribute('aria-pressed'),
-  }));
+  const afterExit = await page.evaluate(() => {
+    const container = document.querySelector('.leaflet-container');
+    return {
+      pressed: document.querySelector('.camera-toggle').getAttribute('aria-pressed'),
+      role: container?.getAttribute('role'),
+      describedBy: container?.getAttribute('aria-describedby'),
+    };
+  });
 
   const wktOk = (wkt) =>
     typeof wkt === 'string' &&
@@ -542,6 +560,10 @@ async function main() {
     toolbar.removeBtn === false &&
     toolbar.drawPolyline === true &&
     cameraPressed === 'true' &&
+    cameraA11y.role === 'application' &&
+    cameraA11y.describedBy === 'camera-keyboard-help' &&
+    cameraA11y.helpMentionsNvda === true &&
+    afterExit.role === 'region' && afterExit.describedBy === null &&
     typeof zoomStart === 'number' &&
     zoomedIn > zoomStart &&
     zoomedOut < zoomedIn &&
@@ -568,6 +590,7 @@ async function main() {
     session3Ok ? 'PASS' : 'FAIL',
     JSON.stringify({
       cameraPressed,
+      cameraA11y,
       cameraDraftWkt,
       pointerCoordsA,
       pointerCoordsB,
