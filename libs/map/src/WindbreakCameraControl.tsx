@@ -156,8 +156,10 @@ export function WindbreakCameraControl({
     setStatus(
       f('map.cameraPointPlaced', {
         n: next.length,
-        lat: latlng.lat.toFixed(4),
-        lon: latlng.lng.toFixed(4),
+        // Same 7 decimals as the coordinate readout (about 1 cm), so the
+        // spoken coordinate and the visible one cannot disagree.
+        lat: latlng.lat.toFixed(7),
+        lon: latlng.lng.toFixed(7),
       }),
     );
   }, [map, f, updatePreview]);

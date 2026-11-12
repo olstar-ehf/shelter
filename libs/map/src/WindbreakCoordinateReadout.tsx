@@ -92,9 +92,12 @@ export function WindbreakCoordinateReadout({
       <span className="map-coords-label">
         {intl.formatMessage({ id: 'map.coordsLabel' })}
       </span>{' '}
-      <output className="map-coords-value">
+      {/* A plain span, not <output>: <output> maps to role="status", so
+          screen readers would announce every coordinate change while the
+          camera pans (and duplicate the explicit point announcements). */}
+      <span className="map-coords-value" aria-live="off">
         {coords.lat.toFixed(DECIMALS)}, {coords.lng.toFixed(DECIMALS)}
-      </output>
+      </span>
     </div>
   );
 }
