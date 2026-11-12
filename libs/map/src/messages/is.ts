@@ -7,7 +7,11 @@ import type { MapMessages } from './en';
 export const is: MapMessages = {
   map: {
     ariaLabel:
-      'Kort af landi þínu til að teikna skjólbeltalínur. Notaðu teiknitakka til að bæta við línu.',
+      'Kort af landi þínu til að teikna skjólbeltalínur. Notaðu línutólið til að bæta við línu.',
+    ariaLabelCamera:
+      'Kort í myndavélaham. Krossinn er í miðju kortsins; ýttu á bilstöng til að setja punkt.',
+    cameraRoleName: 'myndavélahamur',
+    cameraModeOn: 'Myndavélahamur á.',
     legendParcels: 'Land þitt',
     legendEstablished: 'Skjólbelti (eldri)',
     legendPending: 'Í bið (ekki samþykkt)',

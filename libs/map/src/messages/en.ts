@@ -5,7 +5,11 @@
 export const en = {
   map: {
     ariaLabel:
-      'Map of your land for drawing windbreak lines. Use the draw button to add a line.',
+      'Map of your land for drawing windbreak lines. Use the line tool to add a line.',
+    ariaLabelCamera:
+      'Map in camera mode. The crosshair is at the centre of the map; press Space to place a point.',
+    cameraRoleName: 'camera mode',
+    cameraModeOn: 'Camera mode on.',
     legendParcels: 'Your parcels',
     legendEstablished: 'Established windbreak',
     legendPending: 'Pending (not accepted)',

@@ -366,6 +366,8 @@ async function main() {
       role: container?.getAttribute('role'),
       describedBy: helpId,
       helpMentionsNvda: !!help && help.textContent.includes('NVDA'),
+      name: container?.getAttribute('aria-label'),
+      roleDescription: container?.getAttribute('aria-roledescription'),
     };
   });
   // Using the mouse elsewhere (e.g. the coordinate panel) must not break
@@ -563,6 +565,7 @@ async function main() {
       pressed: document.querySelector('.camera-toggle').getAttribute('aria-pressed'),
       role: container?.getAttribute('role'),
       describedBy: container?.getAttribute('aria-describedby'),
+      roleDescription: container?.getAttribute('aria-roledescription'),
     };
   });
 
@@ -589,6 +592,9 @@ async function main() {
     cameraA11y.role === 'application' &&
     cameraA11y.describedBy === 'camera-keyboard-help' &&
     cameraA11y.helpMentionsNvda === true &&
+    /camera mode/i.test(cameraA11y.name ?? '') &&
+    cameraA11y.roleDescription === 'camera mode' &&
+    afterExit.roleDescription === null &&
     refocusOk === true && panBefore !== panAfter &&
     afterExit.role === 'region' && afterExit.describedBy === null &&
     typeof zoomStart === 'number' &&

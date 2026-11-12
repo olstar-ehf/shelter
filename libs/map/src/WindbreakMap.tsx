@@ -118,9 +118,11 @@ const CAMERA_HELP_ID = 'camera-keyboard-help';
 function MapRegionLabel({
   label,
   cameraMode = false,
+  roleDescription,
 }: {
   label: string;
   cameraMode?: boolean;
+  roleDescription?: string;
 }) {
   const map = useMap();
   useEffect(() => {
@@ -129,11 +131,17 @@ function MapRegionLabel({
     if (cameraMode) {
       container.setAttribute('role', 'application');
       container.setAttribute('aria-describedby', CAMERA_HELP_ID);
+      // NVDA/JAWS would otherwise announce the bare word "application";
+      // this says what kind of application region it is.
+      if (roleDescription) {
+        container.setAttribute('aria-roledescription', roleDescription);
+      }
     } else {
       container.setAttribute('role', 'region');
       container.removeAttribute('aria-describedby');
+      container.removeAttribute('aria-roledescription');
     }
-  }, [map, label, cameraMode]);
+  }, [map, label, cameraMode, roleDescription]);
   return null;
 }
 
@@ -369,8 +377,11 @@ export function WindbreakMap({
         attributionControl={false}
       >
         <MapRegionLabel
-          label={intl.formatMessage({ id: 'map.ariaLabel' })}
+          label={intl.formatMessage({
+            id: cameraMode ? 'map.ariaLabelCamera' : 'map.ariaLabel',
+          })}
           cameraMode={cameraMode}
+          roleDescription={intl.formatMessage({ id: 'map.cameraRoleName' })}
         />
         <WindbreakCoordinateReadout cameraMode={cameraMode} />
         <AttributionControl position="bottomright" prefix={false} />

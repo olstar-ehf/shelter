@@ -212,7 +212,9 @@ export function WindbreakCameraControl({
     stopPan();
     zoomTargetRef.current = map.getZoom();
     lastSpaceAtRef.current = 0;
-    setStatus(f('map.cameraInstructions'));
+    // Short announcement: the full key map is the map region's description
+    // (and the visible help), so it is not read out twice.
+    setStatus(f('map.cameraModeOn'));
     container.focus();
     return () => {
       container.style.cursor = '';
