@@ -41,6 +41,9 @@ export function WindbreakApplicationFlow({
   const [lines, setLines] = useState<WindbreakLine[]>([]);
   const [sectionId, setSectionId] = useState<SectionId>('draw');
   const [submitting, setSubmitting] = useState(false);
+  // Drawing mode lives here so the help paragraph above the map can describe
+  // the active method (mouse vs camera mode) instead of always the mouse.
+  const [cameraMode, setCameraMode] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
 
   const reviewing = sectionId === 'review';
@@ -59,6 +62,9 @@ export function WindbreakApplicationFlow({
 
   const goReview = () => {
     setSubmitError(null);
+    // The review step is read-only: leave camera mode so the map does not
+    // keep the application role / camera key handlers there.
+    setCameraMode(false);
     setSectionId('review');
   };
   const goBackToMap = () => {
@@ -106,7 +112,13 @@ export function WindbreakApplicationFlow({
         <h2 id="step-title">{f(section.titleId)}</h2>
 
         <div id="draw-help" hidden={reviewing}>
-          <p className="muted">{f('windbreak.draw.helpParcels')}</p>
+          {cameraMode ? (
+            <p className="muted" id="camera-keyboard-help">
+              {f('map.cameraInstructions')}
+            </p>
+          ) : (
+            <p className="muted">{f('windbreak.draw.helpParcels')}</p>
+          )}
           <p className="muted">
             {f('windbreak.draw.helpExisting', {
               established: f('windbreak.draw.countEstablished', {
@@ -137,6 +149,8 @@ export function WindbreakApplicationFlow({
               onSubmitRequest={submit}
               isSubmitting={submitting}
               submitError={submitError}
+              cameraMode={cameraMode}
+              onCameraModeChange={setCameraMode}
             />
           );
         })}

@@ -19,7 +19,7 @@ export const windbreakEn = {
   draw: {
     title: 'Draw your windbreak',
     helpParcels:
-      'Your registered parcels are shown on the map. Use the line tool (top right) to draw one or more windbreaks inside your land. Click to add points, double-click (or press Enter) to finish. Use the edit tools to move or delete lines.',
+      'Your registered parcels are shown on the map. Draw with the mouse: choose the line tool (top right), click the map to add points and double-click (or press Enter) to finish. To draw without the mouse, switch on Camera mode.',
     helpExisting:
       'Your land already has {established} and {pending} (not accepted yet). A new windbreak may not cross or touch any of them, or another windbreak in this application.',
     countEstablished:

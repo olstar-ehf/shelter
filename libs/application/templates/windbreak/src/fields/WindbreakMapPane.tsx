@@ -31,6 +31,8 @@ export default function WindbreakMapPane({
   onSubmitRequest,
   isSubmitting,
   submitError,
+  cameraMode,
+  onCameraModeChange,
 }: WindbreakLinesFieldValueProps) {
   const intl = useIntl();
   const f = (id: string, values?: Record<string, string | number>): string =>
@@ -73,10 +75,9 @@ export default function WindbreakMapPane({
   const [coordsError, setCoordsError] = useState<string | null>(null);
   const [coordsInfo, setCoordsInfo] = useState<string | null>(null);
 
-  // Keyboard camera mode: the toggle and finish buttons live
-  // outside the map; while aiming the map's pointer controls are hidden and
-  // its mouse handlers are disabled.
-  const [cameraMode, setCameraMode] = useState(false);
+  // Keyboard camera mode is owned by the flow (so the help paragraph above
+  // the field follows it); the toggle lives outside the map, and while it is
+  // on the map's pointer controls are hidden and its mouse handlers disabled.
   // The line selected in the drawn-windbreaks table is highlighted on the
   // map (thicker, blue) so row and line can be matched at a glance.
   const [selectedClientId, setSelectedClientId] = useState<string | null>(null);
@@ -121,7 +122,7 @@ export default function WindbreakMapPane({
         };
   const cameraToggleRef = useRef<HTMLButtonElement | null>(null);
   const exitCameraMode = () => {
-    setCameraMode(false);
+    onCameraModeChange(false);
     cameraToggleRef.current?.focus();
   };
 
@@ -163,15 +164,13 @@ export default function WindbreakMapPane({
             type="button"
             className="camera-toggle"
             aria-pressed={cameraMode}
-            onClick={() => (cameraMode ? exitCameraMode() : setCameraMode(true))}
+            onClick={() =>
+              cameraMode ? exitCameraMode() : onCameraModeChange(true)
+            }
           >
             {f(cameraMode ? 'map.cameraToggleOff' : 'map.cameraToggle')}
           </button>
-          {cameraMode && (
-            <span className="camera-help muted" id="camera-keyboard-help">
-              {f('map.cameraInstructions')}
-            </span>
-          )}
+
         </div>
       )}
 
@@ -188,7 +187,7 @@ export default function WindbreakMapPane({
           previewClientId={previewClientId}
           addLineRef={addLineRef}
           removeLineRef={removeLineRef}
-          cameraMode={cameraMode}
+          cameraMode={cameraMode && !reviewing}
           onCameraExit={exitCameraMode}
           onDraftLineChange={setDraftWkt}
           onLinesChange={onChange}

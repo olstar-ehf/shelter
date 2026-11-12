@@ -126,4 +126,10 @@ export interface WindbreakLinesFieldValueProps extends WindbreakFieldProps {
   onSubmitRequest: () => Promise<void>;
   isSubmitting: boolean;
   submitError: string | null;
+  /**
+   * Camera (keyboard) drawing mode. Owned by the flow so the help text above
+   * the field always describes the drawing method that is actually active.
+   */
+  cameraMode: boolean;
+  onCameraModeChange: (active: boolean) => void;
 }
