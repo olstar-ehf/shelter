@@ -112,13 +112,6 @@ export function WindbreakApplicationFlow({
         <h2 id="step-title">{f(section.titleId)}</h2>
 
         <div id="draw-help" hidden={reviewing}>
-          {cameraMode ? (
-            <p className="muted" id="camera-keyboard-help">
-              {f('map.cameraInstructions')}
-            </p>
-          ) : (
-            <p className="muted">{f('windbreak.draw.helpParcels')}</p>
-          )}
           <p className="muted">
             {f('windbreak.draw.helpExisting', {
               established: f('windbreak.draw.countEstablished', {

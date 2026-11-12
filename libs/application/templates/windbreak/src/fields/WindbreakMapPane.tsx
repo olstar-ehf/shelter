@@ -170,8 +170,19 @@ export default function WindbreakMapPane({
           >
             {f(cameraMode ? 'map.cameraToggleOff' : 'map.cameraToggle')}
           </button>
-
         </div>
+      )}
+      {/* Instructions for the drawing method that is actually active,
+          directly below the mode switch. */}
+      {!reviewing && (
+        <p
+          className="muted camera-instructions"
+          id={cameraMode ? 'camera-keyboard-help' : undefined}
+        >
+          {f(
+            cameraMode ? 'map.cameraInstructions' : 'windbreak.draw.helpParcels',
+          )}
+        </p>
       )}
 
       <div className={cameraMode ? 'map-container camera-mode' : 'map-container'}>
