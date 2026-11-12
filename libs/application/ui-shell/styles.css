@@ -481,31 +481,43 @@ code {
   margin: 0 0 10px;
 }
 
-.camera-toggle {
-  background: #fff;
+/* Segmented drawing-method switch: both modes are visible, the active one
+   is filled, so the state cannot be misread as "camera mode is on". */
+.camera-bar.mode-switch {
+  display: inline-flex;
+  gap: 0;
   border: 1px solid var(--navy);
   border-radius: 6px;
-  padding: 7px 12px;
-  font-size: 0.85rem;
-  font-weight: 600;
+  overflow: hidden;
+  margin: 0 0 10px;
+}
+
+.mode-option {
+  background: #fff;
   color: var(--navy);
+  border: 0;
+  padding: 8px 14px;
+  font-size: 0.9rem;
+  font-weight: 600;
   cursor: pointer;
 }
 
-.camera-toggle:hover {
+.mode-option + .mode-option {
+  border-left: 1px solid var(--navy);
+}
+
+.mode-option[aria-pressed='true'] {
   background: var(--navy);
   color: #fff;
 }
 
-.camera-toggle[aria-pressed='true'] {
-  background: var(--navy);
-  color: #fff;
+.mode-option:hover:not([aria-pressed='true']) {
+  background: #eef2f5;
 }
 
-.camera-help {
-  flex-basis: 100%;
-  font-size: 0.85rem;
-  line-height: 1.4;
+.mode-option:focus-visible {
+  outline: 3px solid var(--green);
+  outline-offset: -3px;
 }
 
 /* In camera mode, the map's pointer controls are hidden and the map itself

@@ -17,8 +17,11 @@ export const windbreakIs: WindbreakTemplateMessages = {
   },
   draw: {
     title: 'Teiknaðu skjólbeltið',
+    modeLabel: 'Teikniaðferð',
+    modeMouse: 'Mús',
+    modeCamera: 'Myndavélahamur',
     helpParcels:
-      'Landspildur þínar eru sýndar á kortinu. Notaðu línutólið (efst til hægri) til að teikna eitt eða fleiri skjólbelti innan lands þíns. Smelltu til að bæta við punktum, tvísmelltu (eða ýttu á Enter) til að ljúka. Notaðu breytingatól til að færa eða eyða línum.',
+      'Landspildur þínar eru sýndar á kortinu. Teiknaðu með músinni: veldu línutólið (efst til hægri), smelltu á kortið til að bæta við punktum og tvísmelltu (eða ýttu á Enter) til að ljúka. Til að teikna án músar skaltu velja Myndavélaham.',
     helpExisting:
       'Á landi þínu eru þegar {established} og {pending} (ekki samþykktar enn). Nýtt skjólbelti má ekki skerast eða snerta neitt þeirra, né annað skjólbelti í þessari umsókn.',
     countEstablished:

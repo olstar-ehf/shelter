@@ -125,6 +125,18 @@ export default function WindbreakMapPane({
     onCameraModeChange(false);
     cameraToggleRef.current?.focus({ preventScroll: true });
   };
+  // Two explicit options instead of one ambiguous toggle button: the active
+  // drawing method is visible at a glance (aria-pressed + filled style).
+  const selectMouseMode = () => {
+    if (cameraMode) {
+      onCameraModeChange(false);
+    }
+  };
+  const selectCameraMode = () => {
+    if (!cameraMode) {
+      onCameraModeChange(true);
+    }
+  };
 
   const addCoordinateLines = () => {
     const parsed = parseCoordinateLines(coordsText);
@@ -158,17 +170,27 @@ export default function WindbreakMapPane({
   return (
     <>
       {!reviewing && (
-        <div className="camera-bar">
+        <div
+          className="camera-bar mode-switch"
+          role="group"
+          aria-label={f('windbreak.draw.modeLabel')}
+        >
+          <button
+            type="button"
+            className="mode-option mouse-mode"
+            aria-pressed={!cameraMode}
+            onClick={selectMouseMode}
+          >
+            {f('windbreak.draw.modeMouse')}
+          </button>
           <button
             ref={cameraToggleRef}
             type="button"
-            className="camera-toggle"
+            className="mode-option camera-toggle"
             aria-pressed={cameraMode}
-            onClick={() =>
-              cameraMode ? exitCameraMode() : onCameraModeChange(true)
-            }
+            onClick={selectCameraMode}
           >
-            {f(cameraMode ? 'map.cameraToggleOff' : 'map.cameraToggle')}
+            {f('windbreak.draw.modeCamera')}
           </button>
         </div>
       )}

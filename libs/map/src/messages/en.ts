@@ -19,8 +19,6 @@ export const en = {
     insideLand: 'Inside your land',
 
     coordsLabel: 'Coordinates (WGS84)',
-    cameraToggle: 'Camera mode',
-    cameraToggleOff: 'Leave camera mode',
     cameraInstructions:
       'Camera mode: the crosshair stays at the centre - the arrow keys move the map underneath it (hold to keep moving; Shift for fine steps). Hold Z to zoom in and X to zoom out. Space places a point; double-tap space finishes the line and camera mode stays on for the next one. Backspace removes the last point, Escape leaves camera mode. The mouse is paused while camera mode is on. Screen reader: if the arrow keys do not move the map, press NVDA+Space to switch to focus mode.',
     cameraZoom: 'Zoom level {zoom}.',

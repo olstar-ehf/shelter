@@ -353,14 +353,21 @@ async function main() {
   const mapTopBeforeToggle = await page.evaluate(() =>
     Math.round(document.querySelector('.map-container').getBoundingClientRect().top),
   );
+  const modeSwitchBefore = await page.evaluate(() => ({
+    group: document.querySelector('.mode-switch')?.getAttribute('aria-label'),
+    mouse: document.querySelector('.mouse-mode')?.getAttribute('aria-pressed'),
+    camera: document.querySelector('.camera-toggle')?.getAttribute('aria-pressed'),
+  }));
   await page.click('.camera-toggle');
   await page.waitForTimeout(400);
   const mapTopInCamera = await page.evaluate(() =>
     Math.round(document.querySelector('.map-container').getBoundingClientRect().top),
   );
-  const cameraPressed = await page.evaluate(() =>
-    document.querySelector('.camera-toggle').getAttribute('aria-pressed'),
-  );
+  const modeSwitchInCamera = await page.evaluate(() => ({
+    mouse: document.querySelector('.mouse-mode')?.getAttribute('aria-pressed'),
+    camera: document.querySelector('.camera-toggle')?.getAttribute('aria-pressed'),
+  }));
+  const cameraPressed = modeSwitchInCamera.camera;
   // Screen readers only pass arrow keys through in focus mode: the map must
   // become an application region while camera mode is active, described by
   // the key instructions (which mention NVDA+Space).
@@ -563,12 +570,14 @@ async function main() {
     rows: document.querySelectorAll('#lines-body tr').length,
   }));
 
-  await page.click('.camera-toggle');
+  // Choosing the other option of the mode switch leaves camera mode.
+  await page.click('.mouse-mode');
   await page.waitForTimeout(300);
   const afterExit = await page.evaluate(() => {
     const container = document.querySelector('.leaflet-container');
     return {
       pressed: document.querySelector('.camera-toggle').getAttribute('aria-pressed'),
+      mousePressed: document.querySelector('.mouse-mode')?.getAttribute('aria-pressed'),
       role: container?.getAttribute('role'),
       describedBy: container?.getAttribute('aria-describedby'),
       roleDescription: container?.getAttribute('aria-roledescription'),
@@ -594,6 +603,10 @@ async function main() {
     toolbar.editBtn === false &&
     toolbar.removeBtn === false &&
     toolbar.drawPolyline === true &&
+    modeSwitchBefore.group === 'Drawing method' &&
+    modeSwitchBefore.mouse === 'true' && modeSwitchBefore.camera === 'false' &&
+    modeSwitchInCamera.mouse === 'false' && modeSwitchInCamera.camera === 'true' &&
+    afterExit.mousePressed === 'true' &&
     cameraPressed === 'true' &&
     cameraA11y.role === 'application' &&
     cameraA11y.describedBy === 'camera-keyboard-help' &&
@@ -630,6 +643,8 @@ async function main() {
     session3Ok ? 'PASS' : 'FAIL',
     JSON.stringify({
       cameraPressed,
+      modeSwitchBefore,
+      modeSwitchInCamera,
       cameraA11y,
       mapTopBeforeToggle,
       mapTopInCamera,
