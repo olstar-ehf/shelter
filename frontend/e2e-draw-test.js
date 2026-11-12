@@ -368,6 +368,32 @@ async function main() {
       helpMentionsNvda: !!help && help.textContent.includes('NVDA'),
     };
   });
+  // Using the mouse elsewhere (e.g. the coordinate panel) must not break
+  // camera mode: returning the pointer to the map re-focuses it, and the
+  // camera keys work again without a click.
+  await page.click('.coords-entry summary');
+  await page.waitForTimeout(300);
+  const mapBoxForFocus = await page.evaluate(() => {
+    const rect = document.querySelector('.map-container').getBoundingClientRect();
+    return { x: rect.x + rect.width / 2, y: rect.y + rect.height / 2 };
+  });
+  await page.mouse.move(mapBoxForFocus.x, mapBoxForFocus.y, { steps: 4 });
+  await page.waitForTimeout(400);
+  const refocusOk = await page.evaluate(() =>
+    document.activeElement?.classList.contains('leaflet-container'),
+  );
+  const panBefore = await page.evaluate(
+    () => document.querySelector('.map-coords-value')?.textContent?.trim(),
+  );
+  await page.keyboard.press('ArrowRight');
+  await page.waitForTimeout(300);
+  const panAfter = await page.evaluate(
+    () => document.querySelector('.map-coords-value')?.textContent?.trim(),
+  );
+  // Restore the view so the line drawing below starts from the same place.
+  await page.keyboard.press('ArrowLeft');
+  await page.waitForTimeout(250);
+
   // Camera mode: the readout follows the crosshair (map centre).
   const cameraCoordsA = await coordsValue();
   await page.keyboard.press('ArrowRight');
@@ -563,6 +589,7 @@ async function main() {
     cameraA11y.role === 'application' &&
     cameraA11y.describedBy === 'camera-keyboard-help' &&
     cameraA11y.helpMentionsNvda === true &&
+    refocusOk === true && panBefore !== panAfter &&
     afterExit.role === 'region' && afterExit.describedBy === null &&
     typeof zoomStart === 'number' &&
     zoomedIn > zoomStart &&
@@ -591,6 +618,7 @@ async function main() {
     JSON.stringify({
       cameraPressed,
       cameraA11y,
+      refocusOk,
       cameraDraftWkt,
       pointerCoordsA,
       pointerCoordsB,

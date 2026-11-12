@@ -398,7 +398,14 @@ export function WindbreakCameraControl({
         event.preventDefault();
         return;
       }
-      if (event.target !== container) {
+      // Keys go to the camera wherever focus is - except when the user is
+      // typing in a field or activating another control (coordinate box,
+      // table rows, buttons, links, the camera toggle itself).
+      const target = event.target as HTMLElement | null;
+      const otherControl = target?.closest(
+        'button, a, input, textarea, select, summary, [contenteditable="true"], [role="button"], tr[tabindex]',
+      );
+      if (otherControl) {
         return;
       }
       panSpeedRef.current = event.shiftKey
@@ -465,14 +472,34 @@ export function WindbreakCameraControl({
         }
       }
     };
-    container.addEventListener('keydown', onKey);
-    container.addEventListener('keyup', onKeyUp);
+    // Re-focus the map when the pointer comes back to it (e.g. after using
+    // the coordinate box), so drawing can continue without a click.
+    const focusMap = () => container.focus({ preventScroll: true });
+    container.addEventListener('mouseenter', focusMap);
+    container.addEventListener('pointerdown', focusMap);
+    // Listen on the document: after scrolling or using another control,
+    // focus may no longer be inside the map, but camera mode is still on.
+    document.addEventListener('keydown', onKey);
+    document.addEventListener('keyup', onKeyUp);
     return () => {
-      container.removeEventListener('keydown', onKey);
-      container.removeEventListener('keyup', onKeyUp);
+      container.removeEventListener('mouseenter', focusMap);
+      container.removeEventListener('pointerdown', focusMap);
+      document.removeEventListener('keydown', onKey);
+      document.removeEventListener('keyup', onKeyUp);
       stopZoomHold();
+      stopPan();
     };
-  }, [cameraMode, map, placePoint, undo, f, startZoomHold, stopZoomHold, handleSpace]);
+  }, [
+    cameraMode,
+    map,
+    placePoint,
+    undo,
+    f,
+    startZoomHold,
+    stopZoomHold,
+    stopPan,
+    handleSpace,
+  ]);
 
   return (
     <>
