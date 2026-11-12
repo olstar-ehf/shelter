@@ -215,7 +215,9 @@ export function WindbreakCameraControl({
     // Short announcement: the full key map is the map region's description
     // (and the visible help), so it is not read out twice.
     setStatus(f('map.cameraModeOn'));
-    container.focus();
+    // Do not scroll the page to the map: the switch is right above it and a
+    // scroll would look like a page jump.
+    container.focus({ preventScroll: true });
     return () => {
       container.style.cursor = '';
       map.keyboard.enable();

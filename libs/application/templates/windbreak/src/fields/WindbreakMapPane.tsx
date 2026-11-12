@@ -123,7 +123,7 @@ export default function WindbreakMapPane({
   const cameraToggleRef = useRef<HTMLButtonElement | null>(null);
   const exitCameraMode = () => {
     onCameraModeChange(false);
-    cameraToggleRef.current?.focus();
+    cameraToggleRef.current?.focus({ preventScroll: true });
   };
 
   const addCoordinateLines = () => {
@@ -175,14 +175,28 @@ export default function WindbreakMapPane({
       {/* Instructions for the drawing method that is actually active,
           directly below the mode switch. */}
       {!reviewing && (
-        <p
-          className="muted camera-instructions"
-          id={cameraMode ? 'camera-keyboard-help' : undefined}
-        >
-          {f(
-            cameraMode ? 'map.cameraInstructions' : 'windbreak.draw.helpParcels',
-          )}
-        </p>
+        <div className="camera-instructions-stack">
+          <p
+            className="muted camera-instructions"
+            id={cameraMode ? 'camera-keyboard-help' : undefined}
+          >
+            {f(
+              cameraMode
+                ? 'map.cameraInstructions'
+                : 'windbreak.draw.helpParcels',
+            )}
+          </p>
+          {/* Invisible copy of the other mode's text: both share one grid
+              cell, so the area is always as tall as the longer text and
+              switching modes does not move the map. */}
+          <p className="muted camera-instructions ghost" aria-hidden="true">
+            {f(
+              cameraMode
+                ? 'windbreak.draw.helpParcels'
+                : 'map.cameraInstructions',
+            )}
+          </p>
+        </div>
       )}
 
       <div className={cameraMode ? 'map-container camera-mode' : 'map-container'}>

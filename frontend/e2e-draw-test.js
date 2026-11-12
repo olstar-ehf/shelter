@@ -350,8 +350,14 @@ async function main() {
   await page.waitForTimeout(250);
   const pointerCoordsB = await coordsValue();
 
+  const mapTopBeforeToggle = await page.evaluate(() =>
+    Math.round(document.querySelector('.map-container').getBoundingClientRect().top),
+  );
   await page.click('.camera-toggle');
   await page.waitForTimeout(400);
+  const mapTopInCamera = await page.evaluate(() =>
+    Math.round(document.querySelector('.map-container').getBoundingClientRect().top),
+  );
   const cameraPressed = await page.evaluate(() =>
     document.querySelector('.camera-toggle').getAttribute('aria-pressed'),
   );
@@ -592,6 +598,7 @@ async function main() {
     cameraA11y.role === 'application' &&
     cameraA11y.describedBy === 'camera-keyboard-help' &&
     cameraA11y.helpMentionsNvda === true &&
+    mapTopBeforeToggle === mapTopInCamera &&
     /camera mode/i.test(cameraA11y.name ?? '') &&
     cameraA11y.roleDescription === 'camera mode' &&
     afterExit.roleDescription === null &&
@@ -624,6 +631,8 @@ async function main() {
     JSON.stringify({
       cameraPressed,
       cameraA11y,
+      mapTopBeforeToggle,
+      mapTopInCamera,
       refocusOk,
       cameraDraftWkt,
       pointerCoordsA,

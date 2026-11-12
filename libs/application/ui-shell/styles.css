@@ -659,3 +659,21 @@ code {
     display: none;
   }
 }
+
+/* Instructions below the camera-mode switch. Both modes' texts share one
+   grid cell (the inactive one is invisible) so the area is always as tall
+   as the longer text and switching modes does not move the map. */
+.camera-instructions-stack {
+  display: grid;
+  margin: 0 0 12px;
+  max-width: 60rem;
+}
+
+.camera-instructions-stack > .camera-instructions {
+  grid-area: 1 / 1;
+  margin: 0;
+}
+
+.camera-instructions.ghost {
+  visibility: hidden;
+}
